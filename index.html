@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIOLAB ENGINE v3</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d0d0d;--s1:#141414;--s2:#1c1c1c;--s3:#242424;--br:#2e2e2e;--br2:#3a3a3a;
+  --ac:#00e5a0;--acd:#00b87d;--ac2:#7c6fff;--ac3:#ff6b35;--ac4:#44aaff;
+  --tx:#dedede;--tx2:#909090;--tx3:#555;
+  --er:#ff4455;--wn:#ffaa00;
+  --mo:'JetBrains Mono',monospace;--sa:'JetBrains Mono',monospace;
+  --r:2px;--rc:2px;--cs:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--mo);font-size:14px;min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+header{background:rgba(10,10,15,.97);border-bottom:1px solid var(--br);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.lb{background:var(--ac);color:#000;font-family:var(--mo);font-size:14px;font-weight:700;padding:3px 7px;letter-spacing:1px}
+.logo h1{font-size:16px;font-weight:800;color:var(--tx);font-family:var(--sa)}
+.logo span{color:var(--ac)}
+.hdr-stats{display:flex;gap:14px;font-family:var(--mo);font-size:14px}
+.hdr-stats .hs{color:var(--tx3)}
+.hdr-stats .hs b{color:var(--ac)}
+.hdr-stats .hs b.er{color:var(--er)}
+.hdr-stats .hs b.wn{color:var(--wn)}
+
+/* TABS */
+.nav{display:flex;border-bottom:1px solid var(--br);background:var(--s1);overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.nav::-webkit-scrollbar{display:none}
+.tab{background:none;border:none;color:var(--tx2);font-family:var(--mo);font-size:14px;letter-spacing:.5px;padding:12px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;text-transform:uppercase;transition:all .15s}
+.tab:hover{color:var(--tx)}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.panel{display:none;flex-direction:column;gap:12px;padding:14px}
+.panel.active{display:flex}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--br);border-radius:2px;padding:16px;box-shadow:var(--cs)}
+.ct{font-family:var(--mo);font-size:14px;letter-spacing:1.5px;color:var(--ac);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ct::after{content:'';flex:1;height:1px;background:var(--br)}
+.ct.wn{color:var(--wn)}.ct.er{color:var(--er)}.ct.pur{color:var(--ac2)}.ct.blu{color:var(--ac4)}.ct.or{color:var(--ac3)}
+
+/* FORMS */
+label{font-family:var(--mo);font-size:14px;letter-spacing:.8px;color:var(--tx2);display:block;margin-bottom:4px;text-transform:uppercase}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--br);color:var(--tx);font-family:var(--mo);font-size:14px;padding:9px 11px;outline:none;transition:border-color .2s;border-radius:2px;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ac)}
+select option{background:var(--s2)}
+textarea{resize:vertical;min-height:60px}
+.fg{margin-bottom:10px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.fr4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+@media(max-width:600px){.fr2,.fr3,.fr4{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.fr2,.fr3,.fr4{grid-template-columns:1fr}}
+
+/* BUTTONS */
+.btn{font-family:var(--mo);font-size:14px;letter-spacing:.8px;text-transform:uppercase;padding:0 14px;border:none;cursor:pointer;height:38px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;gap:5px;border-radius:2px;transition:all .15s}
+.btn-p{background:var(--ac);color:#000}.btn-p:hover{background:#00c888}
+.btn-s{background:transparent;color:var(--tx2);border:1px solid var(--br)}.btn-s:hover{color:var(--tx);border-color:var(--tx2)}
+.btn-d{background:transparent;color:var(--er);border:1px solid rgba(255,68,85,.3)}.btn-d:hover{background:rgba(255,68,85,.1)}
+.btn-pur{background:transparent;color:var(--ac2);border:1px solid rgba(124,111,255,.3)}.btn-pur:hover{background:rgba(124,111,255,.1)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.gbtn{background:var(--ac);color:#000;font-family:var(--mo);font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;cursor:pointer;padding:14px;width:100%;border-radius:2px;min-height:48px;transition:background .15s}
+.gbtn:hover{background:#00c888}
+.gbtn.wn{background:var(--wn);color:#000}.gbtn.er{background:var(--er);color:#fff}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{background:var(--s2);border:1px solid var(--br);border-radius:2px;padding:13px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac)}
+.kpi.wn::before{background:var(--wn)}.kpi.er::before{background:var(--er)}.kpi.pur::before{background:var(--ac2)}.kpi.blu::before{background:var(--ac4)}.kpi.or::before{background:var(--ac3)}
+.klbl{font-family:var(--mo);font-size:11px;letter-spacing:1px;color:var(--tx3);text-transform:uppercase;margin-bottom:5px}
+.kval{font-family:var(--mo);font-size:18px;font-weight:700;color:var(--ac);line-height:1}
+.kval.wn{color:var(--wn)}.kval.er{color:var(--er)}.kval.pur{color:var(--ac2)}.kval.blu{color:var(--ac4)}.kval.or{color:var(--ac3)}
+.ksub{font-family:var(--mo);font-size:14px;color:var(--tx3);margin-top:3px}
+
+/* TABLES */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-family:var(--mo);font-size:14px}
+th{background:var(--s3);color:var(--tx2);letter-spacing:.8px;text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid var(--br);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid rgba(42,42,58,.3);color:var(--tx);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,229,160,.02)}
+td.ac{color:var(--ac)}td.wn{color:var(--wn)}td.er{color:var(--er)}td.mu{color:var(--tx3)}td.pur{color:var(--ac2)}
+
+/* BADGES */
+.badge{font-family:var(--mo);font-size:11px;letter-spacing:.8px;padding:2px 7px;border-radius:3px;font-weight:700}
+.bok{background:rgba(0,229,160,.15);color:var(--ac)}
+.bwn{background:rgba(255,170,0,.15);color:var(--wn)}
+.ber{background:rgba(255,68,85,.15);color:var(--er)}
+.bpur{background:rgba(124,111,255,.15);color:var(--ac2)}
+.bblu{background:rgba(68,170,255,.15);color:var(--ac4)}
+.bor{background:rgba(255,107,53,.15);color:var(--ac3)}
+.bgr{background:rgba(88,88,120,.15);color:var(--tx2)}
+
+/* HISTORY ITEMS */
+.hi{background:var(--s1);border:1px solid var(--br);border-left:3px solid var(--br);padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:2px;transition:border-left-color .15s;cursor:pointer}
+.hi:hover{border-left-color:var(--ac)}
+.hi.activo{border-left-color:var(--ac)}.hi.contaminado{border-left-color:var(--er)}.hi.transferido{border-left-color:var(--wn)}.hi.archivado{border-left-color:var(--tx3)}
+.hid{font-family:var(--mo);font-size:14px;color:var(--ac);font-weight:700}
+.hdate{font-family:var(--mo);font-size:11px;color:var(--tx3);margin-top:2px}
+.hinfo{font-family:var(--mo);font-size:14px;color:var(--tx2);margin-top:3px}
+.hnota{font-family:var(--mo);font-size:14px;color:var(--tx3);margin-top:3px;font-style:italic}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--br);border-top:3px solid var(--ac);padding:20px;width:100%;max-width:540px;border-radius:2px;margin:auto}
+.modal.pur-modal{border-top-color:var(--ac2)}
+.modal.wn-modal{border-top-color:var(--wn)}
+.mtit{font-family:var(--mo);font-size:14px;letter-spacing:1.5px;color:var(--ac);text-transform:uppercase;margin-bottom:16px}
+.mtit.pur{color:var(--ac2)}.mtit.wn{color:var(--wn)}
+
+/* NOTIF */
+.notif{position:fixed;bottom:14px;right:14px;left:14px;background:var(--ac);color:#000;font-family:var(--mo);font-size:14px;font-weight:700;padding:12px 18px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;text-align:center;border-radius:2px}
+.notif.show{transform:translateY(0);opacity:1}
+.notif.err{background:var(--er);color:#fff}
+
+/* CALC PREVIEW */
+.calc-preview{background:var(--bg);border:1px solid var(--br);padding:12px;font-family:var(--mo);font-size:14px;line-height:2;border-radius:2px;color:var(--tx2)}
+.calc-preview .ac{color:var(--ac)}
+.calc-preview .wn{color:var(--wn)}
+.calc-preview .er{color:var(--er)}
+
+/* EMPTY */
+.empty{font-family:var(--mo);font-size:14px;color:var(--tx3);text-align:center;padding:30px}
+
+/* NODE TYPE CHIPS */
+.ntchip{font-family:var(--mo);font-size:11px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px}
+.nt-CI{background:rgba(0,229,160,.15);color:var(--ac)}
+.nt-GR{background:rgba(255,170,0,.15);color:var(--wn)}
+.nt-IN{background:rgba(124,111,255,.15);color:var(--ac2)}
+.nt-SU{background:rgba(255,107,53,.15);color:var(--ac3)}
+.nt-ST{background:rgba(68,170,255,.15);color:var(--ac4)}
+.nt-custom{background:rgba(88,88,120,.15);color:var(--tx2)}
+
+/* TIMELINE LOG */
+.log-item{border-left:2px solid var(--br);padding:8px 12px;margin-bottom:6px;font-family:var(--mo);font-size:14px}
+.log-item.crecimiento{border-left-color:var(--ac)}
+.log-item.contaminacion{border-left-color:var(--er)}
+.log-item.transferencia{border-left-color:var(--wn)}
+.log-item.observacion{border-left-color:var(--tx3)}
+.log-item.cosecha{border-left-color:var(--ac4)}
+.log-tipo{font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:3px}
+.log-tipo.crecimiento{color:var(--ac)}.log-tipo.contaminacion{color:var(--er)}.log-tipo.transferencia{color:var(--wn)}.log-tipo.cosecha{color:var(--ac4)}.log-tipo.observacion{color:var(--tx3)}
+.log-meta{color:var(--tx3);font-size:14px}
+
+/* CHART CONTAINER */
+.chart-wrap{position:relative;height:240px;margin-top:12px}
+.chart-wrap canvas{max-height:230px}
+
+/* INGREDIENT ROW IN FORMULA */
+.ing-row{display:grid;grid-template-columns:1fr 90px 60px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.ing-row input,ing-row select{margin:0}
+
+/* NODE DETAIL BACK */
+.back-link{font-family:var(--mo);font-size:14px;color:var(--ac);letter-spacing:.5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin-bottom:10px;text-transform:uppercase}
+.back-link:hover{color:var(--ac2)}
+
+/* BREADCRUMB */
+.bc{font-family:var(--mo);font-size:14px;color:var(--tx3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.bc a{color:var(--ac);cursor:pointer}.bc a:hover{color:var(--ac2)}
+.bc .sep{color:var(--br)}
+
+/* SECTION DIV */
+.sdiv{font-family:var(--mo);font-size:11px;letter-spacing:2px;color:var(--tx3);text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:14px 0 8px}
+.sdiv::after{content:'';flex:1;height:1px;background:var(--br)}
+
+/* STATUS INDICATOR */
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-activo{background:var(--ac)}.dot-contaminado{background:var(--er)}.dot-transferido{background:var(--wn)}.dot-archivado{background:var(--tx3)}
+
+/* COLLAPSIBLE */
+.coll-header{cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--br);font-family:var(--mo);font-size:14px;letter-spacing:.5px;color:var(--tx2);user-select:none}
+.coll-header:hover{color:var(--tx)}
+.coll-header .arrow{transition:transform .2s;font-size:14px}
+.coll-header.open .arrow{transform:rotate(90deg)}
+.coll-body{display:none;padding:14px}
+.coll-body.open{display:block}
+
+/* STRAIN GROUP */
+.sg{background:var(--s1);border:1px solid var(--br);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.sg-header{padding:12px 16px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.sg-name{font-size:14px;font-weight:700;color:var(--tx)}
+.sg-id{font-family:var(--mo);font-size:14px;color:var(--tx3);margin-top:1px}
+.sg-body{padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+
+/* PHENOTYPE CARD */
+.pcard{background:var(--s2);border:1px solid var(--br);border-radius:2px;padding:13px;cursor:pointer;transition:border-color .15s}
+.pcard:hover{border-color:var(--ac)}
+.pcard-name{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.pcard-meta{font-family:var(--mo);font-size:14px;color:var(--tx3);display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+/* RESULT BOX */
+.rbox{background:var(--s2);border:1px solid var(--br);border-left:3px solid var(--ac);padding:13px;font-family:var(--mo);font-size:14px;line-height:2;border-radius:2px;margin-top:12px}
+.rbox.wn{border-left-color:var(--wn)}.rbox.er{border-left-color:var(--er)}.rbox .ac{color:var(--ac)}.rbox .wn2{color:var(--wn)}.rbox .er2{color:var(--er)}
+
+/* TREE */
+.tree-node{font-family:var(--mo);font-size:14px;padding:4px 0;display:flex;align-items:center;gap:6px}
+.tree-node a{color:var(--ac);cursor:pointer}.tree-node a:hover{color:var(--ac2)}
+.tree-indent{padding-left:18px}
+
+/* FILTER BAR */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.fbar label{margin-bottom:0;white-space:nowrap}
+.fbar select,.fbar input[type=text]{width:auto;min-width:110px}
+
+/* CONFIG item */
+.cfg-item{background:var(--s2);border:1px solid var(--br);border-radius:2px;padding:12px;margin-bottom:8px}
+.cfg-title{font-family:var(--mo);font-size:14px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+
+/* checkbox tag */
+.chtag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mo);font-size:14px;padding:4px 9px;border:1px solid var(--br);border-radius:3px;cursor:pointer;color:var(--tx2);transition:all .1s;margin:2px}
+.chtag.on{border-color:var(--ac);color:var(--ac);background:rgba(0,229,160,.07)}
+.chtag input{display:none}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--br)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    
+    <div class="logo"><span style="font-size:16px;font-weight:700;color:var(--ac);letter-spacing:2px">BIOLAB <span style="color:var(--tx2);font-weight:400">ENGINE</span> <span style="font-size:11px;color:var(--tx3)">v3</span></span></div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hs">Nodos: <b id="hn-total">0</b></div>
+    <div class="hs">Activos: <b id="hn-act">0</b></div>
+    <div class="hs">Contam: <b class="er" id="hn-cont">0</b></div>
+    <div class="hs">Fórmulas: <b class="wn" id="hn-form">0</b></div>
+  </div>
+</header>
+
+<div class="nav">
+  <button class="tab active" data-tab="fen" onclick="ST('fen')">🧬 Fenotipos</button>
+  <button class="tab" data-tab="ci"  onclick="ST('ci')">🧫 CI — Cultivo</button>
+  <button class="tab" data-tab="gr"  onclick="ST('gr')">🌾 GR — Grano</button>
+  <button class="tab" data-tab="in"  onclick="ST('in')">💉 IN — Inóculo</button>
+  <button class="tab" data-tab="su"  onclick="ST('su')">🧱 SU — Sustrato</button>
+  <button class="tab" data-tab="st"  onclick="ST('st')">📦 ST — Stock</button>
+  <button class="tab" data-tab="log" onclick="ST('log')">📋 Log</button>
+  <button class="tab" data-tab="cfg" onclick="ST('cfg')">⚙️ Config</button>
+</div>
+
+<!-- ══════════════════════ FENOTIPOS ══════════════════════ -->
+<div class="panel active" id="tab-fen">
+  <div class="kpi-grid" id="dash-kpi"></div>
+  <div class="card">
+    <div class="ct">🧬 Cepas &amp; Fenotipos</div>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn btn-p" onclick="openM('m-cepa')">+ Nueva Cepa</button>
+      <button class="btn btn-s" onclick="openM('m-fen')">+ Nuevo Fenotipo</button>
+    </div>
+    <div id="strains-list"></div>
+  </div>
+</div>
+
+<!-- ══ FENOTIPO DETAIL (sub-panel) ══ -->
+<div class="panel" id="tab-fen-det">
+  <div id="fen-det-content"></div>
+</div>
+
+<!-- ══ NODO DETAIL (sub-panel) ══ -->
+<div class="panel" id="tab-node-det">
+  <div id="node-det-content"></div>
+</div>
+
+<!-- ══════════════════════ CI ══════════════════════ -->
+<div class="panel" id="tab-ci">
+
+  <!-- 1. ÚLTIMA FÓRMULA UTILIZADA: tabla izquierda + gráfico derecha -->
+  <div class="card" id="ci-last-card">
+    <div class="ct pur">📊 Última Fórmula Utilizada</div>
+    <div id="ci-last-content">
+      <div class="empty">Sin fórmulas registradas aún.</div>
+    </div>
+  </div>
+
+  <!-- 2. TABLA DE SEGUIMIENTO -->
+  <div class="card">
+    <div class="ct">📋 Tabla de Seguimiento CI</div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Fecha</th><th>Nodo CI</th><th>Fórmula</th><th>Fenotipo</th><th>Placas</th><th>Estado</th><th>Notas</th></tr></thead>
+        <tbody id="ci-seguimiento-tbody"></tbody>
+      </table>
+    </div>
+    <div class="sdiv">Nuevo registro de seguimiento</div>
+    <div class="fr3">
+      <div class="fg"><label>Nodo CI</label><select id="seg-nodo"></select></div>
+      <div class="fg"><label>Tipo evento</label>
+        <select id="seg-tipo">
+          <option value="observacion">Observación</option>
+          <option value="crecimiento">Crecimiento</option>
+          <option value="contaminacion">Contaminación</option>
+        </select>
+      </div>
+      <div class="fg"><label>Nota</label><input type="text" id="seg-nota" placeholder="ej: crecimiento rizomórfico, 1 placa contaminada..."></div>
+    </div>
+    <button class="btn btn-p" onclick="saveSeguimiento()">+ Guardar registro</button>
+  </div>
+
+  <!-- 3. NUEVA SESIÓN CI -->
+  <div class="card">
+    <div class="ct">🧫 Nueva Sesión de Cultivo In Vitro</div>
+
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="ci-fen" onchange="ciRefreshOrigen()"></select></div>
+      <div class="fg"><label>Origen (nodo padre)</label><select id="ci-origen"></select></div>
+    </div>
+
+    <!-- Toggle modo -->
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button id="ci-mode-existing" class="btn btn-p" onclick="ciSetMode('existing')" style="flex:1">Usar Fórmula Existente</button>
+      <button id="ci-mode-new" class="btn btn-s" onclick="ciSetMode('new')" style="flex:1">+ Crear Fórmula Magistral</button>
+    </div>
+
+    <!-- MODO EXISTENTE -->
+    <div id="ci-existing-mode">
+      <div class="fg"><label>Seleccionar Fórmula</label><select id="ci-formula" onchange="ciFormulaChange()"></select></div>
+    </div>
+
+    <!-- MODO NUEVA FÓRMULA -->
+    <div id="ci-new-mode" style="display:none">
+      <div class="fr2" style="margin-bottom:10px">
+        <div class="fg"><label>Nombre de la fórmula</label><input type="text" id="ci-frm-nombre" placeholder="ej: MEA modificada v3"></div>
+        <div class="fg"><label>Versión</label><input type="text" id="ci-frm-ver" value="v1"></div>
+      </div>
+      <div class="sdiv" style="margin-top:0">Composición</div>
+      <div id="ci-frm-rows"></div>
+      <button class="btn btn-s" onclick="ciAddFrmRow()" style="margin-bottom:12px;width:100%">+ Agregar Ingrediente</button>
+      <div class="kpi-grid" id="ci-frm-totales" style="margin-bottom:10px"></div>
+      <div id="ci-cn-box" class="rbox" style="display:none;margin-bottom:12px"></div>
+      <button class="btn btn-pur" onclick="ciSaveNewFormula()" style="width:100%;margin-bottom:10px">💾 GUARDAR COMO NUEVA FÓRMULA</button>
+    </div>
+
+    <!-- ANÁLISIS: formula izquierda, gráfico derecha -->
+    <div id="ci-analisis-card" style="display:none">
+      <div class="sdiv">Análisis de la Fórmula</div>
+      <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start;margin-bottom:12px">
+        <!-- IZQUIERDA: tabla + KPIs -->
+        <div>
+          <div class="kpi-grid" id="ci-kpis" style="margin-bottom:12px"></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>Ingrediente</th><th>Aspecto</th><th>Cantidad</th><th>C (g)</th><th>N (g)</th></tr></thead>
+              <tbody id="ci-ing-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- DERECHA: gráfico torta + filtros -->
+        <div>
+          <div style="font-family:var(--mo);font-size:11px;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Filtrar por aspecto</div>
+          <div id="ci-asp-filter-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
+          <div style="position:relative;height:220px"><canvas id="ci-pie"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLACAS -->
+    <div class="sdiv">Placas de esta sesión</div>
+    <div style="max-width:240px">
+      <div class="fg"><label>Total de placas preparadas</label><input type="number" id="ci-placas-total" min="1" value="20" oninput="ciUpdatePlacasDisponibles()"></div>
+    </div>
+
+    <!-- DISTRIBUCIÓN -->
+    <div class="sdiv">Distribución por fenotipo</div>
+    <div style="font-family:var(--mo);font-size:14px;color:var(--tx3);margin-bottom:8px">
+      Total: <span id="ci-placas-disp" style="color:var(--ac);font-weight:700">20</span> &nbsp;|&nbsp;
+      Asignadas: <span id="ci-placas-asig" style="color:var(--wn);font-weight:700">0</span> &nbsp;|&nbsp;
+      Restantes: <span id="ci-placas-rest" style="color:var(--ac);font-weight:700">20</span>
+    </div>
+    <div id="ci-dist-rows"></div>
+    <button class="btn btn-s" onclick="ciAddDistRow()" style="margin-bottom:12px">+ Agregar Fenotipo</button>
+
+    <div class="fg"><label>Notas de la sesión</label><input type="text" id="ci-notas" placeholder="Observaciones generales..."></div>
+    <button class="gbtn" style="margin-top:8px" onclick="saveCI()">💾 GUARDAR SESIÓN CI</button>
+  </div>
+
+  <!-- 4. INGREDIENTES -->
+  <div class="card">
+    <div class="ct">🧪 Ingredientes</div>
+    <div class="fr3" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre</label><input type="text" id="cfg-ing-nombre" placeholder="Agar agar"></div>
+      <div class="fg"><label>Unidad</label><input type="text" id="cfg-ing-unit" placeholder="gr, ml, ud..."></div>
+      <div class="fg"><label>Aspecto</label>
+        <select id="cfg-ing-asp">
+          <option>Solvente</option><option>Carbono</option><option>Nitrógeno</option><option>Mineral</option><option>Cofactores</option><option>Soporte</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr2" style="margin-bottom:10px">
+      <div class="fg"><label>% Carbono (opcional)</label><input type="number" id="cfg-ing-c" value="0" min="0" max="100" placeholder="0"></div>
+      <div class="fg"><label>% Nitrógeno (opcional)</label><input type="number" id="cfg-ing-n" value="0" min="0" max="100" placeholder="0"></div>
+    </div>
+    <div style="font-family:var(--mo);font-size:14px;color:var(--tx3);margin-bottom:10px">Si no conocés el % activo, dejalo en 0 y el sistema usará la masa total del ingrediente en el cálculo de C o N según su aspecto.</div>
+    <button class="btn btn-p" onclick="saveIng()">+ Guardar Ingrediente</button>
+    <div class="tw" style="margin-top:14px">
+      <table><thead><tr><th>ID</th><th>Nombre</th><th>Unidad</th><th>Aspecto</th><th>%C</th><th>%N</th><th></th></tr></thead>
+      <tbody id="cfg-ing-table"></tbody></table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════ GR ══════════════════════ -->
+<div class="panel" id="tab-gr">
+  <div class="card">
+    <div class="ct wn">🌾 Nuevo Grano — GR</div>
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="gr-fen" onchange="grRefreshOrigen()"></select></div>
+      <div class="fg"><label>Origen (nodo padre)</label><select id="gr-origen"></select></div>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label>Tipo de grano</label><input type="text" id="gr-tipo" placeholder="Trigo, centeno..."></div>
+      <div class="fg"><label>Gramos iniciales</label><input type="number" id="gr-gramos" min="0" value="500" oninput="grCalc()"></div>
+      <div class="fg"><label>% Humedad objetivo</label><input type="number" id="gr-hum" min="0" max="100" value="55" oninput="grCalc()"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Temperatura (°C)</label><input type="number" id="gr-temp" value="25"></div>
+      <div class="fg"><label>Notas</label><input type="text" id="gr-notas" placeholder="Observaciones..."></div>
+    </div>
+    <div id="gr-calc-preview" class="rbox" style="display:none"></div>
+    <button class="gbtn wn" style="margin-top:14px" onclick="saveGR()">💾 GUARDAR NODO GR</button>
+  </div>
+  <div class="card">
+    <div class="ct wn">📋 Registros GR</div>
+    <div id="gr-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ IN ══════════════════════ -->
+<div class="panel" id="tab-in">
+  <div class="card">
+    <div class="ct pur">💉 Nuevo Inóculo — IN</div>
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="in-fen" onchange="inRefreshOrigen()"></select></div>
+      <div class="fg"><label>Origen (nodo padre)</label><select id="in-origen"></select></div>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label>Volumen (ml)</label><input type="number" id="in-vol" min="0" value="100" oninput="inCalc()"></div>
+      <div class="fg"><label>Concentración</label><input type="text" id="in-conc" placeholder="ej: 10^6 UFC/ml"></div>
+      <div class="fg"><label>Tipo</label>
+        <select id="in-tipo2">
+          <option value="liquido">Líquido</option>
+          <option value="solido">Sólido</option>
+          <option value="agar">Agar</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Temperatura (°C)</label><input type="number" id="in-temp" value="25"></div>
+      <div class="fg"><label>Notas</label><input type="text" id="in-notas" placeholder="Observaciones..."></div>
+    </div>
+    <div id="in-calc-preview" class="rbox" style="display:none"></div>
+    <button class="gbtn" style="margin-top:14px;background:var(--ac2);color:#fff" onclick="saveIN()">💾 GUARDAR NODO IN</button>
+  </div>
+  <div class="card">
+    <div class="ct pur">📋 Registros IN</div>
+    <div id="in-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SU ══════════════════════ -->
+<div class="panel" id="tab-su">
+  <div class="card">
+    <div class="ct or">🧱 Nuevo Sustrato — SU</div>
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="su-fen" onchange="suRefreshOrigen()"></select></div>
+      <div class="fg"><label>Origen (nodo padre)</label><select id="su-origen"></select></div>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label>Cant. bolsas</label><input type="number" id="su-bolsas" min="1" value="4" oninput="suCalc()"></div>
+      <div class="fg"><label>Peso por bolsa (kg)</label><input type="number" id="su-peso" min="0" step="0.1" value="1.5" oninput="suCalc()"></div>
+      <div class="fg"><label>% Humedad</label><input type="number" id="su-hum" min="0" max="100" value="65" oninput="suCalc()"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Composición / Estructura</label><input type="text" id="su-comp" placeholder="ej: 70% coco + 30% vermiculita"></div>
+      <div class="fg"><label>Temperatura (°C)</label><input type="number" id="su-temp" value="22"></div>
+    </div>
+    <div class="fg"><label>Notas</label><input type="text" id="su-notas" placeholder="Observaciones..."></div>
+    <div id="su-calc-preview" class="rbox" style="display:none"></div>
+    <button class="gbtn" style="margin-top:14px;background:var(--ac3);color:#000" onclick="saveSU()">💾 GUARDAR NODO SU</button>
+  </div>
+
+  <!-- Calculadora hidratación sustrato -->
+  <div class="card">
+    <div class="ct or">💧 Calculadora de Hidratación</div>
+    <div class="fr3">
+      <div class="fg"><label>Sustrato seco (g)</label><input type="number" id="hid-fibra" placeholder="400" oninput="calcHid()"></div>
+      <div class="fg"><label>Ratio agua:sustrato</label><input type="number" id="hid-ratio" placeholder="4.5" step="0.1" oninput="calcHid()"></div>
+      <div class="fg"><label>Nº de bolsas</label><input type="number" id="hid-bolsas" placeholder="4" min="1" oninput="calcHid()"></div>
+    </div>
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-s" onclick="presetHid(200,4.5)">200g/4.5</button>
+      <button class="btn btn-s" onclick="presetHid(400,4)">400g/4</button>
+      <button class="btn btn-s" onclick="presetHid(400,4.5)">400g/4.5</button>
+      <button class="btn btn-s" onclick="presetHid(500,4.5)">500g/4.5</button>
+    </div>
+    <div id="hid-result" class="calc-preview" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct or">📋 Registros SU</div>
+    <div id="su-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ST ══════════════════════ -->
+<div class="panel" id="tab-st">
+  <div class="card">
+    <div class="ct blu">📦 Nuevo Stock Final — ST</div>
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="st-fen" onchange="stRefreshOrigen()"></select></div>
+      <div class="fg"><label>Origen (nodo padre)</label><select id="st-origen"></select></div>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label>Rendimiento (gr)</label><input type="number" id="st-rend" min="0" value="0" oninput="stCalc()"></div>
+      <div class="fg"><label>Tipo de producto</label>
+        <select id="st-tipo2">
+          <option value="fresco">Fresco</option>
+          <option value="seco">Seco</option>
+          <option value="polvo">Polvo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="fg"><label>Peso seco esperado (gr)</label><input type="number" id="st-peso-seco" min="0" value="0" oninput="stCalc()"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Fecha cosecha</label><input type="date" id="st-fecha"></div>
+      <div class="fg"><label>Calidad (1-10)</label><input type="number" id="st-cal" min="1" max="10" value="7"></div>
+    </div>
+    <div class="fg"><label>Notas</label><input type="text" id="st-notas" placeholder="Observaciones de cosecha..."></div>
+    <div id="st-calc-preview" class="rbox" style="display:none"></div>
+    <button class="gbtn" style="margin-top:14px;background:var(--ac4);color:#000" onclick="saveST()">💾 GUARDAR NODO ST</button>
+  </div>
+  <div class="card">
+    <div class="ct blu">📋 Registros ST</div>
+    <div id="st-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ LOG ══════════════════════ -->
+<div class="panel" id="tab-log">
+  <div class="card">
+    <div class="ct">📋 Nuevo Log</div>
+    <div class="fr2">
+      <div class="fg"><label>Fenotipo</label><select id="log-fen" onchange="logRefreshNodo()"></select></div>
+      <div class="fg"><label>Nodo</label><select id="log-nodo"></select></div>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label>Tipo</label>
+        <select id="log-tipo">
+          <option value="observacion">Observación</option>
+          <option value="crecimiento">Crecimiento</option>
+          <option value="contaminacion">Contaminación</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="cosecha">Cosecha</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="fg"><label>Impacto (numérico)</label><input type="number" id="log-imp" value="0"></div>
+      <div class="fg"><label>Fecha</label><input type="date" id="log-fecha"></div>
+    </div>
+    <div class="fg"><label>Nota</label><input type="text" id="log-nota" placeholder="Descripción del evento..."></div>
+    <button class="gbtn" style="margin-top:14px" onclick="saveLog()">💾 GUARDAR LOG</button>
+  </div>
+  <div class="card">
+    <div class="ct">🕐 Historial Global</div>
+    <div class="fbar">
+      <label>FENOTIPO</label>
+      <select id="logf-fen" onchange="renderLogs()"><option value="">Todos</option></select>
+      <label>TIPO</label>
+      <select id="logf-tipo" onchange="renderLogs()">
+        <option value="">Todos</option>
+        <option value="observacion">Observación</option>
+        <option value="crecimiento">Crecimiento</option>
+        <option value="contaminacion">Contaminación</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="cosecha">Cosecha</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div id="log-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONFIG ══════════════════════ -->
+<div class="panel" id="tab-cfg">
+  <!-- GITHUB SYNC -->
+  <div class="card">
+    <div class="ct ac">&#9729; GitHub Sync</div>
+    <p style="font-size:13px;color:var(--tx2);margin-bottom:8px">Guardá y sincronizá tus datos en GitHub. El token se guarda solo en este dispositivo (localStorage).</p>
+
+    <div class="fr3 mb12">
+      <div class="fg"><label>GitHub Token (PAT)</label><input type="password" id="gh-token" placeholder="ghp_..."></div>
+      <div class="fg"><label>Usuario / Repo</label><input type="text" id="gh-repo" placeholder="fungiabduction-ui/BIOLAB"></div>
+      <div class="fg"><label>Archivo de datos</label><input type="text" id="gh-file" value="biolab-data.json"></div>
+    </div>
+    <div class="btn-row mb12">
+      <button class="btn btn-p" onclick="ghSaveCfg()">&#128273; Guardar configuración</button>
+      <button class="btn btn-s" onclick="ghTest()">&#128268; Probar conexión</button>
+    </div>
+    <div id="gh-status-box" class="rbox mb12" style="display:none"></div>
+    <div class="sdiv">Backup local</div>
+    <p style="font-size:12px;color:var(--tx3);margin-bottom:8px">Exportá todos tus datos como JSON o importalos desde un backup previo.</p>
+    <div class="btn-row mb12">
+      <button class="btn btn-s" onclick="localExport()">⬇ Exportar JSON local</button>
+      <button class="btn btn-s" onclick="document.getElementById('local-import-file').click()">⬆ Importar JSON local</button>
+      <input type="file" id="local-import-file" accept=".json" style="display:none" onchange="localImport(this)">
+    </div>
+    <div class="sdiv">GitHub Sync</div>
+    <div class="btn-row mb8">
+      <button class="btn btn-wn" onclick="ghPush()">&#11014; Guardar en GitHub</button>
+      <button class="btn btn-s" onclick="ghPull()">&#11015; Cargar desde GitHub</button>
+    </div>
+    <div id="gh-last" style="font-size:12px;color:var(--tx3);margin-bottom:12px"></div>
+    <div class="sdiv">Backup de seguridad (inmutable por fecha)</div>
+    <p style="font-size:12px;color:var(--tx3);margin-bottom:8px">Se guarda en <code>backups/</code> con fecha — nunca se sobreescribe. Usalo antes de cambios importantes.</p>
+    <div class="btn-row mb8">
+      <button class="btn btn-s" onclick="ghBackup()">&#128274; Guardar backup ahora</button>
+      <button class="btn btn-s" onclick="ghListBackups()">&#128203; Ver backups</button>
+    </div>
+    <div id="gh-bk-list" style="display:none;margin-top:8px"></div>
+    <div class="sdiv">Auto-sync</div>
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tx2)">
+      <input type="checkbox" id="gh-auto" style="width:auto" onchange="ghToggleAuto()">
+      <label for="gh-auto" style="text-transform:none;letter-spacing:0;cursor:pointer;color:var(--tx2)">Guardar en GitHub automáticamente cada vez que registrás un nodo o log</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct pur">🧪 Fórmulas de Medio</div>
+    <div class="fr2" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre</label><input type="text" id="cfg-frm-nombre" placeholder="MEA estándar"></div>
+      <div class="fg"><label>Versión</label><input type="text" id="cfg-frm-ver" value="v1"></div>
+    </div>
+    <div class="sdiv">Ingredientes de la fórmula</div>
+    <div id="cfg-frm-rows"></div>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn btn-s" onclick="addFrmRow()">+ Agregar Ingrediente</button>
+    </div>
+    <div id="cfg-frm-totales" class="kpi-grid" style="margin-bottom:12px"></div>
+    <button class="btn btn-pur" onclick="saveFrm()">+ Guardar Fórmula</button>
+    <div class="sdiv" style="margin-top:14px">Fórmulas guardadas</div>
+    <div id="cfg-frm-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct wn">⚙️ Tipos de Nodo</div>
+    <div id="cfg-nodetypes"></div>
+    <div class="fr3" style="margin-top:12px">
+      <div class="fg"><label>Código (2-4)</label><input type="text" id="nt-code" placeholder="MX" maxlength="4"></div>
+      <div class="fg"><label>Label</label><input type="text" id="nt-label" placeholder="Mezcla"></div>
+      <div class="fg"><label>Ícono</label><input type="text" id="nt-icon" placeholder="🔬"></div>
+    </div>
+    <button class="btn btn-s" onclick="saveNewNT()">+ Nuevo Tipo</button>
+  </div>
+
+  <div class="card">
+    <div class="ct er">💾 Datos</div>
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="exportData()">↓ Exportar JSON</button>
+      <button class="btn btn-s" onclick="document.getElementById('imp-file').click()">↑ Importar JSON</button>
+      <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-d" onclick="resetSystem()">✕ Reset sistema</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="m-cepa">
+  <div class="modal">
+    <div class="mtit">+ Nueva Cepa</div>
+    <div class="fg"><label>Nombre</label><input type="text" id="mc-nombre" placeholder="Ganoderma lucidum"></div>
+    <div class="fg"><label>Descripción</label><textarea id="mc-desc" rows="2"></textarea></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-p" onclick="saveCepa()">Guardar</button>
+      <button class="btn btn-s" onclick="closeM('m-cepa')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-fen">
+  <div class="modal">
+    <div class="mtit">+ Nuevo Fenotipo</div>
+    <div class="fg"><label>Cepa</label><select id="mf-cepa"></select></div>
+    <div class="fr2">
+      <div class="fg"><label>Nombre</label><input type="text" id="mf-nombre" placeholder="GL-Alpha"></div>
+      <div class="fg"><label>Estado</label><select id="mf-estado"><option value="activo">Activo</option><option value="archivado">Archivado</option></select></div>
+    </div>
+    <div class="fg"><label>Descripción</label><textarea id="mf-desc" rows="2"></textarea></div>
+    <div class="fg"><label>Notas</label><input type="text" id="mf-notas"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-p" onclick="saveFen()">Guardar</button>
+      <button class="btn btn-s" onclick="closeM('m-fen')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-log-quick">
+  <div class="modal">
+    <div class="mtit">+ Log rápido</div>
+    <input type="hidden" id="lq-nodo-id">
+    <input type="hidden" id="lq-fen-id">
+    <div class="fg"><label>Tipo</label>
+      <select id="lq-tipo">
+        <option value="observacion">Observación</option>
+        <option value="crecimiento">Crecimiento</option>
+        <option value="contaminacion">Contaminación</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="cosecha">Cosecha</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="fg"><label>Impacto</label><input type="number" id="lq-imp" value="0"></div>
+    <div class="fg"><label>Nota</label><input type="text" id="lq-nota" placeholder="Descripción..."></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-p" onclick="saveLogQuick()">Guardar</button>
+      <button class="btn btn-s" onclick="closeM('m-log-quick')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-frm-detail">
+  <div class="modal pur-modal" style="max-width:600px">
+    <div class="mtit pur">Detalle de Fórmula</div>
+    <div id="m-frm-detail-content"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-s" onclick="closeM('m-frm-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ═══════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════
+const K={strains:'bl2_strains',phenos:'bl2_phenos',nodes:'bl2_nodes',logs:'bl2_logs',ings:'bl2_ings',forms:'bl2_forms',ntypes:'bl2_ntypes',flow:'bl2_flow'};
+const gDB=k=>{try{return JSON.parse(localStorage.getItem(k))||[];}catch{return[];}};
+const sDB=(k,d)=>localStorage.setItem(k,JSON.stringify(d));
+const gOb=(k,def)=>{try{const v=JSON.parse(localStorage.getItem(k));return v||def;}catch{return def;}};
+const sOb=(k,d)=>localStorage.setItem(k,JSON.stringify(d));
+
+// ═══════════════════════════════════════
+// DEFAULT CONFIG
+// ═══════════════════════════════════════
+const DEF_NTYPES={
+  CI:{label:'Cultivo In Vitro',icon:'🧫'},
+  GR:{label:'Grano',icon:'🌾'},
+  IN:{label:'Inóculo',icon:'💉'},
+  SU:{label:'Sustrato',icon:'🧱'},
+  ST:{label:'Stock Final',icon:'📦'}
+};
+const DEF_FLOW={
+  transiciones:{CI:['GR','IN','ST'],GR:['IN'],IN:['SU'],SU:['ST'],ST:[]}
+};
+
+// ═══════════════════════════════════════
+// SEED
+// ═══════════════════════════════════════
+function seed(){
+  if(localStorage.getItem('bl2_seeded'))return;
+  const strains=[{id:'STR-0001',nombre:'Ganoderma lucidum',descripcion:'Cepa de referencia',fecha:now(),fenotipos:['FEN-0001','FEN-0002']}];
+  const phenos=[
+    {id:'FEN-0001',cepa_id:'STR-0001',nombre:'GL-Alpha',descripcion:'Alta vitalidad',estado:'activo',fecha:now(),notas:'Fenotipo más productivo',nodos:['CI-0001'],timeline:['LOG-0001','LOG-0002']},
+    {id:'FEN-0002',cepa_id:'STR-0001',nombre:'GL-Beta',descripcion:'Crecimiento lento',estado:'activo',fecha:now(),notas:'',nodos:[],timeline:[]}
+  ];
+  const ings=[
+    {id:'ING-0001',nombre:'Agua filtrada',unidad:'ml',aspecto:'Solvente',pc:0,pn:0},
+    {id:'ING-0002',nombre:'Agar agar',unidad:'gr',aspecto:'Soporte',pc:0,pn:0},
+    {id:'ING-0003',nombre:'Pharmaton G115',unidad:'ud',aspecto:'Cofactores',pc:0,pn:0},
+    {id:'ING-0004',nombre:'Levadura de cerveza Macro Salud',unidad:'gr',aspecto:'Nitrógeno',pc:0,pn:10},
+    {id:'ING-0005',nombre:'Almidón de maíz',unidad:'gr',aspecto:'Carbono',pc:44,pn:0},
+    {id:'ING-0006',nombre:'Extracto de malta Circe',unidad:'gr',aspecto:'Carbono',pc:65,pn:2},
+    {id:'ING-0007',nombre:'Carbonato de calcio',unidad:'gr',aspecto:'Mineral',pc:0,pn:0},
+    {id:'ING-0008',nombre:'L Arginina',unidad:'gr',aspecto:'Nitrógeno',pc:0,pn:32},
+    {id:'ING-0009',nombre:'Sulfato de magnesio',unidad:'gr',aspecto:'Mineral',pc:0,pn:0},
+    {id:'ING-0010',nombre:'Fosfato monopotásico',unidad:'gr',aspecto:'Mineral',pc:0,pn:0}
+  ];
+  const forms=[{id:'F-0001',nombre:'MEA estándar (Circe)',version:'v1',fecha:now(),ingredientes:[
+    {id:'ING-0001',qty:1000},
+    {id:'ING-0002',qty:18},
+    {id:'ING-0003',qty:1},
+    {id:'ING-0004',qty:4},
+    {id:'ING-0005',qty:6},
+    {id:'ING-0006',qty:5},
+    {id:'ING-0007',qty:0.5},
+    {id:'ING-0008',qty:3},
+    {id:'ING-0009',qty:0.45},
+    {id:'ING-0010',qty:0.45}
+  ]}];
+  const nodes=[{id:'CI-0001',tipo:'CI',fen_id:'FEN-0001',fecha:now(),estado:'activo',origen_id:null,outputs:[],meta:{formula_id:'F-0001',placas:5,placas_restantes:5,vol_total:500,vol_placa:100,temp:25,notas:'Cultivo inicial con MEA Circe'}}];
+  const logs=[
+    {id:'LOG-0001',fecha:new Date(Date.now()-86400000*2).toISOString(),fen_id:'FEN-0001',nodo_id:'CI-0001',tipo:'observacion',impacto:0,nota:'CI creado'},
+    {id:'LOG-0002',fecha:new Date(Date.now()-86400000).toISOString(),fen_id:'FEN-0001',nodo_id:'CI-0001',tipo:'crecimiento',impacto:1,nota:'Micelio denso uniforme'}
+  ];
+  sDB(K.strains,strains);sDB(K.phenos,phenos);sDB(K.ings,ings);sDB(K.forms,forms);sDB(K.nodes,nodes);sDB(K.logs,logs);
+  sOb(K.ntypes,DEF_NTYPES);sOb(K.flow,DEF_FLOW);
+  localStorage.setItem('bl2_seeded','1');
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function now(){return new Date().toISOString();}
+function today(){return new Date().toISOString().slice(0,10);}
+function fDate(iso){if(!iso)return'—';try{const d=new Date(iso);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}catch{return iso;}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function nxtId(prefix,db){const nums=db.map(x=>x.id).filter(id=>id&&id.startsWith(prefix+'-')).map(id=>parseInt(id.split('-')[1])||0);return `${prefix}-${String((nums.length?Math.max(...nums):0)+1).padStart(4,'0')}`;}
+function nxtIdType(tipo,nodes){const same=nodes.filter(n=>n.tipo===tipo);return nxtId(tipo,same);}
+
+// ═══════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════
+let currentTab='fen';
+function ST(n){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[data-tab="${n}"]`).classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+  currentTab=n;
+  if(n==='fen'){renderFenotipos();renderDash();}
+  if(n==='ci'){refreshFenSelects();ciRenderLastFormula();ciRenderSeguimiento();}
+  if(n==='gr'){refreshFenSelects();renderNodeList('GR','gr-list');}
+  if(n==='in'){refreshFenSelects();renderNodeList('IN','in-list');}
+  if(n==='su'){renderNodeList('SU','su-list');}
+  if(n==='st'){renderNodeList('ST','st-list');}
+  if(n==='log'){renderLogs();populateLogModal();}
+  if(n==='cfg'){renderCfg();}
+  updateHeader();
+}
+
+function showFenDet(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-fen-det').classList.add('active');
+  renderFenDetail(id);
+}
+function showNodeDet(id,backTab){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-node-det').classList.add('active');
+  renderNodeDetail(id,backTab||'fen');
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function openM(id){
+  if(id==='m-fen'){const strains=gDB(K.strains);document.getElementById('mf-cepa').innerHTML=strains.map(s=>`<option value="${s.id}">${esc(s.nombre)}</option>`).join('')||'<option value="">Sin cepas</option>';}
+  document.getElementById(id).classList.add('open');
+}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// ═══════════════════════════════════════
+// NOTIF
+// ═══════════════════════════════════════
+function sN(msg,err=false){const n=document.getElementById('notif');n.textContent=msg;n.className='notif'+(err?' err':'');setTimeout(()=>n.classList.add('show'),10);setTimeout(()=>n.classList.remove('show'),2600);}
+
+// ═══════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════
+function updateHeader(){
+  const nodes=gDB(K.nodes);const forms=gDB(K.forms);
+  document.getElementById('hn-total').textContent=nodes.length;
+  document.getElementById('hn-act').textContent=nodes.filter(n=>n.estado==='activo').length;
+  document.getElementById('hn-cont').textContent=nodes.filter(n=>n.estado==='contaminado').length;
+  document.getElementById('hn-form').textContent=forms.length;
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDash(){
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);
+  const total=nodes.length;const act=nodes.filter(n=>n.estado==='activo').length;
+  const cont=nodes.filter(n=>n.estado==='contaminado').length;
+  const stNodes=nodes.filter(n=>n.tipo==='ST'&&n.meta&&n.meta.rendimiento_gr);
+  const avgRend=stNodes.length?(stNodes.reduce((s,n)=>s+(parseFloat(n.meta.rendimiento_gr)||0),0)/stNodes.length).toFixed(1):'—';
+  const contamPct=total?((cont/total)*100).toFixed(1):'0.0';
+  const formsEnUso=new Set(nodes.filter(n=>n.tipo==='CI'&&n.estado==='activo'&&n.meta?.formula_id).map(n=>n.meta.formula_id)).size;
+  document.getElementById('dash-kpi').innerHTML=`
+    <div class="kpi"><div class="klbl">Nodos activos</div><div class="kval">${act}</div><div class="ksub">de ${total} totales</div></div>
+    <div class="kpi er"><div class="klbl">Contaminación</div><div class="kval er">${contamPct}%</div><div class="ksub">${cont} nodos</div></div>
+    <div class="kpi wn"><div class="klbl">Rend. promedio ST</div><div class="kval wn">${avgRend}</div><div class="ksub">gramos</div></div>
+    <div class="kpi pur"><div class="klbl">Fórmulas en uso</div><div class="kval pur">${formsEnUso}</div><div class="ksub">en CI activos</div></div>
+    <div class="kpi blu"><div class="klbl">Fenotipos</div><div class="kval blu">${phenos.length}</div><div class="ksub">${phenos.filter(p=>p.estado==='activo').length} activos</div></div>`;
+}
+
+// ═══════════════════════════════════════
+// FENOTIPOS
+// ═══════════════════════════════════════
+function renderFenotipos(){
+  const strains=gDB(K.strains);const phenos=gDB(K.phenos);const nodes=gDB(K.nodes);
+  const el=document.getElementById('strains-list');
+  if(!strains.length){el.innerHTML='<div class="empty">Sin cepas. Creá una para comenzar.</div>';return;}
+  el.innerHTML=strains.map(s=>{
+    const fps=phenos.filter(p=>p.cepa_id===s.id);
+    const pcards=fps.map(p=>{
+      const pnodes=nodes.filter(n=>n.fen_id===p.id);
+      const pact=pnodes.filter(n=>n.estado==='activo').length;
+      const pcont=pnodes.filter(n=>n.estado==='contaminado').length;
+      return `<div class="pcard" onclick="showFenDet('${p.id}')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div class="pcard-name">${esc(p.nombre)}</div>
+          <span class="badge ${p.estado==='activo'?'bok':p.estado==='contaminado'?'ber':'bgr'}">${p.estado}</span>
+        </div>
+        <div style="font-family:var(--mo);font-size:14px;color:var(--tx3)">${p.id}</div>
+        <div class="pcard-meta">
+          <span>🧩 ${pnodes.length} nodos</span>
+          <span style="color:var(--ac)">✓ ${pact}</span>
+          ${pcont?`<span style="color:var(--er)">⚠ ${pcont}</span>`:''}
+          ${p.notas?`<span>${esc(p.notas.substring(0,30))}${p.notas.length>30?'…':''}</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="sg">
+      <div class="sg-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+        <div>
+          <div class="sg-name">🔬 ${esc(s.nombre)}</div>
+          <div class="sg-id">${s.id} · ${fps.length} fenotipos</div>
+        </div>
+        <span style="font-family:var(--mo);font-size:14px;color:var(--tx3)">▼</span>
+      </div>
+      <div class="sg-body">${fps.length?pcards:'<div class="empty">Sin fenotipos</div>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFenDetail(id){
+  const phenos=gDB(K.phenos);const strains=gDB(K.strains);const nodes=gDB(K.nodes);const logs=gDB(K.logs);const ntypes=gOb(K.ntypes,DEF_NTYPES);
+  const p=phenos.find(x=>x.id===id);if(!p)return;
+  const s=strains.find(x=>x.id===p.cepa_id);
+  const pnodes=nodes.filter(n=>n.fen_id===id);
+  const plogs=logs.filter(l=>l.fen_id===id).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+
+  const nodesHtml=pnodes.length?`<div class="tw"><table><thead><tr><th>ID</th><th>Tipo</th><th>Estado</th><th>Origen</th><th>Hijos</th><th>Creado</th><th></th></tr></thead><tbody>
+    ${pnodes.map(n=>{const nt=ntypes[n.tipo]||{icon:'❓',label:n.tipo};return`<tr>
+      <td class="ac">${n.id}</td>
+      <td>${nt.icon} <span class="ntchip nt-${n.tipo}">${n.tipo}</span></td>
+      <td><span class="badge ${bCls(n.estado)}">${n.estado}</span></td>
+      <td class="mu">${n.origen_id||'—'}</td>
+      <td>${(n.outputs||[]).length}</td>
+      <td class="mu">${fDate(n.fecha)}</td>
+      <td><button class="btn btn-s" style="height:28px;font-size:11px" onclick="showNodeDet('${n.id}','fen-det')">VER</button></td>
+    </tr>`}).join('')}
+  </tbody></table></div>`:'<div class="empty">Sin nodos</div>';
+
+  const logsHtml=plogs.length?plogs.map(l=>`<div class="log-item ${l.tipo}">
+    <div class="log-tipo ${l.tipo}">${l.tipo}${l.impacto!==0?` [${l.impacto>0?'+':''}${l.impacto}]`:''}</div>
+    <div style="color:var(--tx)">${esc(l.nota)}</div>
+    <div class="log-meta">${l.nodo_id} · ${fDate(l.fecha)}</div>
+  </div>`).join(''):'<div class="empty">Sin logs</div>';
+
+  document.getElementById('fen-det-content').innerHTML=`
+    <span class="back-link" onclick="ST('fen')">← Fenotipos</span>
+    <div class="bc"><a onclick="ST('fen')">FENOTIPOS</a><span class="sep">›</span><span style="color:var(--wn)">${esc(s?.nombre||'—')}</span><span class="sep">›</span><span>${esc(p.nombre)}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:12px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="ct">${esc(p.nombre)} · ${p.id}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <span class="badge ${bCls(p.estado)}">${p.estado}</span>
+            <button class="btn btn-s" style="height:28px" onclick="cycleEstado('fen','${p.id}','${id}')">Cambiar estado</button>
+            <button class="btn btn-p" style="height:28px" onclick="openQuickNode('${id}')">+ Nodo</button>
+            <button class="btn btn-s" style="height:28px" onclick="openLogQuick('','${id}')">+ Log</button>
+          </div>
+          <div class="fr2" style="font-family:var(--mo);font-size:14px;gap:8px">
+            <div><div style="font-size:11px;color:var(--tx3);letter-spacing:1px;margin-bottom:3px">CEPA</div>${esc(s?.nombre||'—')}</div>
+            <div><div style="font-size:11px;color:var(--tx3);letter-spacing:1px;margin-bottom:3px">CREADO</div>${fDate(p.fecha)}</div>
+            ${p.descripcion?`<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--tx3);letter-spacing:1px;margin-bottom:3px">DESCRIPCIÓN</div>${esc(p.descripcion)}</div>`:''}
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">Nodos (${pnodes.length})</div>
+          ${nodesHtml}
+        </div>
+      </div>
+      <div class="card" style="height:fit-content">
+        <div class="ct">Timeline</div>
+        ${logsHtml}
+      </div>
+    </div>`;
+}
+
+function openQuickNode(fenId){
+  // Route to correct tab
+  ST('ci');
+  setTimeout(()=>{
+    const sel=document.getElementById('ci-fen');
+    if(sel)sel.value=fenId;
+    ciRefreshOrigen();
+  },100);
+}
+
+function cycleEstado(entity,id,detailId){
+  const opts=['activo','contaminado','archivado'];
+  if(entity==='fen'){
+    const phenos=gDB(K.phenos);const p=phenos.find(x=>x.id===id);if(!p)return;
+    p.estado=opts[(opts.indexOf(p.estado)+1)%opts.length];
+    sDB(K.phenos,phenos);renderFenDetail(detailId);sN('Estado: '+p.estado);
+  }
+  if(entity==='node'){
+    const opts2=['activo','contaminado','transferido','archivado'];
+    const nodes=gDB(K.nodes);const n=nodes.find(x=>x.id===id);if(!n)return;
+    n.estado=opts2[(opts2.indexOf(n.estado)+1)%opts2.length];
+    sDB(K.nodes,nodes);renderNodeDetail(id,detailId);sN('Estado: '+n.estado);
+  }
+}
+
+// ═══════════════════════════════════════
+// CEPA / FENOTIPO SAVE
+// ═══════════════════════════════════════
+function saveCepa(){
+  const nombre=document.getElementById('mc-nombre').value.trim();
+  if(!nombre)return sN('Nombre requerido',true);
+  const strains=gDB(K.strains);
+  strains.push({id:nxtId('STR',strains),nombre,descripcion:document.getElementById('mc-desc').value.trim(),fecha:now(),fenotipos:[]});
+  sDB(K.strains,strains);closeM('m-cepa');
+  document.getElementById('mc-nombre').value='';document.getElementById('mc-desc').value='';
+  renderFenotipos();sN('Cepa creada');
+}
+function saveFen(){
+  const cepa_id=document.getElementById('mf-cepa').value;
+  const nombre=document.getElementById('mf-nombre').value.trim();
+  if(!cepa_id||!nombre)return sN('Cepa y nombre requeridos',true);
+  const phenos=gDB(K.phenos);const strains=gDB(K.strains);
+  const fen={id:nxtId('FEN',phenos),cepa_id,nombre,descripcion:document.getElementById('mf-desc').value.trim(),estado:document.getElementById('mf-estado').value,fecha:now(),notas:document.getElementById('mf-notas').value.trim(),nodos:[],timeline:[]};
+  phenos.push(fen);sDB(K.phenos,phenos);
+  const s=strains.find(x=>x.id===cepa_id);if(s){s.fenotipos=s.fenotipos||[];s.fenotipos.push(fen.id);sDB(K.strains,strains);}
+  closeM('m-fen');['mf-nombre','mf-desc','mf-notas'].forEach(x=>document.getElementById(x).value='');
+  renderFenotipos();sN('Fenotipo creado: '+fen.id);
+}
+
+// ═══════════════════════════════════════
+// FEN SELECTS FOR NODE TABS
+// ═══════════════════════════════════════
+function refreshFenSelects(){
+  const phenos=gDB(K.phenos);
+  const html=phenos.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${p.id})</option>`).join('');
+  ['ci','gr','in','su','st'].forEach(t=>{
+    const el=document.getElementById(t+'-fen');
+    if(el){el.innerHTML=html||'<option value="">Sin fenotipos</option>';}
+  });
+  ciRefreshOrigen();grRefreshOrigen();inRefreshOrigen();suRefreshOrigen();stRefreshOrigen();
+}
+
+function getOrigenHTML(fenId,allowedFrom){
+  const nodes=gDB(K.nodes);const flow=gOb(K.flow,DEF_FLOW);
+  const candidates=nodes.filter(n=>{
+    if(n.fen_id!==fenId||n.estado!=='activo')return false;
+    const trans=flow.transiciones[n.tipo]||[];
+    return allowedFrom.some(t=>trans.includes(t));
+  });
+  return`<option value="">— raíz (sin origen) —</option>`+candidates.map(n=>`<option value="${n.id}">${n.id} [${n.tipo}]</option>`).join('');
+}
+
+function ciRefreshOrigen(){const v=document.getElementById('ci-fen')?.value||'';document.getElementById('ci-origen').innerHTML=getOrigenHTML(v,['CI']);}
+function grRefreshOrigen(){const v=document.getElementById('gr-fen')?.value||'';document.getElementById('gr-origen').innerHTML=getOrigenHTML(v,['GR']);}
+function inRefreshOrigen(){const v=document.getElementById('in-fen')?.value||'';document.getElementById('in-origen').innerHTML=getOrigenHTML(v,['IN']);}
+function suRefreshOrigen(){const v=document.getElementById('su-fen')?.value||'';document.getElementById('su-origen').innerHTML=getOrigenHTML(v,['SU']);}
+function stRefreshOrigen(){const v=document.getElementById('st-fen')?.value||'';document.getElementById('st-origen').innerHTML=getOrigenHTML(v,['ST']);}
+
+// ═══════════════════════════════════════
+// NODE LIST (shared)
+// ═══════════════════════════════════════
+function renderNodeList(tipo,elId,filterEstadoId){
+  const nodes=gDB(K.nodes).filter(n=>n.tipo===tipo);
+  const phenos=gDB(K.phenos);const ntypes=gOb(K.ntypes,DEF_NTYPES);
+  const nt=ntypes[tipo]||{icon:'❓',label:tipo};
+  const fEst=filterEstadoId?document.getElementById(filterEstadoId)?.value:'';
+  const filtered=fEst?nodes.filter(n=>n.estado===fEst):nodes;
+  const el=document.getElementById(elId);
+  if(!filtered.length){el.innerHTML='<div class="empty">Sin registros '+tipo+'</div>';return;}
+  el.innerHTML=filtered.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(n=>{
+    const fen=phenos.find(p=>p.id===n.fen_id);
+    const metaStr=buildMetaStr(n);
+    return`<div class="hi ${n.estado}" onclick="showNodeDet('${n.id}','${tipo.toLowerCase()}')">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="hid">${n.id}</div>
+          <span class="badge ${bCls(n.estado)}">${n.estado}</span>
+          ${n.origen_id?`<span style="font-family:var(--mo);font-size:11px;color:var(--tx3)">← ${n.origen_id}</span>`:''}
+        </div>
+        <div class="hdate">${fDate(n.fecha)}</div>
+        <div class="hinfo">${esc(fen?.nombre||n.fen_id)}${metaStr?' · '+metaStr:''}</div>
+        ${n.meta?.notas?`<div class="hnota">${esc(n.meta.notas)}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${(n.outputs||[]).length?`<span style="font-family:var(--mo);font-size:14px;color:var(--tx3)">${n.outputs.length} hijos</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildMetaStr(n){
+  if(!n.meta)return'';
+  if(n.tipo==='CI')return`${n.meta.placas||0} placas · ${n.meta.vol_placa||0}ml/placa`;
+  if(n.tipo==='GR')return`${n.meta.gramos_iniciales||0}gr ${n.meta.tipo_grano?'· '+n.meta.tipo_grano:''}`;
+  if(n.tipo==='IN')return`${n.meta.vol_ml||0}ml · ${n.meta.tipo||''}`;
+  if(n.tipo==='SU')return`${n.meta.bolsas||0} bolsas · ${n.meta.peso_bolsa||0}kg c/u`;
+  if(n.tipo==='ST')return`${n.meta.rendimiento_gr||0}gr · ${n.meta.tipo_producto||''}`;
+  return'';
+}
+
+function bCls(e){return{activo:'bok',contaminado:'ber',transferido:'bwn',archivado:'bgr'}[e]||'bgr';}
+
+// ═══════════════════════════════════════
+// NODE DETAIL
+// ═══════════════════════════════════════
+function renderNodeDetail(id,backTab){
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const strains=gDB(K.strains);
+  const logs=gDB(K.logs);const forms=gDB(K.forms);const ings=gDB(K.ings);const ntypes=gOb(K.ntypes,DEF_NTYPES);
+  const n=nodes.find(x=>x.id===id);if(!n)return;
+  const nt=ntypes[n.tipo]||{icon:'❓',label:n.tipo};
+  const fen=phenos.find(p=>p.id===n.fen_id);
+  const s=fen?strains.find(x=>x.id===fen.cepa_id):null;
+
+  // Build ancestry
+  const ancestry=[];let cur=n;
+  while(cur?.origen_id){const par=nodes.find(x=>x.id===cur.origen_id);if(par)ancestry.unshift(par);cur=par;}
+
+  // Outputs tree
+  function buildTree(nid,depth=0){
+    const nd=nodes.find(x=>x.id===nid);if(!nd)return'';
+    const children=(nd.outputs||[]).map(c=>buildTree(c,depth+1)).join('');
+    return`<div class="tree-node" style="padding-left:${depth*16}px">
+      <span style="color:var(--tx3)">${depth>0?'└─':''}</span>
+      <a onclick="showNodeDet('${nd.id}','${backTab}')">${nd.id}</a>
+      <span class="badge ${bCls(nd.estado)}">${nd.estado}</span>
+      <span class="ntchip nt-${nd.tipo}">${nd.tipo}</span>
+    </div>${children}`;
+  }
+
+  // Meta display
+  const metaHtml=buildMetaDetail(n,forms,ings);
+  const nodeLogs=logs.filter(l=>l.nodo_id===id).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+
+  const backFn=backTab==='fen-det'?`showFenDet('${n.fen_id}')`:`ST('${backTab}')`;
+  const backLabel=backTab==='fen-det'?'← Fenotipo':'← '+backTab.toUpperCase();
+
+  document.getElementById('node-det-content').innerHTML=`
+    <span class="back-link" onclick="${backFn}">${backLabel}</span>
+    <div class="bc">
+      ${s?`<span style="color:var(--wn)">${esc(s.nombre)}</span><span class="sep">›</span>`:''}
+      ${fen?`<a onclick="showFenDet('${fen.id}')">${esc(fen.nombre)}</a><span class="sep">›</span>`:''}
+      ${ancestry.map(a=>`<a onclick="showNodeDet('${a.id}','${backTab}')">${a.id}</a><span class="sep">›</span>`).join('')}
+      <span>${n.id}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:12px">
+      <div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="ct">${nt.icon} ${n.id} · ${nt.label}</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+            <span class="badge ${bCls(n.estado)}">${n.estado}</span>
+            <button class="btn btn-s" style="height:28px" onclick="cycleEstado('node','${n.id}','${backTab}')">Cambiar estado</button>
+            <button class="btn btn-p" style="height:28px" onclick="openLogQuick('${n.id}','${n.fen_id}')">+ Log</button>
+          </div>
+          ${metaHtml}
+        </div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="ct">🔗 Ascendencia</div>
+          <div class="bc" style="margin-bottom:8px">
+            ${s?`<span style="color:var(--wn)">${esc(s.nombre)}</span><span class="sep">→</span>`:''}
+            ${fen?`<a onclick="showFenDet('${fen.id}')">${esc(fen.nombre)}</a><span class="sep">→</span>`:''}
+            ${ancestry.map(a=>`<a onclick="showNodeDet('${a.id}','${backTab}')" style="color:var(--ac)">${a.id}</a><span class="sep">→</span>`).join('')}
+            <span>[actual]</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">Outputs (${(n.outputs||[]).length})</div>
+          ${(n.outputs||[]).length?(n.outputs||[]).map(oid=>buildTree(oid)).join(''):'<div class="empty">Sin outputs</div>'}
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Log del nodo</div>
+        ${nodeLogs.length?nodeLogs.map(l=>`<div class="log-item ${l.tipo}">
+          <div class="log-tipo ${l.tipo}">${l.tipo}${l.impacto!==0?` [${l.impacto>0?'+':''}${l.impacto}]`:''}</div>
+          <div style="color:var(--tx);font-size:14px;font-family:var(--mo)">${esc(l.nota)}</div>
+          <div class="log-meta">${fDate(l.fecha)}</div>
+        </div>`).join(''):'<div class="empty">Sin logs</div>'}
+      </div>
+    </div>`;
+}
+
+function buildMetaDetail(n,forms,ings){
+  if(!n.meta)return'';
+  const rows=[];
+  if(n.tipo==='CI'){
+    const f=forms.find(x=>x.id===n.meta.formula_id);
+    if(f)rows.push(`<div style="grid-column:1/-1"><div class="klbl">Fórmula</div><div style="color:var(--ac2)">${esc(f.nombre)} (${f.version})</div></div>`);
+    rows.push(`<div><div class="klbl">Placas</div><div>${n.meta.placas||0}</div></div>`);
+    rows.push(`<div><div class="klbl">Placas restantes</div><div style="color:var(--wn)">${n.meta.placas_restantes||0}</div></div>`);
+    rows.push(`<div><div class="klbl">Vol total</div><div>${n.meta.vol_total||0} ml</div></div>`);
+    rows.push(`<div><div class="klbl">Vol/placa</div><div style="color:var(--ac)">${n.meta.vol_placa||0} ml</div></div>`);
+    if(n.meta.temp)rows.push(`<div><div class="klbl">Temperatura</div><div>${n.meta.temp}°C</div></div>`);
+  }else if(n.tipo==='GR'){
+    rows.push(`<div><div class="klbl">Tipo grano</div><div>${esc(n.meta.tipo_grano||'—')}</div></div>`);
+    rows.push(`<div><div class="klbl">Gramos iniciales</div><div>${n.meta.gramos_iniciales||0} gr</div></div>`);
+    rows.push(`<div><div class="klbl">Gramos restantes</div><div style="color:var(--wn)">${n.meta.gramos_restantes||0} gr</div></div>`);
+    rows.push(`<div><div class="klbl">% Humedad</div><div>${n.meta.humedad||0}%</div></div>`);
+    if(n.meta.agua_necesaria)rows.push(`<div><div class="klbl">Agua necesaria</div><div style="color:var(--ac4)">${n.meta.agua_necesaria} ml</div></div>`);
+  }else if(n.tipo==='IN'){
+    rows.push(`<div><div class="klbl">Volumen</div><div>${n.meta.vol_ml||0} ml</div></div>`);
+    rows.push(`<div><div class="klbl">Tipo</div><div>${esc(n.meta.tipo||'—')}</div></div>`);
+    rows.push(`<div><div class="klbl">Concentración</div><div>${esc(n.meta.concentracion||'—')}</div></div>`);
+  }else if(n.tipo==='SU'){
+    rows.push(`<div><div class="klbl">Bolsas</div><div>${n.meta.bolsas||0}</div></div>`);
+    rows.push(`<div><div class="klbl">Peso bolsa</div><div>${n.meta.peso_bolsa||0} kg</div></div>`);
+    rows.push(`<div><div class="klbl">Peso total</div><div style="color:var(--ac)">${((n.meta.bolsas||0)*(n.meta.peso_bolsa||0)).toFixed(2)} kg</div></div>`);
+    rows.push(`<div><div class="klbl">% Humedad</div><div>${n.meta.humedad||0}%</div></div>`);
+    if(n.meta.composicion)rows.push(`<div style="grid-column:1/-1"><div class="klbl">Composición</div><div>${esc(n.meta.composicion)}</div></div>`);
+  }else if(n.tipo==='ST'){
+    rows.push(`<div><div class="klbl">Rendimiento</div><div style="color:var(--ac)">${n.meta.rendimiento_gr||0} gr</div></div>`);
+    rows.push(`<div><div class="klbl">Tipo</div><div>${esc(n.meta.tipo_producto||'—')}</div></div>`);
+    rows.push(`<div><div class="klbl">Calidad</div><div style="color:var(--wn)">${n.meta.calidad||'—'}/10</div></div>`);
+    if(n.meta.fecha_cosecha)rows.push(`<div><div class="klbl">Fecha cosecha</div><div>${n.meta.fecha_cosecha}</div></div>`);
+  }
+  if(n.meta.notas)rows.push(`<div style="grid-column:1/-1"><div class="klbl">Notas</div><div style="color:var(--tx2)">${esc(n.meta.notas)}</div></div>`);
+  return`<div class="fr3" style="font-family:var(--mo);font-size:14px;gap:12px">${rows.join('')}</div>`;
+}
+
+// ═══════════════════════════════════════
+// CI LOGIC — REDISEÑO COMPLETO
+// ═══════════════════════════════════════
+const ASP_COLORS={Solvente:'#44aaff',Carbono:'#ffaa00','Nitrógeno':'#00e5a0',Mineral:'#ff6b35',Cofactores:'#7c6fff',Soporte:'#888888'};
+let ciPieChart=null;
+let ciCurrentFormula=null; // {id, ingredientes:[{id,qty}]}  — fórmula activa en pantalla
+let ciMode='existing'; // 'existing' | 'new'
+
+// ── Modo toggle ──
+function ciSetMode(mode){
+  ciMode=mode;
+  document.getElementById('ci-mode-existing').className='btn '+(mode==='existing'?'btn-p':'btn-s');
+  document.getElementById('ci-mode-new').className='btn '+(mode==='new'?'btn-p':'btn-s');
+  document.getElementById('ci-existing-mode').style.display=mode==='existing'?'block':'none';
+  document.getElementById('ci-new-mode').style.display=mode==='new'?'block':'none';
+  if(mode==='existing')ciFormulaChange();
+  if(mode==='new'){ciCurrentFormula=null;document.getElementById('ci-analisis-card').style.display='none';}
+}
+
+// ── Fórmula existente seleccionada ──
+function ciFormulaChange(){
+  const fid=document.getElementById('ci-formula').value;
+  if(!fid){document.getElementById('ci-analisis-card').style.display='none';ciCurrentFormula=null;return;}
+  const forms=gDB(K.forms);
+  const f=forms.find(x=>x.id===fid);if(!f)return;
+  ciCurrentFormula={id:fid,ingredientes:f.ingredientes};
+  document.getElementById('ci-analisis-card').style.display='block';
+  ciRenderAnalisis(f.ingredientes,true);
+}
+
+// ── Nueva fórmula: agregar fila de ingrediente ──
+function ciAddFrmRow(){
+  const ings=gDB(K.ings);
+  const cont=document.getElementById('ci-frm-rows');
+  const rid='cirow'+Date.now();
+  const div=document.createElement('div');
+  div.id=rid;
+  div.className='ing-row';
+  div.innerHTML=`
+    <select onchange="ciCalcNewFormula()">${ings.map(i=>`<option value="${i.id}">${esc(i.nombre)} (${i.unidad})</option>`).join('')}</select>
+    <input type="number" placeholder="cantidad" min="0" step="0.01" oninput="ciCalcNewFormula()" style="width:90px">
+    <span style="font-family:var(--mo);font-size:14px;color:var(--tx3);padding:9px 4px">${ings[0]?.unidad||''}</span>
+    <button onclick="document.getElementById('${rid}').remove();ciCalcNewFormula()" style="background:none;border:1px solid rgba(255,68,85,.3);color:var(--er);cursor:pointer;border-radius:4px;height:34px;width:32px;font-size:14px">✕</button>`;
+  div.querySelector('select').addEventListener('change',function(){
+    const i=ings.find(x=>x.id===this.value);
+    div.querySelector('span').textContent=i?.unidad||'';
+    ciCalcNewFormula();
+  });
+  cont.appendChild(div);
+}
+
+// ── Calcular totales de fórmula nueva en tiempo real ──
+function ciCalcNewFormula(){
+  const ings=gDB(K.ings);
+  const ingRows=[];
+  document.querySelectorAll('#ci-frm-rows .ing-row').forEach(row=>{
+    const sel=row.querySelector('select');const inp=row.querySelector('input');
+    if(!sel||!inp||!sel.value)return;
+    ingRows.push({id:sel.value,qty:parseFloat(inp.value)||0});
+  });
+  ciCurrentFormula={id:null,ingredientes:ingRows};
+  document.getElementById('ci-analisis-card').style.display=ingRows.length?'block':'none';
+  if(ingRows.length)ciRenderAnalisis(ingRows,false);
+  // Totales en recuadro
+  const {c,n,masa}=calcCN(ingRows,ings);
+  document.getElementById('ci-frm-totales').innerHTML=`
+    <div class="kpi pur"><div class="klbl">C Total</div><div class="kval pur" style="font-size:14px">${c.toFixed(2)}</div></div>
+    <div class="kpi"><div class="klbl">N Total</div><div class="kval" style="font-size:14px">${n.toFixed(2)}</div></div>
+    <div class="kpi wn"><div class="klbl">C/N Ratio</div><div class="kval wn" style="font-size:14px">${n>0?(c/n).toFixed(2):'—'}</div></div>
+    <div class="kpi or"><div class="klbl">Masa total</div><div class="kval or" style="font-size:14px">${masa.toFixed(1)}</div></div>`;
+  const cnBox=document.getElementById('ci-cn-box');
+  if(masa>0){
+    cnBox.style.display='block';
+    const cn=n>0?(c/n).toFixed(2):'—';
+    const cnNum=parseFloat(cn);
+    const cnStatus=isNaN(cnNum)?'—':cnNum<20?'⚠ Bajo (ideal: 20–40)':cnNum>60?'⚠ Alto (ideal: 20–40)':'✓ Rango óptimo';
+    cnBox.innerHTML=`<span class="ac">C/N =</span> <strong style="font-size:15px;color:var(--wn)">${cn}</strong> &nbsp;|&nbsp; ${cnStatus} &nbsp;|&nbsp; <span class="ac">C:</span> ${c.toFixed(2)}g &nbsp;|&nbsp; <span class="ac">N:</span> ${n.toFixed(2)}g`;
+  }else{cnBox.style.display='none';}
+}
+
+// ── Guardar fórmula nueva desde el constructor CI ──
+function ciSaveNewFormula(){
+  const nombre=document.getElementById('ci-frm-nombre').value.trim();
+  if(!nombre)return sN('Ingresá nombre para la fórmula',true);
+  if(!ciCurrentFormula||!ciCurrentFormula.ingredientes.length)return sN('Agregá al menos un ingrediente',true);
+  const forms=gDB(K.forms);
+  const f={id:nxtId('F',forms),nombre,version:document.getElementById('ci-frm-ver').value||'v1',fecha:now(),ingredientes:ciCurrentFormula.ingredientes};
+  forms.push(f);sDB(K.forms,forms);
+  ciCurrentFormula.id=f.id;
+  // Actualizar selector de fórmulas
+  const sel=document.getElementById('ci-formula');
+  const opt=document.createElement('option');opt.value=f.id;opt.textContent=`${f.nombre} (${f.version})`;sel.appendChild(opt);sel.value=f.id;
+  // También actualizar select en config
+  renderCfg();
+  sN('Fórmula guardada: '+f.id);
+}
+
+// ── RENDERIZAR ANÁLISIS (compartido entre modo existing y new) ──
+function ciRenderAnalisis(ingRows,hasAspFilter){
+  const ings=gDB(K.ings);
+  // chips de aspecto (toggle)
+  const aspects=[...new Set(ingRows.map(r=>{const i=ings.find(x=>x.id===r.id);return i?.aspecto;}).filter(Boolean))];
+  const chipsCont=document.getElementById('ci-asp-filter-chips');
+  // Solo rebuild chips si cambió la fórmula (evitar reset de toggles)
+  const existingAspects=[...chipsCont.querySelectorAll('.chtag')].map(c=>c.dataset.asp);
+  const same=existingAspects.length===aspects.length&&aspects.every(a=>existingAspects.includes(a));
+  if(!same){
+    chipsCont.innerHTML=aspects.map(a=>`<label class="chtag on" data-asp="${a}" onclick="toggleCiAsp(this,'${a}')"><input type="checkbox" checked value="${a}">${a}</label>`).join('');
+  }
+  ciUpdatePie(ingRows);
+  ciUpdateKpisTable(ingRows);
+}
+
+function toggleCiAsp(el,asp){
+  el.classList.toggle('on');
+  if(ciCurrentFormula)ciUpdatePie(ciCurrentFormula.ingredientes);
+}
+
+function ciUpdatePie(ingRows){
+  const ings=gDB(K.ings);
+  const activeAsp=[...document.querySelectorAll('#ci-asp-filter-chips .chtag.on')].map(x=>x.dataset.asp);
+  // Agrupar por aspecto (solo activos)
+  const byAsp={};
+  ingRows.forEach(r=>{
+    const i=ings.find(x=>x.id===r.id);if(!i||!activeAsp.includes(i.aspecto))return;
+    byAsp[i.aspecto]=(byAsp[i.aspecto]||0)+r.qty;
+  });
+  const labels=Object.keys(byAsp);const data=Object.values(byAsp);
+  const colors=labels.map(a=>ASP_COLORS[a]||'#666');
+  const total=data.reduce((s,v)=>s+v,0);
+
+  const tooltipOpts={backgroundColor:'#1a1a24',borderColor:'#2a2a3a',borderWidth:1,titleColor:'#00e5a0',bodyColor:'#8888a0',titleFont:{family:'JetBrains Mono',size:10},bodyFont:{family:'JetBrains Mono',size:9},
+    callbacks:{label:(ctx)=>{const pct=total>0?((ctx.raw/total)*100).toFixed(1):0;return` ${ctx.raw.toFixed(2)} · ${pct}%`;}}};
+
+  if(ciPieChart)ciPieChart.destroy();
+  ciPieChart=new Chart(document.getElementById('ci-pie'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'cc'),borderColor:colors,borderWidth:2}]},
+    options:{
+      cutout:'55%',
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{color:'#8888a0',font:{family:'JetBrains Mono',size:9},padding:8,boxWidth:10}},
+        tooltip:tooltipOpts
+      }
+    }
+  });
+}
+
+function ciUpdateKpisTable(ingRows){
+  const ings=gDB(K.ings);
+  const {c,n,masa,rows}=calcCN(ingRows,ings);
+  document.getElementById('ci-kpis').innerHTML=`
+    <div class="kpi pur"><div class="klbl">C Total</div><div class="kval pur">${c.toFixed(2)}</div><div class="ksub">g carbono</div></div>
+    <div class="kpi"><div class="klbl">N Total</div><div class="kval">${n.toFixed(2)}</div><div class="ksub">g nitrógeno</div></div>
+    <div class="kpi wn"><div class="klbl">C/N</div><div class="kval wn">${n>0?(c/n).toFixed(2):'—'}</div><div class="ksub">ratio</div></div>
+    <div class="kpi or"><div class="klbl">Masa</div><div class="kval or">${masa.toFixed(1)}</div><div class="ksub">g totales</div></div>`;
+  document.getElementById('ci-ing-table').innerHTML=rows.map(({i,r,aC,aN})=>`<tr>
+    <td>${esc(i.nombre)}</td>
+    <td><span style="color:${ASP_COLORS[i.aspecto]||'#888'};font-family:var(--mo);font-size:14px">${i.aspecto}</span></td>
+    <td class="ac">${r.qty} ${i.unidad}</td>
+    <td class="mu">${aC.toFixed(2)}</td>
+    <td style="color:var(--ac2)">${aN.toFixed(2)}</td>
+  </tr>`).join('');
+}
+
+// ── Placas calc ──
+function ciCalc(){
+  // vol/temp removed from UI — kept as stub for compatibility
+  ciUpdatePlacasDisponibles();
+}
+
+function ciUpdatePlacasDisponibles(){
+  const total=parseFloat(document.getElementById('ci-placas-total').value)||0;
+  let asig=0;
+  document.querySelectorAll('.ci-dist-qty').forEach(inp=>asig+=parseFloat(inp.value)||0);
+  document.getElementById('ci-placas-disp').textContent=total;
+  document.getElementById('ci-placas-asig').textContent=asig;
+  const rest=total-asig;
+  const restEl=document.getElementById('ci-placas-rest');
+  restEl.textContent=rest;
+  restEl.style.color=rest<0?'var(--er)':rest===0?'var(--ac)':'var(--wn)';
+}
+
+// ── Distribución por fenotipo ──
+function ciAddDistRow(){
+  const phenos=gDB(K.phenos);
+  const cont=document.getElementById('ci-dist-rows');
+  const rid='dist'+Date.now();
+  const div=document.createElement('div');div.id=rid;
+  div.style.cssText='display:grid;grid-template-columns:1fr 120px 32px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`
+    <select style="margin:0">${phenos.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select>
+    <input type="number" class="ci-dist-qty" placeholder="cant. placas" min="1" style="margin:0" oninput="ciUpdatePlacasDisponibles()">
+    <button onclick="document.getElementById('${rid}').remove();ciUpdatePlacasDisponibles()" style="background:none;border:1px solid rgba(255,68,85,.3);color:var(--er);cursor:pointer;border-radius:4px;height:34px;font-size:14px">✕</button>`;
+  cont.appendChild(div);
+}
+
+// ── C/N calc helper — si %C o %N es 0, usa masa completa del aspecto ──
+// Carbono: ingredientes de aspecto Carbono → si pc>0 usa qty*pc/100, si pc=0 usa qty completa
+// Nitrógeno: ídem con pn y aspecto Nitrógeno
+function calcCN(ingRows,ings){
+  let c=0,n=0,masa=0;
+  const rows=[];
+  ingRows.forEach(r=>{
+    const i=ings.find(x=>x.id===r.id);if(!i)return;
+    let aC=0,aN=0;
+    if(i.pc>0) aC=r.qty*(i.pc/100);
+    else if(i.aspecto==='Carbono') aC=r.qty; // masa completa como aporte C
+    if(i.pn>0) aN=r.qty*(i.pn/100);
+    else if(i.aspecto==='Nitrógeno') aN=r.qty; // masa completa como aporte N
+    c+=aC;n+=aN;masa+=r.qty;
+    rows.push({i,r,aC,aN});
+  });
+  return{c,n,masa,rows};
+}
+
+// ── Pantallaso última fórmula — tabla IZQ, gráfico DER ──
+function ciRenderLastFormula(){
+  const forms=gDB(K.forms);const ings=gDB(K.ings);const nodes=gDB(K.nodes);
+  const el=document.getElementById('ci-last-content');
+  if(!forms.length){el.innerHTML='<div class="empty">Sin fórmulas registradas aún. Creá una en el constructor o en Config.</div>';return;}
+  const ciNodes=nodes.filter(n=>n.tipo==='CI'&&n.meta?.formula_id).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const lastFid=ciNodes.length?ciNodes[0].meta.formula_id:forms[forms.length-1].id;
+  const f=forms.find(x=>x.id===lastFid)||forms[forms.length-1];
+  const {c,n,masa,rows}=calcCN(f.ingredientes,ings);
+  const canId='last-pie-'+Date.now();
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:14px;font-weight:700">${esc(f.nombre)}</span>
+      <span style="font-family:var(--mo);font-size:14px;color:var(--tx3)">${f.id} · ${f.version} · ${fDate(f.fecha)}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start">
+      <!-- IZQUIERDA: KPIs + tabla -->
+      <div>
+        <div class="kpi-grid" style="margin-bottom:12px">
+          <div class="kpi pur"><div class="klbl">C Total</div><div class="kval pur">${c.toFixed(2)}</div><div class="ksub">gramos</div></div>
+          <div class="kpi"><div class="klbl">N Total</div><div class="kval">${n.toFixed(2)}</div><div class="ksub">gramos</div></div>
+          <div class="kpi wn"><div class="klbl">C/N Ratio</div><div class="kval wn">${n>0?(c/n).toFixed(2):'—'}</div><div class="ksub">relación</div></div>
+          <div class="kpi or"><div class="klbl">Masa total</div><div class="kval or">${masa.toFixed(1)}</div><div class="ksub">g / ml</div></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Ingrediente</th><th>Aspecto</th><th>Cantidad</th><th>C (g)</th><th>N (g)</th></tr></thead>
+        <tbody>${rows.map(({i,r,aC,aN})=>`<tr>
+          <td>${esc(i.nombre)}</td>
+          <td><span style="color:${ASP_COLORS[i.aspecto]||'#888'};font-family:var(--mo);font-size:14px">${i.aspecto}</span></td>
+          <td class="ac">${r.qty} ${i.unidad}</td>
+          <td class="mu">${aC.toFixed(2)}</td>
+          <td style="color:var(--ac2)">${aN.toFixed(2)}</td>
+        </tr>`).join('')}</tbody></table></div>
+      </div>
+      <!-- DERECHA: gráfico -->
+      <div>
+        <div style="font-family:var(--mo);font-size:11px;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Composición por Aspecto</div>
+        <div style="position:relative;height:240px"><canvas id="${canId}"></canvas></div>
+      </div>
+    </div>`;
+
+  // Draw pie for last formula
+  const byAsp={};
+  rows.forEach(({i,r})=>{byAsp[i.aspecto]=(byAsp[i.aspecto]||0)+r.qty;});
+  const lbl=Object.keys(byAsp),dat=Object.values(byAsp),col=lbl.map(a=>ASP_COLORS[a]||'#666');
+  const total=dat.reduce((s,v)=>s+v,0);
+  new Chart(document.getElementById(canId),{
+    type:'doughnut',
+    data:{labels:lbl,datasets:[{data:dat,backgroundColor:col.map(c=>c+'cc'),borderColor:col,borderWidth:2}]},
+    options:{cutout:'52%',plugins:{
+      legend:{display:true,position:'bottom',labels:{color:'#8888a0',font:{family:'JetBrains Mono',size:9},padding:8,boxWidth:10}},
+      tooltip:{backgroundColor:'#1a1a24',borderColor:'#2a2a3a',borderWidth:1,titleColor:'#00e5a0',bodyColor:'#8888a0',
+        callbacks:{label:(ctx)=>{const pct=total>0?((ctx.raw/total)*100).toFixed(1):0;return` ${ctx.raw.toFixed(2)} g · ${pct}%`;}}}
+    }}
+  });
+}
+
+// ── GUARDAR SESIÓN CI ──
+function saveCI(){
+  const placasTotal=parseFloat(document.getElementById('ci-placas-total').value)||0;
+  const notas=document.getElementById('ci-notas').value.trim();
+  const origen_id=document.getElementById('ci-origen').value||null;
+
+  // Determinar fórmula activa
+  let formula_id=null;
+  if(ciMode==='existing'){
+    formula_id=document.getElementById('ci-formula').value;
+    if(!formula_id)return sN('Seleccioná una fórmula',true);
+  }else{
+    if(!ciCurrentFormula||!ciCurrentFormula.id)return sN('Guardá primero la fórmula magistral',true);
+    formula_id=ciCurrentFormula.id;
+  }
+
+  // Leer distribución por fenotipo
+  const distRows=[];
+  document.querySelectorAll('#ci-dist-rows > div').forEach(row=>{
+    const sel=row.querySelector('select');const inp=row.querySelector('.ci-dist-qty');
+    if(!sel||!inp||!sel.value||!inp.value)return;
+    distRows.push({fen_id:sel.value,placas:parseFloat(inp.value)||0});
+  });
+
+  if(!distRows.length){
+    const fen_id=document.getElementById('ci-fen').value;
+    if(!fen_id)return sN('Seleccioná un fenotipo o definí distribución',true);
+    distRows.push({fen_id,placas:placasTotal});
+  }
+
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const logs=gDB(K.logs);
+  const createdIds=[];
+
+  distRows.forEach(dist=>{
+    const node={
+      id:nxtIdType('CI',nodes),tipo:'CI',fen_id:dist.fen_id,fecha:now(),estado:'activo',
+      origen_id,outputs:[],
+      meta:{formula_id,placas:dist.placas,placas_restantes:dist.placas,notas}
+    };
+    nodes.push(node);
+    if(origen_id){const par=nodes.find(x=>x.id===origen_id);if(par){par.outputs=par.outputs||[];par.outputs.push(node.id);}}
+    const fen=phenos.find(p=>p.id===dist.fen_id);
+    if(fen){fen.nodos=fen.nodos||[];fen.nodos.push(node.id);}
+    autoLog(logs,phenos,node,'observacion',`CI creado · Fórmula: ${formula_id} · ${dist.placas} placas`);
+    createdIds.push(node.id);
+  });
+
+  sDB(K.nodes,nodes);sDB(K.phenos,phenos);
+  ciRenderLastFormula();
+  ciRenderSeguimiento();
+  updateHeader();
+  // Limpiar distribución
+  document.getElementById('ci-dist-rows').innerHTML='';
+  ciUpdatePlacasDisponibles();
+  sN(`CI creado: ${createdIds.join(', ')}`);
+}
+
+// ── SEGUIMIENTO CI ──
+function ciRenderSeguimiento(){
+  const nodes=gDB(K.nodes).filter(n=>n.tipo==='CI');
+  const phenos=gDB(K.phenos);const forms=gDB(K.forms);const logs=gDB(K.logs);
+  // Todos los logs de nodos CI
+  const ciLogs=logs.filter(l=>nodes.find(n=>n.id===l.nodo_id)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const tbody=document.getElementById('ci-seguimiento-tbody');
+  if(!ciLogs.length){tbody.innerHTML='<tr><td colspan="7" class="mu" style="text-align:center;padding:20px">Sin registros de seguimiento</td></tr>';return;}
+  tbody.innerHTML=ciLogs.map(l=>{
+    const nd=nodes.find(n=>n.id===l.nodo_id);
+    const fen=phenos.find(p=>p.id===l.fen_id);
+    const f=nd?.meta?.formula_id?forms.find(x=>x.id===nd.meta.formula_id):null;
+    return`<tr>
+      <td class="mu">${fDate(l.fecha)}</td>
+      <td class="ac">${l.nodo_id}</td>
+      <td class="mu">${f?`${f.nombre} (${f.version})`:nd?.meta?.formula_id||'—'}</td>
+      <td>${esc(fen?.nombre||l.fen_id)}</td>
+      <td class="mu">${nd?.meta?.placas||'—'}</td>
+      <td>${esc(l.nota)}</td>
+      <td><span class="badge ${bCls(nd?.estado||'activo')}">${nd?.estado||'—'}</span></td>
+    </tr>`;
+  }).join('');
+  // Poblar selector de nodo CI para nuevo seguimiento
+  const segSel=document.getElementById('seg-nodo');
+  if(segSel)segSel.innerHTML=nodes.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(n=>`<option value="${n.id}">${n.id} · ${phenos.find(p=>p.id===n.fen_id)?.nombre||n.fen_id}</option>`).join('');
+}
+
+function saveSeguimiento(){
+  const nodo_id=document.getElementById('seg-nodo').value;if(!nodo_id)return sN('Seleccioná un nodo CI',true);
+  const tipo=document.getElementById('seg-tipo').value;
+  const nota=document.getElementById('seg-nota').value.trim();if(!nota)return sN('Ingresá una nota',true);
+  const logs=gDB(K.logs);const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);
+  const nd=nodes.find(n=>n.id===nodo_id);if(!nd)return;
+  const log={id:nxtId('LOG',logs),fecha:now(),fen_id:nd.fen_id,nodo_id,tipo,impacto:0,nota};
+  logs.push(log);
+  if(tipo==='contaminacion')nd.estado='contaminado';
+  sDB(K.logs,logs);sDB(K.nodes,nodes);
+  const fen=phenos.find(p=>p.id===nd.fen_id);
+  if(fen){fen.timeline=fen.timeline||[];fen.timeline.push(log.id);sDB(K.phenos,phenos);}
+  document.getElementById('seg-nota').value='';
+  ciRenderSeguimiento();sN('Seguimiento registrado');
+}
+
+// ═══════════════════════════════════════
+// GR LOGIC
+// ═══════════════════════════════════════
+function grCalc(){
+  const g=parseFloat(document.getElementById('gr-gramos').value)||0;
+  const h=parseFloat(document.getElementById('gr-hum').value)||0;
+  const agua=g*(h/100)/(1-h/100);
+  const prev=document.getElementById('gr-calc-preview');
+  prev.style.display='block';
+  prev.innerHTML=`<span class="ac">Gramos secos:</span> ${g} gr &nbsp;|&nbsp; <span class="wn">Agua necesaria:</span> ${agua.toFixed(0)} ml &nbsp;|&nbsp; <span class="ac">Peso final:</span> ${(g+agua).toFixed(0)} gr`;
+}
+
+function saveGR(){
+  const fen_id=document.getElementById('gr-fen').value;if(!fen_id)return sN('Seleccioná un fenotipo',true);
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const logs=gDB(K.logs);
+  const gramos=parseFloat(document.getElementById('gr-gramos').value)||0;
+  const hum=parseFloat(document.getElementById('gr-hum').value)||0;
+  const aguaN=gramos*(hum/100)/(1-hum/100);
+  const node={
+    id:nxtIdType('GR',nodes),tipo:'GR',fen_id,fecha:now(),estado:'activo',
+    origen_id:document.getElementById('gr-origen').value||null,outputs:[],
+    meta:{tipo_grano:document.getElementById('gr-tipo').value.trim(),gramos_iniciales:gramos,gramos_restantes:gramos,humedad:hum,agua_necesaria:aguaN.toFixed(0),temp:parseFloat(document.getElementById('gr-temp').value)||0,notas:document.getElementById('gr-notas').value.trim()}
+  };
+  nodes.push(node);linkToParent(nodes,node);sDB(K.nodes,nodes);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.nodos=fen.nodos||[];fen.nodos.push(node.id);sDB(K.phenos,phenos);}
+  autoLog(logs,phenos,node,'observacion','Nodo GR creado');
+  renderNodeList('GR','gr-list');updateHeader();sN('GR creado: '+node.id);
+}
+
+// ═══════════════════════════════════════
+// IN LOGIC
+// ═══════════════════════════════════════
+function inCalc(){
+  const vol=parseFloat(document.getElementById('in-vol').value)||0;
+  const prev=document.getElementById('in-calc-preview');
+  prev.style.display='block';
+  prev.innerHTML=`<span class="ac">Volumen inóculo:</span> ${vol} ml &nbsp;|&nbsp; <span class="pur">Tipo:</span> ${document.getElementById('in-tipo2').value}`;
+}
+
+function saveIN(){
+  const fen_id=document.getElementById('in-fen').value;if(!fen_id)return sN('Seleccioná un fenotipo',true);
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const logs=gDB(K.logs);
+  const node={
+    id:nxtIdType('IN',nodes),tipo:'IN',fen_id,fecha:now(),estado:'activo',
+    origen_id:document.getElementById('in-origen').value||null,outputs:[],
+    meta:{vol_ml:parseFloat(document.getElementById('in-vol').value)||0,concentracion:document.getElementById('in-conc').value.trim(),tipo:document.getElementById('in-tipo2').value,temp:parseFloat(document.getElementById('in-temp').value)||0,notas:document.getElementById('in-notas').value.trim()}
+  };
+  nodes.push(node);linkToParent(nodes,node);sDB(K.nodes,nodes);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.nodos=fen.nodos||[];fen.nodos.push(node.id);sDB(K.phenos,phenos);}
+  autoLog(logs,phenos,node,'observacion','Nodo IN creado');
+  renderNodeList('IN','in-list');updateHeader();sN('IN creado: '+node.id);
+}
+
+// ═══════════════════════════════════════
+// SU LOGIC
+// ═══════════════════════════════════════
+function suCalc(){
+  const b=parseFloat(document.getElementById('su-bolsas').value)||0;
+  const p=parseFloat(document.getElementById('su-peso').value)||0;
+  const h=parseFloat(document.getElementById('su-hum').value)||0;
+  const total=(b*p).toFixed(2);
+  const prev=document.getElementById('su-calc-preview');
+  prev.style.display='block';
+  prev.innerHTML=`<span class="ac">Bolsas:</span> ${b} &nbsp;|&nbsp; <span class="ac">Peso/bolsa:</span> ${p} kg &nbsp;|&nbsp; <span class="or">Total:</span> ${total} kg &nbsp;|&nbsp; <span class="wn">Humedad obj:</span> ${h}%`;
+}
+
+function saveSU(){
+  const fen_id=document.getElementById('su-fen').value;if(!fen_id)return sN('Seleccioná un fenotipo',true);
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const logs=gDB(K.logs);
+  const node={
+    id:nxtIdType('SU',nodes),tipo:'SU',fen_id,fecha:now(),estado:'activo',
+    origen_id:document.getElementById('su-origen').value||null,outputs:[],
+    meta:{bolsas:parseFloat(document.getElementById('su-bolsas').value)||0,peso_bolsa:parseFloat(document.getElementById('su-peso').value)||0,humedad:parseFloat(document.getElementById('su-hum').value)||0,composicion:document.getElementById('su-comp').value.trim(),temp:parseFloat(document.getElementById('su-temp').value)||0,notas:document.getElementById('su-notas').value.trim()}
+  };
+  nodes.push(node);linkToParent(nodes,node);sDB(K.nodes,nodes);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.nodos=fen.nodos||[];fen.nodos.push(node.id);sDB(K.phenos,phenos);}
+  autoLog(logs,phenos,node,'observacion','Nodo SU creado');
+  renderNodeList('SU','su-list');updateHeader();sN('SU creado: '+node.id);
+}
+
+// ═══════════════════════════════════════
+// ST LOGIC
+// ═══════════════════════════════════════
+function stCalc(){
+  const r=parseFloat(document.getElementById('st-rend').value)||0;
+  const ps=parseFloat(document.getElementById('st-peso-seco').value)||0;
+  const ratio=r>0&&ps>0?((ps/r)*100).toFixed(1):'—';
+  const prev=document.getElementById('st-calc-preview');
+  prev.style.display='block';
+  prev.innerHTML=`<span class="ac">Rendimiento:</span> ${r} gr &nbsp;|&nbsp; <span class="ac">Peso seco:</span> ${ps} gr &nbsp;|&nbsp; <span class="wn">Ratio seco/fresco:</span> ${ratio}%`;
+}
+
+function saveST(){
+  const fen_id=document.getElementById('st-fen').value;if(!fen_id)return sN('Seleccioná un fenotipo',true);
+  const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);const logs=gDB(K.logs);
+  const node={
+    id:nxtIdType('ST',nodes),tipo:'ST',fen_id,fecha:now(),estado:'activo',
+    origen_id:document.getElementById('st-origen').value||null,outputs:[],
+    meta:{rendimiento_gr:parseFloat(document.getElementById('st-rend').value)||0,tipo_producto:document.getElementById('st-tipo2').value,peso_seco:parseFloat(document.getElementById('st-peso-seco').value)||0,calidad:parseFloat(document.getElementById('st-cal').value)||0,fecha_cosecha:document.getElementById('st-fecha').value,notas:document.getElementById('st-notas').value.trim()}
+  };
+  nodes.push(node);linkToParent(nodes,node);sDB(K.nodes,nodes);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.nodos=fen.nodos||[];fen.nodos.push(node.id);sDB(K.phenos,phenos);}
+  autoLog(logs,phenos,node,'cosecha',`Cosecha: ${node.meta.rendimiento_gr}gr ${node.meta.tipo_producto}`);
+  renderNodeList('ST','st-list');updateHeader();sN('ST creado: '+node.id);
+}
+
+// ═══════════════════════════════════════
+// LINK TO PARENT
+// ═══════════════════════════════════════
+function linkToParent(nodes,node){
+  if(node.origen_id){const par=nodes.find(x=>x.id===node.origen_id);if(par){par.outputs=par.outputs||[];par.outputs.push(node.id);}}
+}
+
+// ═══════════════════════════════════════
+// LOGS
+// ═══════════════════════════════════════
+function autoLog(logs,phenos,node,tipo,nota){
+  const log={id:nxtId('LOG',logs),fecha:now(),fen_id:node.fen_id,nodo_id:node.id,tipo,impacto:0,nota};
+  logs.push(log);sDB(K.logs,logs);
+  const fen=phenos.find(p=>p.id===node.fen_id);
+  if(fen){fen.timeline=fen.timeline||[];fen.timeline.push(log.id);sDB(K.phenos,phenos);}
+}
+
+function populateLogModal(){
+  const phenos=gDB(K.phenos);
+  const html=phenos.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  const sel=document.getElementById('log-fen');sel.innerHTML=html||'<option value="">Sin fenotipos</option>';
+  const fSel=document.getElementById('logf-fen');
+  fSel.innerHTML='<option value="">Todos</option>'+html;
+  logRefreshNodo();
+  document.getElementById('log-fecha').value=today();
+}
+
+function logRefreshNodo(){
+  const fen_id=document.getElementById('log-fen').value;
+  const nodes=gDB(K.nodes).filter(n=>n.fen_id===fen_id);
+  document.getElementById('log-nodo').innerHTML=nodes.map(n=>`<option value="${n.id}">${n.id} [${n.tipo}] ${n.estado}</option>`).join('')||'<option value="">Sin nodos</option>';
+}
+
+function saveLog(){
+  const fen_id=document.getElementById('log-fen').value;
+  const nodo_id=document.getElementById('log-nodo').value;
+  if(!fen_id||!nodo_id)return sN('Fenotipo y nodo requeridos',true);
+  const tipo=document.getElementById('log-tipo').value;
+  const impacto=parseFloat(document.getElementById('log-imp').value)||0;
+  const nota=document.getElementById('log-nota').value.trim();
+  const fecha=document.getElementById('log-fecha').value||today();
+  const logs=gDB(K.logs);const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);
+  const log={id:nxtId('LOG',logs),fecha:new Date(fecha).toISOString(),fen_id,nodo_id,tipo,impacto,nota};
+  logs.push(log);
+  // Apply effects
+  const node=nodes.find(n=>n.id===nodo_id);
+  if(node){
+    if(tipo==='contaminacion')node.estado='contaminado';
+    if(tipo==='transferencia')node.estado='transferido';
+    if(tipo==='cosecha'&&node.meta)node.meta.rendimiento_gr=(parseFloat(node.meta.rendimiento_gr)||0)+impacto;
+    if(tipo==='crecimiento'){
+      if(node.meta?.placas_restantes!==undefined)node.meta.placas_restantes=Math.max(0,(parseFloat(node.meta.placas_restantes)||0)+impacto);
+      if(node.meta?.gramos_restantes!==undefined)node.meta.gramos_restantes=Math.max(0,(parseFloat(node.meta.gramos_restantes)||0)+impacto);
+    }
+    sDB(K.nodes,nodes);
+  }
+  sDB(K.logs,logs);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.timeline=fen.timeline||[];fen.timeline.push(log.id);sDB(K.phenos,phenos);}
+  document.getElementById('log-nota').value='';
+  renderLogs();updateHeader();sN('Log guardado · '+tipo);
+}
+
+function openLogQuick(nodoId,fenId){
+  document.getElementById('lq-nodo-id').value=nodoId;
+  document.getElementById('lq-fen-id').value=fenId;
+  openM('m-log-quick');
+}
+
+function saveLogQuick(){
+  const nodo_id=document.getElementById('lq-nodo-id').value;
+  const fen_id=document.getElementById('lq-fen-id').value;
+  if(!nodo_id&&!fen_id)return sN('Sin referencia',true);
+  const tipo=document.getElementById('lq-tipo').value;
+  const impacto=parseFloat(document.getElementById('lq-imp').value)||0;
+  const nota=document.getElementById('lq-nota').value.trim();
+  const logs=gDB(K.logs);const nodes=gDB(K.nodes);const phenos=gDB(K.phenos);
+  const log={id:nxtId('LOG',logs),fecha:now(),fen_id,nodo_id,tipo,impacto,nota};
+  logs.push(log);
+  if(nodo_id){
+    const node=nodes.find(n=>n.id===nodo_id);
+    if(node){
+      if(tipo==='contaminacion')node.estado='contaminado';
+      if(tipo==='transferencia')node.estado='transferido';
+      sDB(K.nodes,nodes);
+    }
+  }
+  sDB(K.logs,logs);
+  const fen=phenos.find(p=>p.id===fen_id);
+  if(fen){fen.timeline=fen.timeline||[];fen.timeline.push(log.id);sDB(K.phenos,phenos);}
+  closeM('m-log-quick');
+  document.getElementById('lq-nota').value='';document.getElementById('lq-imp').value='0';
+  sN('Log guardado');
+}
+
+function renderLogs(){
+  const logs=gDB(K.logs);const phenos=gDB(K.phenos);
+  const fFen=document.getElementById('logf-fen')?.value||'';
+  const fTipo=document.getElementById('logf-tipo')?.value||'';
+  let fl=logs.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  if(fFen)fl=fl.filter(l=>l.fen_id===fFen);
+  if(fTipo)fl=fl.filter(l=>l.tipo===fTipo);
+  const el=document.getElementById('log-list');
+  if(!fl.length){el.innerHTML='<div class="empty">Sin logs</div>';return;}
+  el.innerHTML=fl.map(l=>{
+    const fen=phenos.find(p=>p.id===l.fen_id);
+    return`<div class="log-item ${l.tipo}">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="log-tipo ${l.tipo}">${l.tipo}${l.impacto!==0?` [${l.impacto>0?'+':''}${l.impacto}]`:''}</div>
+        <span style="font-family:var(--mo);font-size:14px;color:var(--ac)">${l.nodo_id}</span>
+        <span style="font-family:var(--mo);font-size:14px;color:var(--tx3)">${esc(fen?.nombre||l.fen_id)}</span>
+        <span style="font-family:var(--mo);font-size:14px;color:var(--tx3)">${fDate(l.fecha)}</span>
+      </div>
+      ${l.nota?`<div style="font-family:var(--mo);font-size:14px;color:var(--tx2);margin-top:4px">${esc(l.nota)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// SU HYDRATION CALC
+// ═══════════════════════════════════════
+function calcHid(){
+  const f=parseFloat(document.getElementById('hid-fibra').value)||0;
+  const r=parseFloat(document.getElementById('hid-ratio').value)||0;
+  const b=parseFloat(document.getElementById('hid-bolsas').value)||1;
+  const el=document.getElementById('hid-result');
+  if(!f||!r){el.style.display='none';return;}
+  const agua=f*r;const total=f+agua;const vol=(total/1000).toFixed(2);
+  el.style.display='block';
+  el.innerHTML=`<span class="ac">Sustrato seco:</span> ${f}g &nbsp;|&nbsp; <span class="ac">Ratio:</span> ${r}:1<br>
+<span class="wn">Agua necesaria:</span> ${agua.toFixed(0)} ml &nbsp;|&nbsp; <span class="ac">Total:</span> ${total.toFixed(0)}g (${vol}L)<br>
+<span class="or">Por bolsa (${b} bolsas):</span> sustrato ${(f/b).toFixed(0)}g · agua ${(agua/b).toFixed(0)} ml`;
+}
+function presetHid(f,r){document.getElementById('hid-fibra').value=f;document.getElementById('hid-ratio').value=r;calcHid();}
+
+// ═══════════════════════════════════════
+// CONFIG: INGREDIENTS & FORMULAS
+// ═══════════════════════════════════════
+function saveIng(){
+  const nombre=document.getElementById('cfg-ing-nombre').value.trim();
+  const unidad=document.getElementById('cfg-ing-unit').value.trim();
+  if(!nombre||!unidad)return sN('Nombre y unidad requeridos',true);
+  const ings=gDB(K.ings);
+  ings.push({id:nxtId('ING',ings),nombre,unidad,aspecto:document.getElementById('cfg-ing-asp').value,pc:parseFloat(document.getElementById('cfg-ing-c').value)||0,pn:parseFloat(document.getElementById('cfg-ing-n').value)||0});
+  sDB(K.ings,ings);
+  document.getElementById('cfg-ing-nombre').value='';document.getElementById('cfg-ing-unit').value='';
+  document.getElementById('cfg-ing-c').value='0';document.getElementById('cfg-ing-n').value='0';
+  renderCfg();sN('Ingrediente guardado');
+}
+
+let frmRows=[];
+function addFrmRow(){
+  const ings=gDB(K.ings);const rid=Date.now();frmRows.push(rid);
+  const div=document.createElement('div');div.className='ing-row';div.id='fr-'+rid;
+  div.innerHTML=`<select onchange="calcFrmTotals()">${ings.map(i=>`<option value="${i.id}">${esc(i.nombre)}</option>`).join('')}</select>
+    <input type="number" placeholder="cantidad" min="0" oninput="calcFrmTotals()">
+    <span style="font-family:var(--mo);font-size:14px;color:var(--tx3);padding:9px 0">${ings[0]?.unidad||'—'}</span>
+    <button onclick="document.getElementById('fr-${rid}').remove();calcFrmTotals()" style="background:none;border:1px solid rgba(255,68,85,.3);color:var(--er);cursor:pointer;border-radius:4px;height:34px;font-size:14px">✕</button>`;
+  div.querySelector('select').addEventListener('change',function(){const i=ings.find(x=>x.id===this.value);div.querySelector('span').textContent=i?.unidad||'—';calcFrmTotals();});
+  document.getElementById('cfg-frm-rows').appendChild(div);
+}
+function calcFrmTotals(){
+  const ings=gDB(K.ings);let c=0,n=0,masa=0;
+  document.querySelectorAll('#cfg-frm-rows .ing-row').forEach(row=>{
+    const sel=row.querySelector('select');const inp=row.querySelector('input');
+    if(!sel||!inp)return;const i=ings.find(x=>x.id===sel.value);if(!i)return;
+    const q=parseFloat(inp.value)||0;c+=q*(i.pc/100);n+=q*(i.pn/100);masa+=q;
+  });
+  document.getElementById('cfg-frm-totales').innerHTML=`
+    <div class="kpi pur"><div class="klbl">C Total</div><div class="kval pur" style="font-size:14px">${c.toFixed(2)}</div></div>
+    <div class="kpi"><div class="klbl">N Total</div><div class="kval" style="font-size:14px">${n.toFixed(2)}</div></div>
+    <div class="kpi wn"><div class="klbl">C/N</div><div class="kval wn" style="font-size:14px">${n>0?(c/n).toFixed(1):'—'}</div></div>
+    <div class="kpi or"><div class="klbl">Masa</div><div class="kval or" style="font-size:14px">${masa.toFixed(1)}</div></div>`;
+}
+function saveFrm(){
+  const nombre=document.getElementById('cfg-frm-nombre').value.trim();
+  if(!nombre)return sN('Nombre requerido',true);
+  const ings2=[];let ok=true;
+  document.querySelectorAll('#cfg-frm-rows .ing-row').forEach(row=>{
+    const sel=row.querySelector('select');const inp=row.querySelector('input');
+    if(!sel.value){ok=false;return;}
+    ings2.push({id:sel.value,qty:parseFloat(inp.value)||0});
+  });
+  if(!ok)return sN('Completá todos los ingredientes',true);
+  const forms=gDB(K.forms);
+  forms.push({id:nxtId('F',forms),nombre,version:document.getElementById('cfg-frm-ver').value||'v1',fecha:now(),ingredientes:ings2});
+  sDB(K.forms,forms);
+  document.getElementById('cfg-frm-nombre').value='';document.getElementById('cfg-frm-ver').value='v1';
+  document.getElementById('cfg-frm-rows').innerHTML='';frmRows=[];
+  renderCfg();sN('Fórmula guardada');
+}
+
+function renderCfg(){
+  const ings=gDB(K.ings);const forms=gDB(K.forms);const ntypes=gOb(K.ntypes,DEF_NTYPES);
+  // Ings table
+  document.getElementById('cfg-ing-table').innerHTML=ings.map(i=>`<tr>
+    <td class="mu">${i.id}</td><td>${esc(i.nombre)}</td><td class="mu">${i.unidad}</td>
+    <td style="color:var(--wn)">${i.aspecto}</td><td>${i.pc}%</td><td>${i.pn}%</td>
+    <td><button onclick="delIng('${i.id}')" style="background:none;border:none;color:var(--er);cursor:pointer;font-size:14px">✕</button></td>
+  </tr>`).join('')||'<tr><td colspan="7" class="empty">Sin ingredientes</td></tr>';
+  // Formulas list
+  document.getElementById('cfg-frm-list').innerHTML=forms.map(f=>`<div class="hi" onclick="showFrmDetail('${f.id}')">
+    <div><div class="hid">${esc(f.nombre)} <span style="color:var(--tx3)">${f.version}</span></div>
+    <div class="hdate">${f.id} · ${fDate(f.fecha)}</div>
+    <div class="hinfo">${f.ingredientes.length} ingredientes</div></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-pur" style="height:28px;font-size:11px" onclick="event.stopPropagation();dupFrm('${f.id}')">⎘ DUP</button>
+      <button class="btn btn-d" style="height:28px;font-size:11px" onclick="event.stopPropagation();delFrm('${f.id}')">✕</button>
+    </div>
+  </div>`).join('')||'<div class="empty">Sin fórmulas</div>';
+  // Node types
+  document.getElementById('cfg-nodetypes').innerHTML=Object.entries(ntypes).map(([code,nt])=>`<div class="cfg-item">
+    <div class="cfg-title"><span>${nt.icon} ${code} — ${nt.label}</span><button onclick="delNT('${code}')" style="background:none;border:none;color:var(--er);cursor:pointer;font-size:14px">✕</button></div>
+  </div>`).join('');
+  // Populate CI formula select
+  const ciSel=document.getElementById('ci-formula');if(ciSel){ciSel.innerHTML=forms.map(f=>`<option value="${f.id}">${esc(f.nombre)} (${f.version})</option>`).join('')||'<option value="">Sin fórmulas</option>';}
+  // Load GH config
+  try{ghLoadCfg();}catch{}
+}
+
+function delIng(id){if(!confirm('¿Eliminar ingrediente?'))return;const ings=gDB(K.ings).filter(x=>x.id!==id);sDB(K.ings,ings);renderCfg();sN('Ingrediente eliminado');}
+function delFrm(id){if(!confirm('¿Eliminar fórmula?'))return;const forms=gDB(K.forms).filter(x=>x.id!==id);sDB(K.forms,forms);renderCfg();sN('Fórmula eliminada');}
+function dupFrm(id){
+  const forms=gDB(K.forms);const f=forms.find(x=>x.id===id);if(!f)return;
+  const vn=parseInt((f.version||'v1').replace('v',''))||1;
+  forms.push({...JSON.parse(JSON.stringify(f)),id:nxtId('F',forms),version:'v'+(vn+1),fecha:now()});
+  sDB(K.forms,forms);renderCfg();sN('Fórmula duplicada');
+}
+
+function showFrmDetail(id){
+  const forms=gDB(K.forms);const ings=gDB(K.ings);
+  const f=forms.find(x=>x.id===id);if(!f)return;
+  let c=0,n=0,masa=0;
+  const rows=f.ingredientes.map(r=>{const i=ings.find(x=>x.id===r.id);if(!i)return'';const cc=r.qty*(i.pc/100),nn=r.qty*(i.pn/100);c+=cc;n+=nn;masa+=r.qty;
+    return`<div class="rec-row" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(42,42,58,.4);font-family:var(--mo);font-size:14px">
+      <span style="color:var(--tx2)">${esc(i.nombre)}</span>
+      <span style="color:var(--ac);font-weight:700">${r.qty} ${i.unidad}</span>
+    </div>`;}).join('');
+  document.getElementById('m-frm-detail-content').innerHTML=`
+    <div class="kpi-grid" style="margin-bottom:12px">
+      <div class="kpi pur"><div class="klbl">C Total</div><div class="kval pur">${c.toFixed(2)}</div></div>
+      <div class="kpi"><div class="klbl">N Total</div><div class="kval">${n.toFixed(2)}</div></div>
+      <div class="kpi wn"><div class="klbl">C/N</div><div class="kval wn">${n>0?(c/n).toFixed(1):'—'}</div></div>
+      <div class="kpi or"><div class="klbl">Masa</div><div class="kval or">${masa.toFixed(1)}</div></div>
+    </div>
+    <div style="font-family:var(--mo);font-size:14px;color:var(--tx3);margin-bottom:8px">${f.id} · ${f.version} · ${fDate(f.fecha)}</div>
+    ${rows}`;
+  openM('m-frm-detail');
+}
+
+function delNT(code){if(!confirm('¿Eliminar tipo '+code+'?'))return;const nt=gOb(K.ntypes,DEF_NTYPES);delete nt[code];sOb(K.ntypes,nt);renderCfg();sN('Tipo eliminado');}
+function saveNewNT(){
+  const code=document.getElementById('nt-code').value.trim().toUpperCase();
+  const label=document.getElementById('nt-label').value.trim();
+  const icon=document.getElementById('nt-icon').value.trim()||'🔬';
+  if(!code||!label)return sN('Código y label requeridos',true);
+  const nt=gOb(K.ntypes,DEF_NTYPES);if(nt[code])return sN('Código ya existe',true);
+  nt[code]={label,icon};sOb(K.ntypes,nt);
+  ['nt-code','nt-label','nt-icon'].forEach(id=>document.getElementById(id).value='');
+  renderCfg();sN('Tipo creado: '+code);
+}
+
+// ═══════════════════════════════════════
+// EXPORT / IMPORT / RESET
+// ═══════════════════════════════════════
+function exportData(){
+  const data={};Object.entries(K).forEach(([k,key])=>{try{data[key]=JSON.parse(localStorage.getItem(key));}catch{}});
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`biolab-${Date.now()}.json`;a.click();URL.revokeObjectURL(url);sN('Datos exportados');
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);Object.entries(d).forEach(([key,val])=>localStorage.setItem(key,JSON.stringify(val)));sN('Datos importados');ST('fen');}catch{sN('Error al importar',true);}};
+  reader.readAsText(file);
+}
+function resetSystem(){
+  if(!confirm('¿RESET COMPLETO? Se borrarán TODOS los datos.'))return;
+  Object.values(K).forEach(key=>localStorage.removeItem(key));
+  localStorage.removeItem('bl2_seeded');seed();ST('fen');sN('Sistema reseteado');
+}
+
+
+// ═══════════════════════════════════════════════════
+// GITHUB SYNC
+// ═══════════════════════════════════════════════════
+let ghAutoEn=false;let ghTimer=null;
+
+function ghLoadCfg(){
+  const gc=gOb(K.gh,{});
+  if(gc.token)document.getElementById('gh-token').value=gc.token;
+  if(gc.repo)document.getElementById('gh-repo').value=gc.repo;
+  if(gc.file)document.getElementById('gh-file').value=gc.file;
+  if(gc.auto){ghAutoEn=true;document.getElementById('gh-auto').checked=true;}
+  const ls=document.getElementById('gh-last');
+  ls.textContent=gc.lastSync?'Último guardado: '+fDate(gc.lastSync):'Sin sincronizaciones aún';
+  const hdr=document.getElementById('gh-hdr-status');
+  if(hdr)hdr.innerHTML=gc.token&&gc.repo?`☁ GitHub: <b style="color:var(--ac)">${esc(gc.repo)}</b> · <span style="color:var(--tx3)">${gc.lastSync?fDate(gc.lastSync):'sin sync'}</span>`:'☁ GitHub: <b style="color:var(--tx3)">no configurado</b>';
+}
+
+function localExport(){
+  const keys=[K.strains,K.phenos,K.nodes,K.logs,K.ings,K.forms];
+  const data={};keys.forEach(k=>{try{data[k]=JSON.parse(localStorage.getItem(k)||'null')}catch(e){}});
+  data._exported=new Date().toISOString();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`biolab-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  sN('Backup local exportado');
+}
+function localImport(input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const keys=[K.strains,K.phenos,K.nodes,K.logs,K.ings,K.forms];
+      keys.forEach(k=>{if(data[k]!==undefined&&data[k]!==null)localStorage.setItem(k,JSON.stringify(data[k]));});
+      sN('Datos importados — recargando...');setTimeout(()=>location.reload(),1200);
+    }catch(err){sN('Error al importar: '+err.message,true);}
+  };
+  r.readAsText(file);input.value='';
+}
+function ghSaveCfg(){
+  const t=document.getElementById('gh-token').value.trim();let r=document.getElementById('gh-repo').value.trim();const f=document.getElementById('gh-file').value.trim()||'biolab-data.json';
+  if(!t||!r)return sN('Token y repo requeridos',true);
+  r=r.replace(/^https?:\/\/github\.com\//,'').replace(/\/$/,'');
+  const gc=gOb(K.gh,{});gc.token=t;gc.repo=r;gc.file=f;sOb(K.gh,gc);ghLoadCfg();sN('Configuración GitHub guardada');
+}
+
+function ghToggleAuto(){
+  const gc=gOb(K.gh,{});ghAutoEn=document.getElementById('gh-auto').checked;gc.auto=ghAutoEn;sOb(K.gh,gc);
+  sN(ghAutoEn?'Auto-sync activado':'Auto-sync desactivado');
+}
+
+function ghAuto(){
+  if(!ghAutoEn)return;clearTimeout(ghTimer);ghTimer=setTimeout(()=>ghPush(true),2500);
+}
+
+async function ghApi(method,path,body){
+  const gc=gOb(K.gh,{});if(!gc.token||!gc.repo)throw new Error('GitHub no configurado');
+  const url=`https://api.github.com/repos/${gc.repo}/contents/${path}`;
+  const headers={'Authorization':'token '+gc.token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'};
+  let resp;
+  try{
+    resp=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined});
+  }catch{
+    const proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(url);
+    resp=await fetch(proxyUrl,{method,headers,body:body?JSON.stringify(body):undefined});
+  }
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.message||resp.statusText);}
+  return resp.json();
+}
+
+async function ghTest(){
+  const el=document.getElementById('gh-status-box');el.style.display='block';el.className='rbox';el.innerHTML='🔄 Probando...';
+  try{const gc=gOb(K.gh,{});if(!gc.token||!gc.repo){el.className='rbox er';el.innerHTML='⚠ Guardá configuración primero';return;}
+    const url=`https://api.github.com/repos/${gc.repo}`;
+    let r=await fetch(url,{headers:{'Authorization':'token '+gc.token}}).catch(()=>null);
+    if(!r)r=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url),{headers:{'Authorization':'token '+gc.token}});
+    const d=await r.json();
+    if(r.ok){el.className='rbox';el.innerHTML=`✓ Conectado · <b style="color:var(--ac)">${d.full_name}</b> · ${d.private?'privado':'público'}`;}
+    else{el.className='rbox er';el.innerHTML='✕ '+d.message;}
+  }catch(e){el.className='rbox er';el.innerHTML='✕ '+e.message;}
+}
+
+function ghData(){const data={};Object.entries(K).forEach(([k,key])=>{try{data[key]=JSON.parse(localStorage.getItem(key));}catch{}});return data;}
+
+async function ghPush(silent=false){
+  const el=document.getElementById('gh-status-box');
+  if(!silent){el.style.display='block';el.className='rbox';el.innerHTML='🔄 Guardando en GitHub...';}
+  try{
+    const gc=gOb(K.gh,{});if(!gc.token||!gc.repo){if(!silent)sN('GitHub no configurado',true);return;}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(ghData(),null,2))));
+    let sha=null;try{const cur=await ghApi('GET',gc.file);sha=cur.sha;}catch{}
+    const body={message:`BIOLAB sync · ${new Date().toLocaleString('es-AR')}`,content};if(sha)body.sha=sha;
+    await ghApi('PUT',gc.file,body);
+    gc.lastSync=now();sOb(K.gh,gc);
+    if(!silent){el.className='rbox';el.innerHTML='✓ Guardado · '+fDate(gc.lastSync);}
+    document.getElementById('gh-last').textContent='Último guardado: '+fDate(gc.lastSync);
+    ghLoadCfg();if(!silent)sN('Guardado en GitHub');
+  }catch(e){if(!silent){el.style.display='block';el.className='rbox er';el.innerHTML='✕ '+e.message;}sN('Error: '+e.message,true);}
+}
+
+async function ghPull(){
+  const el=document.getElementById('gh-status-box');el.style.display='block';el.className='rbox';el.innerHTML='🔄 Cargando...';
+  try{
+    const gc=gOb(K.gh,{});if(!gc.token||!gc.repo){el.className='rbox er';el.innerHTML='⚠ No configurado';return;}
+    const file=await ghApi('GET',gc.file);
+    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    const data=JSON.parse(decoded);Object.entries(data).forEach(([key,val])=>localStorage.setItem(key,JSON.stringify(val)));
+    el.className='rbox';el.innerHTML='✓ Datos cargados desde GitHub';
+    ST('fen');sN('Datos cargados desde GitHub');
+  }catch(e){el.className='rbox er';el.innerHTML='✕ '+e.message;sN('Error: '+e.message,true);}
+}
+
+async function ghBackup(){
+  const el=document.getElementById('gh-status-box');el.style.display='block';el.className='rbox';el.innerHTML='🔄 Guardando backup...';
+  try{
+    const gc=gOb(K.gh,{});if(!gc.token||!gc.repo){el.className='rbox er';el.innerHTML='⚠ No configurado';return;}
+    const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);const path=`backups/biolab-backup-${ts}.json`;
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(ghData(),null,2))));
+    await ghApi('PUT',path,{message:`BIOLAB backup · ${ts}`,content});
+    el.className='rbox';el.innerHTML=`✓ Backup guardado en <code>${path}</code>`;sN('Backup guardado');
+  }catch(e){el.className='rbox er';el.innerHTML='✕ '+e.message;sN('Error: '+e.message,true);}
+}
+
+async function ghListBackups(){
+  const el=document.getElementById('gh-bk-list');el.style.display='block';el.innerHTML='🔄 Cargando...';
+  try{
+    const gc=gOb(K.gh,{});if(!gc.token||!gc.repo){el.innerHTML='No configurado';return;}
+    const files=await ghApi('GET','backups').catch(()=>[]);
+    if(!files.length){el.innerHTML='<div class="empty">Sin backups todavía</div>';return;}
+    el.innerHTML=`<div class="tw"><table><thead><tr><th>Archivo</th><th>Acción</th></tr></thead><tbody>${files.map(f=>`<tr><td style="font-size:12px;color:var(--tx2)">${f.name}</td><td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button></td></tr>`).join('')}</tbody></table></div>`;
+  }catch(e){el.innerHTML='Error: '+e.message;}
+}
+
+async function ghRestore(path){
+  if(!confirm('¿Restaurar este backup? Se sobreescribirán los datos actuales.'))return;
+  const el=document.getElementById('gh-status-box');el.style.display='block';el.className='rbox';el.innerHTML='🔄 Restaurando...';
+  try{
+    const file=await ghApi('GET',path);
+    const decoded=decodeURIComponent(escape(atob(file.content.replace(/\n/g,''))));
+    const data=JSON.parse(decoded);Object.entries(data).forEach(([key,val])=>localStorage.setItem(key,JSON.stringify(val)));
+    el.className='rbox';el.innerHTML='✓ Backup restaurado';ST('fen');sN('Backup restaurado');
+  }catch(e){el.className='rbox er';el.innerHTML='✕ '+e.message;}
+}
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+seed();
+document.getElementById('log-fecha').value=today();
+document.getElementById('st-fecha').value=today();
+refreshFenSelects();
+renderCfg();
+ciRenderLastFormula();
+ciRenderSeguimiento();
+ST('fen');
+</script>
+</body>
+</html>
