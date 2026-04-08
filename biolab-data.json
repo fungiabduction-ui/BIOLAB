@@ -204,6 +204,78 @@
       "aspecto": "Mineral",
       "pc": 0,
       "pn": 0
+    },
+    {
+      "id": "ING-0011",
+      "nombre": "Agua destilada",
+      "unidad": "ml",
+      "aspecto": "nutricion",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0012",
+      "nombre": "Extracto de malta",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 45,
+      "pn": 2
+    },
+    {
+      "id": "ING-0013",
+      "nombre": "Levadura de cerveza",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 40,
+      "pn": 7
+    },
+    {
+      "id": "ING-0014",
+      "nombre": "Azúcar (sacarosa)",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 42,
+      "pn": 0
+    },
+    {
+      "id": "ING-0015",
+      "nombre": "Dextrosa",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 40,
+      "pn": 0
+    },
+    {
+      "id": "ING-0016",
+      "nombre": "Peptona",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 50,
+      "pn": 10
+    },
+    {
+      "id": "ING-0017",
+      "nombre": "Carbón activado",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0018",
+      "nombre": "Shilajit",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0019",
+      "nombre": "Cloruro de calcio",
+      "unidad": "g",
+      "aspecto": "nutricion",
+      "pc": 0,
+      "pn": 0
     }
   ],
   "bl2_forms": [
@@ -264,6 +336,504 @@
           "orden": 9
         }
       ]
+    },
+    {
+      "id": "F-0001",
+      "nombre": "B",
+      "version": "v1",
+      "fecha": "2026-01-08T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 3.5,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 1,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.5,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.5,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0002",
+      "nombre": "C",
+      "version": "v1",
+      "fecha": "2026-01-28T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0003",
+      "nombre": "D",
+      "version": "v1",
+      "fecha": "2026-02-17T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0004",
+      "nombre": "E",
+      "version": "v1",
+      "fecha": "2026-03-10T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3.5,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 10,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0018",
+          "qty": 0.2,
+          "orden": 10
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 11
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 12
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0005",
+      "nombre": "H",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 4,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 10,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 13
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0006",
+      "nombre": "I a",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 6,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 5,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.45,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.45,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 500,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 9,
+          "orden": 11
+        },
+        {
+          "id": "ING-0004",
+          "qty": 2,
+          "orden": 12
+        },
+        {
+          "id": "ING-0005",
+          "qty": 5,
+          "orden": 13
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0007",
+      "nombre": "I b",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 500,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 9,
+          "orden": 1
+        },
+        {
+          "id": "ING-0004",
+          "qty": 2,
+          "orden": 2
+        },
+        {
+          "id": "ING-0005",
+          "qty": 5,
+          "orden": 3
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 4
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1.5,
+          "orden": 5
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.25,
+          "orden": 6
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.25,
+          "orden": 7
+        }
+      ],
+      "customCols": []
     }
   ],
   "bl2_ntypes": {
