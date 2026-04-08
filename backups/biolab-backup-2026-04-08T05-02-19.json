@@ -1,0 +1,368 @@
+{
+  "bl2_species": [
+    {
+      "id": "ESP-0001",
+      "nombre": "Psilocybe cubensis",
+      "descripcion": "Especie principal de cultivo",
+      "fecha": "2026-04-08T04:14:25.748Z"
+    },
+    {
+      "id": "ESP-0002",
+      "nombre": "Ganoderma lucidum",
+      "descripcion": "Cepa de referencia",
+      "fecha": "2026-04-08T04:14:25.749Z"
+    }
+  ],
+  "bl2_strains": [
+    {
+      "id": "STR-0001",
+      "especie_id": "ESP-0001",
+      "nombre": "Albino Penis Envy",
+      "descripcion": "Alta potencia, micelio blanco",
+      "fecha": "2026-04-08T04:14:25.749Z",
+      "fenotipos": [
+        "FEN-0001",
+        "FEN-0002"
+      ]
+    },
+    {
+      "id": "STR-0002",
+      "especie_id": "ESP-0001",
+      "nombre": "Super Ice Flower",
+      "descripcion": "Híbrido potente",
+      "fecha": "2026-04-08T04:14:25.749Z",
+      "fenotipos": [
+        "FEN-0003"
+      ]
+    },
+    {
+      "id": "STR-0003",
+      "especie_id": "ESP-0002",
+      "nombre": "GL-Standard",
+      "descripcion": "Cepa de referencia GL",
+      "fecha": "2026-04-08T04:14:25.749Z",
+      "fenotipos": []
+    }
+  ],
+  "bl2_phenos": [
+    {
+      "id": "FEN-0001",
+      "cepa_id": "STR-0001",
+      "nombre": "F1",
+      "descripcion": "Primera generación",
+      "estado": "activo",
+      "fecha": "2026-04-08T04:14:25.749Z",
+      "notas": "Fenotipo más productivo",
+      "nodos": [
+        "CI-0001"
+      ],
+      "timeline": [
+        "LOG-0001",
+        "LOG-0002"
+      ]
+    },
+    {
+      "id": "FEN-0002",
+      "cepa_id": "STR-0001",
+      "nombre": "F2",
+      "descripcion": "Segunda generación",
+      "estado": "activo",
+      "fecha": "2026-04-08T04:14:25.750Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    },
+    {
+      "id": "FEN-0003",
+      "cepa_id": "STR-0002",
+      "nombre": "F1",
+      "descripcion": "Primera generación SIF",
+      "estado": "activo",
+      "fecha": "2026-04-08T04:14:25.750Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    }
+  ],
+  "bl2_nodes": [
+    {
+      "id": "CI-0001",
+      "tipo": "CI",
+      "fen_id": "FEN-0001",
+      "fecha": "2026-04-08T04:14:25.750Z",
+      "estado": "activo",
+      "origen_id": null,
+      "outputs": [],
+      "meta": {
+        "formula_id": "FRM-001",
+        "placas": 5,
+        "placas_restantes": 5,
+        "vol_total": 500,
+        "vol_placa": 100,
+        "temp": 25,
+        "notas": "Cultivo inicial con MEA Circe"
+      }
+    }
+  ],
+  "bl2_logs": [
+    {
+      "id": "LOG-0001",
+      "fecha": "2026-04-06T04:14:25.750Z",
+      "fen_id": "FEN-0001",
+      "nodo_id": "CI-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "CI creado"
+    },
+    {
+      "id": "LOG-0002",
+      "fecha": "2026-04-07T04:14:25.750Z",
+      "fen_id": "FEN-0001",
+      "nodo_id": "CI-0001",
+      "tipo": "crecimiento",
+      "impacto": 1,
+      "nota": "Micelio denso uniforme"
+    }
+  ],
+  "bl2_ings": [
+    {
+      "id": "ING-0001",
+      "nombre": "Agua filtrada",
+      "unidad": "ml",
+      "aspecto": "Solvente",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0002",
+      "nombre": "Agar agar",
+      "unidad": "gr",
+      "aspecto": "Soporte",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0003",
+      "nombre": "Pharmaton G115",
+      "unidad": "ud",
+      "aspecto": "Cofactores",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0004",
+      "nombre": "Levadura de cerveza Macro Salud",
+      "unidad": "gr",
+      "aspecto": "Nitrógeno",
+      "pc": 0,
+      "pn": 10
+    },
+    {
+      "id": "ING-0005",
+      "nombre": "Almidón de maíz",
+      "unidad": "gr",
+      "aspecto": "Carbono",
+      "pc": 44,
+      "pn": 0
+    },
+    {
+      "id": "ING-0006",
+      "nombre": "Extracto de malta Circe",
+      "unidad": "gr",
+      "aspecto": "Carbono",
+      "pc": 65,
+      "pn": 2
+    },
+    {
+      "id": "ING-0007",
+      "nombre": "Carbonato de calcio",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0008",
+      "nombre": "L Arginina",
+      "unidad": "gr",
+      "aspecto": "Nitrógeno",
+      "pc": 0,
+      "pn": 32
+    },
+    {
+      "id": "ING-0009",
+      "nombre": "Sulfato de magnesio",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0010",
+      "nombre": "Fosfato monopotásico",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    }
+  ],
+  "bl2_forms": [
+    {
+      "id": "F-0001",
+      "nombre": "CATEGORIA I A",
+      "version": "v1",
+      "fecha": "2026-04-01T03:47:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 1
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 6,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 5,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0008",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.45,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.45,
+          "orden": 9
+        }
+      ]
+    }
+  ],
+  "bl2_ntypes": {
+    "CI": {
+      "label": "Cultivo In Vitro",
+      "icon": "🧫"
+    },
+    "GR": {
+      "label": "Grano",
+      "icon": "🌾"
+    },
+    "IN": {
+      "label": "Inóculo",
+      "icon": "💉"
+    },
+    "SU": {
+      "label": "Sustrato",
+      "icon": "🧱"
+    },
+    "ST": {
+      "label": "Stock Final",
+      "icon": "📦"
+    }
+  },
+  "bl2_flow": {
+    "transiciones": {
+      "CI": [
+        "GR",
+        "IN",
+        "ST"
+      ],
+      "GR": [
+        "IN"
+      ],
+      "IN": [
+        "SU"
+      ],
+      "SU": [
+        "ST"
+      ],
+      "ST": []
+    }
+  },
+  "bl2_seg": [],
+  "bl2_su_ings": [
+    {
+      "id": "SUI-0001",
+      "nombre": "Coco seco",
+      "unidad": "g",
+      "estado": "seco",
+      "aspectos": [
+        "estructura"
+      ],
+      "peso": 1,
+      "volumen": 1.5,
+      "densidad": 0.6666666666666666
+    },
+    {
+      "id": "SUI-0004",
+      "nombre": "Agua hirviendo",
+      "unidad": "mL",
+      "estado": "mojado",
+      "aspectos": [
+        "hidratacion"
+      ],
+      "peso": 945,
+      "volumen": 1,
+      "densidad": 1000
+    }
+  ],
+  "bl2_su_forms": [
+    {
+      "id": "SU-00001",
+      "nombre": "ABRIL",
+      "fecha": "2026-04-08T07:45:00.000Z",
+      "base": {
+        "fibra": 500,
+        "agua": 2200,
+        "ratio": "4.40"
+      },
+      "ingredientes": [],
+      "produccion": {
+        "modo": "normal",
+        "bolsas": 2,
+        "pesoBolsa": 1.5
+      },
+      "esteril": {
+        "tiempo": 120
+      },
+      "meta": {
+        "pesoTotal": 2700,
+        "humedad": "81.5",
+        "pctNutricion": "0.0"
+      },
+      "notas": "Probando nuevo protocolo"
+    }
+  ],
+  "bl2_su_params": {
+    "agua_g": 945,
+    "expansion": 12
+  }
+}
