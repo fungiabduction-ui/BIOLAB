@@ -1,0 +1,619 @@
+{
+  "version": "1.0",
+  "fechaExportacion": "2026-04-11",
+  "loteActual": {
+    "id": "113",
+    "mezcla": "MAIZ+AVENA-48horas",
+    "fecha": "2026-03-11",
+    "version": "v1",
+    "componentes": [
+      {
+        "nombre": "Maíz (MA)",
+        "volumen": 1310,
+        "densidad": 0.802,
+        "masa": 1050.62,
+        "notas": ""
+      },
+      {
+        "nombre": "Avena (AV)",
+        "volumen": 2350,
+        "densidad": 0.556,
+        "masa": 1306.6,
+        "notas": ""
+      }
+    ],
+    "dc": {
+      "volSol": 5,
+      "agente": "ÁCIDO PERACÉTICO",
+      "concAgente": 5,
+      "volAgente": 300,
+      "conc": 0.3,
+      "tiempo": 1440,
+      "temp": "AMBIENTE",
+      "agitacion": "PASIVA"
+    },
+    "hm": {
+      "modo": "mixto",
+      "metodo": "INMERSION",
+      "agitacion": "NO",
+      "notas": "",
+      "resultado": "ok",
+      "etapas": [
+        {
+          "step": 1,
+          "tipo": "coccion",
+          "tiempo": 0,
+          "unidad": "h",
+          "notas": "INMERSION EN AGUA HIRVIENDO"
+        },
+        {
+          "step": 2,
+          "tipo": "espera",
+          "tiempo": 24,
+          "unidad": "h",
+          "notas": "ABSORSION"
+        }
+      ],
+      "aditivos": []
+    },
+    "dm": {
+      "masaSeca": 2357.22,
+      "masaHidr": 6400,
+      "densidad": 630,
+      "aguaAbs": 4042.78,
+      "retencion": 171.5,
+      "volumen": 10.16,
+      "expansion": 177.6
+    },
+    "fr": {
+      "capacidad": 660,
+      "cargaUtil": 500,
+      "headspace": 160,
+      "densidad": 630,
+      "pesoFrasco": 315,
+      "cantFrascos": 20
+    },
+    "adtivos": [],
+    "es": {
+      "tiempo": 120,
+      "medio": "",
+      "objPrimario": "",
+      "objSecundario": "",
+      "riesgos": [
+        {
+          "causa": "",
+          "nivel": ""
+        },
+        {
+          "causa": "",
+          "nivel": ""
+        },
+        {
+          "causa": "",
+          "nivel": ""
+        }
+      ]
+    },
+    "po": [
+      {
+        "paso": 1,
+        "completado": false
+      },
+      {
+        "paso": 2,
+        "completado": false
+      },
+      {
+        "paso": 3,
+        "completado": false
+      },
+      {
+        "paso": 4,
+        "completado": false
+      },
+      {
+        "paso": 5,
+        "completado": false
+      },
+      {
+        "paso": 6,
+        "completado": false
+      }
+    ],
+    "re": {
+      "evaluacion": {
+        "hidratacion": "",
+        "distribucion": "",
+        "eficiencia": ""
+      },
+      "notas": "Volver a utilizar este protocolo en el futuro para confirmar datos"
+    }
+  },
+  "lotesRegistrados": [
+    {
+      "id": "1903-MA-AV",
+      "mezcla": "MA + AV (50/50 vol.)",
+      "fecha": "2024-01-15",
+      "version": "v2.0",
+      "componentes": [
+        {
+          "nombre": "Avena (AV)",
+          "volumen": 2000,
+          "densidad": 0.556,
+          "masa": 1112,
+          "notas": "Grano fino, alta superficie específica"
+        },
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 2000,
+          "densidad": 0.802,
+          "masa": 1604,
+          "notas": "Grano grueso, mayor resistencia a hidratación"
+        }
+      ],
+      "dc": {
+        "volSol": 4,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 60,
+        "conc": 0.075,
+        "tiempo": 60,
+        "temp": "AMBIENTE",
+        "agitacion": "PASIVA (DIFUSIÓN)"
+      },
+      "hm": {
+        "modo": "coccion",
+        "metodo": "INMERSIÓN DIRECTA",
+        "agitacion": "CADA 5 MINUTOS",
+        "notas": "No se lavo el grano. Secado superficial y a enfrascar.",
+        "resultado": "sub",
+        "etapas": [
+          {
+            "step": 1,
+            "tipo": "coccion",
+            "tiempo": 10,
+            "unidad": "min",
+            "notas": "INMERSIÓN DIRECTA EN AGUA HIRVIENDO"
+          },
+          {
+            "step": 2,
+            "tipo": "coccion",
+            "tiempo": 20,
+            "unidad": "min",
+            "notas": "FUEGO MINIMO"
+          }
+        ],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2716,
+        "masaHidr": 4316,
+        "densidad": 630,
+        "aguaAbs": 1600,
+        "retencion": 58.9,
+        "volumen": 6.85,
+        "expansion": 71.3
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 630,
+        "pesoFrasco": 315,
+        "cantFrascos": 13
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 150,
+        "medio": "VAPOR SATURADO",
+        "objPrimario": "ESTERILIDAD DEL SUSTRATO",
+        "objSecundario": "HIDRATACIÓN INTERNA DEL MAÍZ",
+        "riesgos": [
+          {
+            "causa": "CaSO4 insuficiente",
+            "nivel": "medio"
+          },
+          {
+            "causa": "CaSO4 excesivo",
+            "nivel": "medio"
+          },
+          {
+            "causa": "Mala distribución en esterilizador",
+            "nivel": "alto"
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": "Se observa un crecimiento mucho más vigoroso y agresivo en las tandas preparadas con avena o mediante hidratación pasiva en frío."
+      }
+    },
+    {
+      "id": "GR273",
+      "mezcla": "MA100COCCION",
+      "fecha": "2026-03-27",
+      "version": "v1",
+      "componentes": [
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 3000,
+          "densidad": 0.802,
+          "masa": 2406,
+          "notas": ""
+        }
+      ],
+      "dc": {
+        "volSol": 4,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 60,
+        "conc": 0.075,
+        "tiempo": 60,
+        "temp": "AMBIENTE",
+        "agitacion": "PASIVA"
+      },
+      "hm": {
+        "modo": "coccion",
+        "metodo": "INMERSION DIRECTA EN AGUA HIRVIENDO",
+        "agitacion": "PASIVA",
+        "notas": "Se mantuvo a fuego mínimo con agitación pasiva cada 15 minutos.\nEl grano no se lavó",
+        "resultado": "ok",
+        "etapas": [
+          {
+            "step": 1,
+            "tipo": "coccion",
+            "tiempo": 10,
+            "unidad": "min",
+            "notas": "INMERSION DIRECTA EN AGUA HIRVIENDO"
+          },
+          {
+            "step": 2,
+            "tipo": "coccion",
+            "tiempo": 15,
+            "unidad": "min",
+            "notas": "Se mantuvo a fuego mínimo con agitación pasiva cada 15 minutos"
+          },
+          {
+            "step": 3,
+            "tipo": "coccion",
+            "tiempo": 15,
+            "unidad": "min",
+            "notas": "Se mantuvo a fuego mínimo con agitación pasiva cada 15 minutos"
+          },
+          {
+            "step": 4,
+            "tipo": "coccion",
+            "tiempo": 15,
+            "unidad": "min",
+            "notas": "Se mantuvo a fuego mínimo con agitación pasiva cada 15 minutos"
+          },
+          {
+            "step": 5,
+            "tipo": "coccion",
+            "tiempo": 15,
+            "unidad": "min",
+            "notas": "Se mantuvo a fuego mínimo con agitación pasiva cada 15 minutos"
+          },
+          {
+            "step": 6,
+            "tipo": "espera",
+            "tiempo": 30,
+            "unidad": "min",
+            "notas": "Al enfriarse el maiz absorbe mas agua"
+          }
+        ],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2406,
+        "masaHidr": 5406,
+        "densidad": 901,
+        "aguaAbs": 3000,
+        "retencion": 124.7,
+        "volumen": 6,
+        "expansion": 100
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 901,
+        "pesoFrasco": 450.5,
+        "cantFrascos": 12
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 120,
+        "medio": "",
+        "objPrimario": "",
+        "objSecundario": "",
+        "riesgos": [
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": "Se observa un crecimiento mucho más vigoroso y agresivo en las tandas preparadas con avena o mediante hidratación pasiva en frío."
+      }
+    },
+    {
+      "id": "113",
+      "mezcla": "MAIZ+AVENA-48horas",
+      "fecha": "2026-03-11",
+      "version": "v1",
+      "componentes": [
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 1310,
+          "densidad": 0.802,
+          "masa": 1050.62,
+          "notas": ""
+        },
+        {
+          "nombre": "Avena (AV)",
+          "volumen": 2350,
+          "densidad": 0.556,
+          "masa": 1306.6,
+          "notas": ""
+        }
+      ],
+      "dc": {
+        "volSol": 5,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 300,
+        "conc": 0.3,
+        "tiempo": 1440,
+        "temp": "AMBIENTE",
+        "agitacion": "PASIVA"
+      },
+      "hm": {
+        "modo": "mixto",
+        "metodo": "INMERSION",
+        "agitacion": "NO",
+        "notas": "",
+        "resultado": "ok",
+        "etapas": [
+          {
+            "step": 1,
+            "tipo": "coccion",
+            "tiempo": 0,
+            "unidad": "h",
+            "notas": "INMERSION EN AGUA HIRVIENDO"
+          },
+          {
+            "step": 2,
+            "tipo": "espera",
+            "tiempo": 24,
+            "unidad": "h",
+            "notas": "ABSORSION"
+          }
+        ],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2357.22,
+        "masaHidr": 6400,
+        "densidad": 630,
+        "aguaAbs": 4042.78,
+        "retencion": 171.5,
+        "volumen": 10.16,
+        "expansion": 177.6
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 630,
+        "pesoFrasco": 315,
+        "cantFrascos": 20
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 120,
+        "medio": "",
+        "objPrimario": "",
+        "objSecundario": "",
+        "riesgos": [
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": "Volver a utilizar este protocolo en el futuro para confirmar datos"
+      }
+    }
+  ],
+  "biblioteca": {
+    "agentes": [
+      {
+        "id": "AG-01",
+        "nombre": "ÁCIDO PERACÉTICO",
+        "concDefault": 5,
+        "notas": "Descontaminante oxidativo"
+      },
+      {
+        "id": "AG-02",
+        "nombre": "HIPOCLORITO DE SODIO",
+        "concDefault": 1,
+        "notas": "Blanqueador disinfectante"
+      },
+      {
+        "id": "AG-03",
+        "nombre": "PERÓXIDO DE HIDRÓGENO",
+        "concDefault": 3,
+        "notas": "Oxidante fuerte"
+      }
+    ],
+    "aditivos": [
+      {
+        "id": "AD-01",
+        "nombre": "CaSO4 (Yeso)",
+        "tipo": "Estructurante",
+        "notas": "Mejora aireación"
+      },
+      {
+        "id": "AD-02",
+        "nombre": "Carbonato de Calcio",
+        "tipo": "Corrector pH",
+        "notas": "Alcalinizante"
+      },
+      {
+        "id": "AD-03",
+        "nombre": "Gesso",
+        "tipo": "Estructurante",
+        "notas": "Similar al yeso"
+      },
+      {
+        "id": "AD-04",
+        "nombre": "Tiza",
+        "tipo": "Estructurante",
+        "notas": "Fuente de calcio"
+      }
+    ],
+    "granos": [
+      {
+        "id": "GR-01",
+        "nombre": "Avena (AV)",
+        "densidadTipica": 0.556,
+        "notas": "Grano fino, alta superficie"
+      },
+      {
+        "id": "GR-02",
+        "nombre": "Maíz (MA)",
+        "densidadTipica": 0.802,
+        "notas": "Grano grueso"
+      },
+      {
+        "id": "GR-03",
+        "nombre": "Trigo (TR)",
+        "densidadTipica": 0.75,
+        "notas": "Grano medio"
+      },
+      {
+        "id": "GR-04",
+        "nombre": "Centeno (CE)",
+        "densidadTipica": 0.7,
+        "notas": "Grano medio"
+      },
+      {
+        "id": "GR-05",
+        "nombre": "Sorgo (SO)",
+        "densidadTipica": 0.75,
+        "notas": "Grano medio"
+      }
+    ]
+  }
+}

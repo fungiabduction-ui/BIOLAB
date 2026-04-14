@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Config - Biblioteca de Materiales</title>
+    <link rel="stylesheet" href="su_styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .edit-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--dark-tertiary);
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+        .edit-input:focus {
+            outline: none;
+            border-color: var(--su-fibra);
+        }
+        .edit-select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--dark-tertiary);
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+        .btn-delete-row {
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .btn-cargar-row {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-right: 4px;
+        }
+        .col-acciones {
+            display: none;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .btn-small.cargar {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-small.eliminar {
+            background: var(--danger);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <h1>⚙️ Config - Biblioteca de Materiales</h1>
+            <p class="subtitle">Gestión de materiales y registros para sustratos</p>
+            <div class="header-actions">
+                <button type="button" class="btn btn-secondary" onclick="importarDatosExcel()">📥 Importar Datos</button>
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='su_index.html'">✕ Cerrar</button>
+            </div>
+        </header>
+
+        <!-- PANEL DE MÉTRICAS BÁSICAS -->
+        <section class="metrics-panel">
+            <h2>📊 Resumen</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">Materiales</span>
+                    <span class="metric-value" id="metricTotalMateriales">0</span>
+                    <span class="metric-unit">registrados</span>
+                </div>
+                <div class="metric-card su-fibra">
+                    <span class="metric-label">Estructura</span>
+                    <span class="metric-value" id="metricEstructura">0</span>
+                    <span class="metric-unit">tipos</span>
+                </div>
+                <div class="metric-card su-agua">
+                    <span class="metric-label">Nutrición</span>
+                    <span class="metric-value" id="metricNutricion">0</span>
+                    <span class="metric-unit">tipos</span>
+                </div>
+                <div class="metric-card highlight">
+                    <span class="metric-label">Registros</span>
+                    <span class="metric-value" id="metricRegistros">0</span>
+                    <span class="metric-unit">lotes</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- BIBLIOTECA DE MATERIALES -->
+        <section class="section-card active">
+            <div class="section-header" data-section="biblioteca">
+                <h2>🧱 Biblioteca de Materiales</h2>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content" id="biblioteca">
+                <div style="margin-bottom:10px">
+                    <button type="button" id="btnEditMat" class="btn btn-secondary" onclick="toggleEdicionMateriales()">✏️ Edit</button>
+                </div>
+                <table class="data-table" id="tablaMateriales">
+                    <thead>
+                        <tr>
+                            <th>ING-ID</th>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Tipo</th>
+                            <th>Unidad</th>
+                            <th>Peso (g)</th>
+                            <th>Volumen (ml)</th>
+                            <th>Densidad (g/ml)</th>
+                            <th>Notas</th>
+                            <th class="col-acciones"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bibliotecaTable">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- AGREGAR NUEVO MATERIAL -->
+        <section class="section-card">
+            <div class="section-header" data-section="agregar">
+                <h2>➕ Agregar Nuevo Material</h2>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content" id="agregar">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="matNombre">Nombre</label>
+                        <input type="text" id="matNombre" placeholder="ej: Fibra de coco">
+                    </div>
+                    <div class="form-group">
+                        <label for="matTipo">Tipo</label>
+                        <select id="matTipo">
+                            <option value="estructura">Estructura</option>
+                            <option value="base">Base</option>
+                            <option value="nutricion">Nutrición</option>
+                            <option value="aditivo">Aditivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="matEstado">Estado</label>
+                        <select id="matEstado">
+                            <option value="solido">Sólido / Seco</option>
+                            <option value="liquido">Líquido / Mojado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="matUnidad">Unidad</label>
+                        <select id="matUnidad">
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="matPeso">Peso (g)</label>
+                        <input type="number" id="matPeso" step="0.001" placeholder="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="matVolumen">Volumen (ml)</label>
+                        <input type="number" id="matVolumen" step="0.001" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="matDensidad">Densidad (g/ml)</label>
+                        <input type="number" id="matDensidad" step="0.001" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="matNotas">Notas</label>
+                    <input type="text" id="matNotas" placeholder="Notas sobre el material...">
+                </div>
+                <button type="button" class="btn btn-su" onclick="agregarMaterial()">+ Agregar Material</button>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>⚙️ Config - Biblioteca de Materiales | Módulo SU v1.0</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // VARIABLES GLOBALES
+        // ==========================================
+        const SU_BIBLIOTECA_KEY = 'su_biblioteca';
+        const SU_LOTES_KEY = 'su_lotes';
+        
+        let biblioteca = { materiales: [] };
+        let lotesData = [];
+        let modoEdicionMateriales = false;
+        let modoEdicionRegistros = false;
+
+// ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        window.onload = function() {
+            cargarBibliotecaDesdeStorage();
+            cargarLotesDesdeStorage();
+            inicializarEventos();
+            renderizarBiblioteca();
+            renderizarRegistros();
+            actualizarEstadisticas();
+        };
+
+        // Función para cargar datos iniciales desde archivo JSON externo
+        async function cargarDatosIniciales() {
+            try {
+                const response = await fetch('datos_iniciales.json');
+                if (response.ok) {
+                    const datos = await response.json();
+                    
+                    // Cargar materiales si no hay datos
+                    if (biblioteca.materiales.length === 0 && datos.materiales) {
+                        biblioteca.materiales = datos.materiales;
+                        guardarBiblioteca();
+                        console.log('Datos iniciales cargados:', datos.materiales.length, 'materiales');
+                    }
+                    
+                    // Cargar registros si no hay datos  
+                    if (lotesData.length === 0 && datos.registros) {
+                        lotesData = datos.registros;
+                        guardarLotes();
+                        console.log('Datos iniciales cargados:', datos.registros.length, 'registros');
+                    }
+                }
+            } catch (error) {
+                console.log('No se pudieron cargar datos iniciales automaticamente');
+            }
+        }
+
+        // Llamar automáticamente al cargar si no hay datos
+        if (biblioteca.materiales.length === 0 || lotesData.length === 0) {
+            cargarDatosIniciales();
+        }
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        window.onload = function() {
+            cargarBibliotecaDesdeStorage();
+            cargarLotesDesdeStorage();
+            inicializarEventos();
+            renderizarBiblioteca();
+            renderizarRegistros();
+            actualizarEstadisticas();
+        };
+
+        function cargarBibliotecaDesdeStorage() {
+            const stored = localStorage.getItem(SU_BIBLIOTECA_KEY);
+            if (stored) {
+                biblioteca = JSON.parse(stored);
+            }
+        }
+
+        function cargarLotesDesdeStorage() {
+            const stored = localStorage.getItem(SU_LOTES_KEY);
+            if (stored) {
+                lotesData = JSON.parse(stored);
+            }
+        }
+
+        function guardarBiblioteca() {
+            localStorage.setItem(SU_BIBLIOTECA_KEY, JSON.stringify(biblioteca));
+        }
+
+        function guardarLotes() {
+            localStorage.setItem(SU_LOTES_KEY, JSON.stringify(lotesData));
+        }
+
+        function inicializarEventos() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    this.parentElement.classList.toggle('collapsed');
+                });
+            });
+        }
+
+        // ==========================================
+        // EDICIÓN MATERIALES
+        // ==========================================
+        function toggleEdicionMateriales() {
+            modoEdicionMateriales = !modoEdicionMateriales;
+            const btnEdit = document.getElementById('btnEditMat');
+            const tablaMateriales = document.getElementById('tablaMateriales');
+            const colsAcciones = tablaMateriales ? tablaMateriales.querySelectorAll('.col-acciones') : [];
+            
+            if (btnEdit) {
+                if (modoEdicionMateriales) {
+                    btnEdit.textContent = '💾 Save';
+                    btnEdit.classList.remove('btn-secondary');
+                    btnEdit.classList.add('btn-su');
+                } else {
+                    guardarCambiosMateriales();
+                    btnEdit.textContent = '✏️ Edit';
+                    btnEdit.classList.remove('btn-su');
+                    btnEdit.classList.add('btn-secondary');
+                }
+                
+                // Agregar o quit(clase 'visible' a cada elemento
+                colsAcciones.forEach(el => {
+                    if (modoEdicionMateriales) {
+                        el.classList.add('visible');
+                    } else {
+                        el.classList.remove('visible');
+                    }
+                });
+            }
+            
+            renderizarBiblioteca();
+        }
+
+        function guardarCambiosMateriales() {
+            const inputsAll = document.querySelectorAll('#bibliotecaTable input, #bibliotecaTable select');
+            if (inputsAll.length === 0) return;
+            
+            const numCols = 9;
+            const nuevosMateriales = [];
+            for (let i = 0; i < inputsAll.length; i += numCols) {
+                const idx = Math.floor(i / numCols);
+                nuevosMateriales.push({
+                    id: biblioteca.materiales[idx]?.id || 'ING-SU-' + String(idx + 1).padStart(3, '0'),
+                    nombre: inputsAll[i + 1].value,
+                    estado: inputsAll[i + 2].value,
+                    tipo: inputsAll[i + 3].value,
+                    unidad: inputsAll[i + 4].value,
+                    peso: parseFloat(inputsAll[i + 5].value) || 0,
+                    volumen: parseFloat(inputsAll[i + 6].value) || 0,
+                    densidad: parseFloat(inputsAll[i + 7].value) || 0,
+                    notas: inputsAll[i + 8].value
+                });
+            }
+            
+            biblioteca.materiales = nuevosMateriales;
+            guardarBiblioteca();
+            actualizarEstadisticas();
+            alert('Cambios guardados');
+        }
+
+        function eliminarMaterial(index) {
+            if (!confirm('¿Eliminar este material?')) return;
+            biblioteca.materiales.splice(index, 1);
+            guardarBiblioteca();
+            renderizarBiblioteca();
+            actualizarEstadisticas();
+        }
+
+        // ==========================================
+        // EDICIÓN REGISTROS
+        // ==========================================
+        function toggleEdicionRegistros() {
+            modoEdicionRegistros = !modoEdicionRegistros;
+            const btnEdit = document.getElementById('btnEditRegistros');
+            const colsAcciones = document.querySelectorAll('#tablaRegistros .col-acciones');
+            
+            if (modoEdicionRegistros) {
+                btnEdit.textContent = '💾 Save';
+                btnEdit.classList.remove('btn-secondary');
+                btnEdit.classList.add('btn-su');
+                colsAcciones.forEach(th => th.style.display = 'table-cell');
+            } else {
+                btnEdit.textContent = '✏️ Edit';
+                btnEdit.classList.remove('btn-su');
+                btnEdit.classList.add('btn-secondary');
+                colsAcciones.forEach(th => th.style.display = 'none');
+            }
+            
+            renderizarRegistros();
+        }
+
+        function eliminarRegistro(index) {
+            if (!confirm('¿Eliminar este registro?')) return;
+            lotesData.splice(index, 1);
+            guardarLotes();
+            renderizarRegistros();
+            actualizarEstadisticas();
+            alert('Registro eliminado');
+        }
+
+        function cargarRegistro(index) {
+            const lote = lotesData[index];
+            if (!lote) return;
+            
+            if (!confirm('Cargar el registro "' + lote.id + '" en la calculadora?')) return;
+            
+            // Guardar índice del lote a cargar
+            localStorage.setItem('lote_a_cargar', index);
+            
+            // Abrir index.html
+            window.open('su_index.html', '_self');
+        }
+
+        // ==========================================
+        // RENDERIZAR BIBLIOTECA
+        // ==========================================
+        function renderizarBiblioteca() {
+            const tbody = document.getElementById('bibliotecaTable');
+            const tablaMateriales = document.getElementById('tablaMateriales');
+            const colsAcciones = tablaMateriales ? tablaMateriales.querySelectorAll('.col-acciones') : [];
+            
+            if (!biblioteca.materiales.length) {
+                colsAcciones.forEach(el => el.classList.remove('visible'));
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Sin materiales registrados</td></tr>';
+                return;
+            }
+            
+            // Agregar o quitar clase visible según modo
+            colsAcciones.forEach(el => {
+                if (modoEdicionMateriales) {
+                    el.classList.add('visible');
+                } else {
+                    el.classList.remove('visible');
+                }
+            });
+            
+            tbody.innerHTML = biblioteca.materiales.map((m, index) => {
+                if (modoEdicionMateriales) {
+                    return `
+                    <tr>
+                        <td><input type="text" class="edit-input" value="${m.id}" readonly style="background:var(--dark);width:80px"></td>
+                        <td><input type="text" class="edit-input" value="${escapeHtml(m.nombre)}"></td>
+                        <td>
+                            <select class="edit-select">
+                                <option value="solido" ${m.estado === 'solido' ? 'selected' : ''}>sólido</option>
+                                <option value="liquido" ${m.estado === 'liquido' ? 'selected' : ''}>líquido</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="edit-select">
+                                <option value="estructura" ${m.tipo === 'estructura' ? 'selected' : ''}>estructura</option>
+                                <option value="base" ${m.tipo === 'base' ? 'selected' : ''}>base</option>
+                                <option value="nutricion" ${m.tipo === 'nutricion' ? 'selected' : ''}>nutrición</option>
+                                <option value="aditivo" ${m.tipo === 'aditivo' ? 'selected' : ''}>aditivo</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="edit-select">
+                                <option value="g" ${m.unidad === 'g' ? 'selected' : ''}>g</option>
+                                <option value="ml" ${m.unidad === 'ml' ? 'selected' : ''}>ml</option>
+                            </select>
+                        </td>
+                        <td><input type="number" class="edit-input" step="0.001" value="${m.peso || 0}"></td>
+                        <td><input type="number" class="edit-input" step="0.001" value="${m.volumen || 0}"></td>
+                        <td><input type="number" class="edit-input" step="0.001" value="${m.densidad || 0}"></td>
+                        <td><input type="text" class="edit-input" value="${escapeHtml(m.notas || '')}"></td>
+                        <td class="col-acciones"><button class="btn-delete-row" onclick="eliminarMaterial(${index})">✕</button></td>
+                    </tr>`;
+                } else {
+                    return `
+                    <tr>
+                        <td>${m.id}</td>
+                        <td>${m.nombre}</td>
+                        <td>${m.estado}</td>
+                        <td>${m.tipo}</td>
+                        <td>${m.unidad || '-'}</td>
+                        <td>${m.peso || '-'}</td>
+                        <td>${m.volumen || '-'}</td>
+                        <td>${m.densidad || '-'}</td>
+                        <td>${m.notas || '-'}</td>
+                        <td class="col-acciones" style="display:none"></td>
+                    </tr>`;
+                }
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ==========================================
+        // RENDERIZAR REGISTROS
+        // ==========================================
+        function renderizarRegistros() {
+            const tbody = document.getElementById('registroLotesBody');
+            const tablaRegistros = document.getElementById('tablaRegistros');
+            const colsAcciones = tablaRegistros.querySelectorAll('.col-acciones');
+            const noLotesMsg = document.getElementById('noLotesMsg');
+            
+            if (lotesData.length === 0) {
+                colsAcciones.forEach(th => th.style.display = 'none');
+                tbody.innerHTML = '';
+                noLotesMsg.style.display = 'block';
+                return;
+            }
+            
+            noLotesMsg.style.display = 'none';
+            colsAcciones.forEach(th => th.style.display = modoEdicionRegistros ? 'table-cell' : 'none');
+            
+            // Ordenar por fecha
+            const lotesOrdenados = [...lotesData].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            
+            tbody.innerHTML = lotesOrdenados.map((lote, ordenIdx) => {
+                // Encontrar índice real
+                const realIndex = lotesData.indexOf(lote);
+                
+                if (modoEdicionRegistros) {
+                    return `
+                    <tr>
+                        <td>${lote.fecha || '-'}</td>
+                        <td>${lote.id || '-'}</td>
+                        <td>${lote.estructura || '-'}</td>
+                        <td>${lote.fibra || 0}g</td>
+                        <td>${lote.ratio || 0}</td>
+                        <td>${lote.agua || 0}ml</td>
+                        <td>${lote.total || 0}g</td>
+                        <td>${lote.bolsas || 0}</td>
+                        <td>${lote.steril || 0}min</td>
+                        <td>${lote.notas || '-'}</td>
+                        <td class="col-acciones">
+                            <button class="btn-small cargar" onclick="cargarRegistro(${realIndex})">📂 Cargar</button>
+                            <button class="btn-small eliminar" onclick="eliminarRegistro(${realIndex})">✕</button>
+                        </td>
+                    </tr>`;
+                } else {
+                    return `
+                    <tr>
+                        <td>${lote.fecha || '-'}</td>
+                        <td>${lote.id || '-'}</td>
+                        <td>${lote.estructura || '-'}</td>
+                        <td>${lote.fibra || 0}g</td>
+                        <td>${lote.ratio || 0}</td>
+                        <td>${lote.agua || 0}ml</td>
+                        <td>${lote.total || 0}g</td>
+                        <td>${lote.bolsas || 0}</td>
+                        <td>${lote.steril || 0}min</td>
+                        <td>${lote.notas || '-'}</td>
+                        <td class="col-acciones" style="display:none">
+                            <button class="btn-small cargar" onclick="cargarRegistro(${realIndex})">📂 Cargar</button>
+                            <button class="btn-small eliminar" onclick="eliminarRegistro(${realIndex})">✕</button>
+                        </td>
+                    </tr>`;
+                }
+            }).join('');
+        }
+
+        // ==========================================
+        // AGREGAR MATERIAL
+        // ==========================================
+        function agregarMaterial() {
+            const nombre = document.getElementById('matNombre').value.trim();
+            if (!nombre) {
+                alert('Ingrese el nombre del material');
+                return;
+            }
+            
+            const nuevo = {
+                id: 'ING-SU-' + String(biblioteca.materiales.length + 1).padStart(3, '0'),
+                nombre: nombre,
+                tipo: document.getElementById('matTipo').value,
+                estado: document.getElementById('matEstado').value,
+                unidad: document.getElementById('matUnidad').value,
+                peso: parseFloat(document.getElementById('matPeso').value) || 0,
+                volumen: parseFloat(document.getElementById('matVolumen').value) || 0,
+                densidad: parseFloat(document.getElementById('matDensidad').value) || 0,
+                notas: document.getElementById('matNotas').value.trim()
+            };
+            
+            biblioteca.materiales.push(nuevo);
+            guardarBiblioteca();
+            renderizarBiblioteca();
+            actualizarEstadisticas();
+            
+            document.getElementById('matNombre').value = '';
+            document.getElementById('matNotas').value = '';
+            document.getElementById('matPeso').value = '';
+            document.getElementById('matVolumen').value = '';
+            document.getElementById('matDensidad').value = '';
+            
+            alert('Material agregado: ' + nuevo.id);
+        }
+
+        // ==========================================
+        // ESTADÍSTICAS
+        // ==========================================
+        function actualizarEstadisticas() {
+            const total = biblioteca.materiales.length;
+            const estructura = biblioteca.materiales.filter(m => m.tipo === 'estructura').length;
+            const nutricion = biblioteca.materiales.filter(m => m.tipo === 'nutricion').length;
+            const adicion = biblioteca.materiales.filter(m => m.tipo === 'aditivo').length;
+            
+            document.getElementById('metricTotalMateriales').textContent = total;
+            document.getElementById('metricEstructura').textContent = estructura;
+            document.getElementById('metricNutricion').textContent = nutricion;
+            document.getElementById('metricAditivos').textContent = adicion;
+            document.getElementById('metricRegistros').textContent = lotesData.length;
+        }
+
+        // ==========================================
+        // IMPORTAR DESDE JSON (USANDO SELECTOR DE ARCHIVO)
+        // ==========================================
+        function importarDatosExcel() {
+            // Crear input de archivo invisible
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const datos = JSON.parse(event.target.result);
+                        
+                        if (!datos.materiales && !Array.isArray(datos)) {
+                            throw new Error('Formato JSON inválido. Use un archivo con formato: {"materiales": [...], "registros": [...]}');
+                        }
+                        
+                        // Importar materiales
+                        let nuevosMat = 0;
+                        if (datos.materiales && Array.isArray(datos.materiales)) {
+                            datos.materiales.forEach(mat => {
+                                const existe = biblioteca.materiales.some(m => m.id === mat.id);
+                                if (!existe) {
+                                    biblioteca.materiales.push(mat);
+                                    nuevosMat++;
+                                }
+                            });
+                        }
+                        guardarBiblioteca();
+                        renderizarBiblioteca();
+                        
+                        // Importar registros
+                        let nuevosReg = 0;
+                        // Aceptar tanto "registros" como "records" como array directo
+                        const registros = datos.registros || datos.records || (Array.isArray(datos) ? datos : []);
+                        if (Array.isArray(registros)) {
+                            registros.forEach(registro => {
+                                const existe = lotesData.some(l => l.id === registro.id);
+                                if (!existe) {
+                                    lotesData.push(registro);
+                                    nuevosReg++;
+                                }
+                            });
+                        }
+                        guardarLotes();
+                        renderizarRegistros();
+                        actualizarEstadisticas();
+                        
+                        alert('Importación completada:\n- Materiales: ' + nuevosMat + '\n- Registros: ' + nuevosReg);
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al importar: ' + error.message);
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Función para cargar datos iniciales al abrir (solo si no hay datos)
+        function cargarDatosIniciales() {
+            if (biblioteca.materiales.length > 0 || lotesData.length > 0) {
+                return;
+            }
+            
+            fetch('datos_iniciales.json')
+                .then(response => response.json())
+                .then(datos => {
+                    if (datos.materiales) {
+                        biblioteca.materiales = datos.materiales;
+                        guardarBiblioteca();
+                        renderizarBiblioteca();
+                    }
+                    if (datos.registros) {
+                        lotesData = datos.registros;
+                        guardarLotes();
+                        renderizarRegistros();
+                    }
+                    actualizarEstadisticas();
+                })
+                .catch(() => {
+                });
+        }
+    </script>
+</body>
+</html>
