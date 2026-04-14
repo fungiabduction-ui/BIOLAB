@@ -1,0 +1,1383 @@
+{
+  "bl2_col_align": {
+    "F-0008": {
+      "cant": "center",
+      "c": "center"
+    }
+  },
+  "bl2_flow": {
+    "transiciones": {
+      "CI": [
+        "IN"
+      ],
+      "IN": [
+        "GR",
+        "SU",
+        "FR"
+      ],
+      "GR": [
+        "FR"
+      ],
+      "SU": [
+        "FR"
+      ],
+      "FR": [
+        "ST"
+      ],
+      "ST": []
+    }
+  },
+  "bl2_forms": [
+    {
+      "id": "F-0001",
+      "nombre": "B",
+      "version": "v1",
+      "fecha": "2026-01-08T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 3.5,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 1,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.5,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.5,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0002",
+      "nombre": "C",
+      "version": "v1",
+      "fecha": "2026-01-28T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0003",
+      "nombre": "D",
+      "version": "v1",
+      "fecha": "2026-02-17T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 12,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0004",
+      "nombre": "E",
+      "version": "v1",
+      "fecha": "2026-03-10T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 20,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 3.5,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 10,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 11
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0005",
+      "nombre": "H",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 4,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 10,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.2,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.2,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 11
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 12
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 13
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0006",
+      "nombre": "I a",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 1000,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 18,
+          "orden": 1
+        },
+        {
+          "id": "ING-0003",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0004",
+          "qty": 4,
+          "orden": 3
+        },
+        {
+          "id": "ING-0005",
+          "qty": 6,
+          "orden": 4
+        },
+        {
+          "id": "ING-0006",
+          "qty": 5,
+          "orden": 5
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 6
+        },
+        {
+          "id": "ING-0001",
+          "qty": 3,
+          "orden": 7
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.45,
+          "orden": 8
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.45,
+          "orden": 9
+        },
+        {
+          "id": "ING-0001",
+          "qty": 500,
+          "orden": 10
+        },
+        {
+          "id": "ING-0002",
+          "qty": 9,
+          "orden": 11
+        },
+        {
+          "id": "ING-0004",
+          "qty": 2,
+          "orden": 12
+        },
+        {
+          "id": "ING-0005",
+          "qty": 5,
+          "orden": 13
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0007",
+      "nombre": "I b",
+      "version": "v1",
+      "fecha": "2026-04-01T00:00:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 500,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 9,
+          "orden": 1
+        },
+        {
+          "id": "ING-0004",
+          "qty": 2,
+          "orden": 2
+        },
+        {
+          "id": "ING-0005",
+          "qty": 5,
+          "orden": 3
+        },
+        {
+          "id": "ING-0007",
+          "qty": 0.5,
+          "orden": 4
+        },
+        {
+          "id": "ING-0001",
+          "qty": 1.5,
+          "orden": 5
+        },
+        {
+          "id": "ING-0009",
+          "qty": 0.25,
+          "orden": 6
+        },
+        {
+          "id": "ING-0010",
+          "qty": 0.25,
+          "orden": 7
+        }
+      ],
+      "customCols": []
+    },
+    {
+      "id": "F-0008",
+      "nombre": "J -> HILLIBILLY RESET",
+      "version": "v1",
+      "fecha": "2026-04-14T16:44:00.000Z",
+      "ingredientes": [
+        {
+          "id": "ING-0001",
+          "qty": 500,
+          "orden": 0
+        },
+        {
+          "id": "ING-0002",
+          "qty": 8,
+          "orden": 1
+        },
+        {
+          "id": "ING-0011",
+          "qty": 1,
+          "orden": 2
+        },
+        {
+          "id": "ING-0006",
+          "qty": 5,
+          "orden": 3
+        },
+        {
+          "id": "ING-0004",
+          "qty": 1,
+          "orden": 4
+        }
+      ],
+      "customCols": [
+        "dsfdsf"
+      ]
+    }
+  ],
+  "bl2_ings": [
+    {
+      "id": "ING-0001",
+      "nombre": "Agua filtrada",
+      "unidad": "ml",
+      "aspecto": "Solvente",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0002",
+      "nombre": "Agar agar",
+      "unidad": "gr",
+      "aspecto": "Soporte",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0003",
+      "nombre": "Pharmaton G115",
+      "unidad": "ud",
+      "aspecto": "Cofactores",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0004",
+      "nombre": "Levadura de cerveza Macro Salud",
+      "unidad": "gr",
+      "aspecto": "Nitrógeno",
+      "pc": 0,
+      "pn": 10
+    },
+    {
+      "id": "ING-0005",
+      "nombre": "Almidón de maíz",
+      "unidad": "gr",
+      "aspecto": "Carbono",
+      "pc": 44,
+      "pn": 0
+    },
+    {
+      "id": "ING-0006",
+      "nombre": "Extracto de malta Circe",
+      "unidad": "gr",
+      "aspecto": "Carbono",
+      "pc": 65,
+      "pn": 2
+    },
+    {
+      "id": "ING-0007",
+      "nombre": "Carbonato de calcio",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0008",
+      "nombre": "L Arginina",
+      "unidad": "gr",
+      "aspecto": "Nitrógeno",
+      "pc": 0,
+      "pn": 32
+    },
+    {
+      "id": "ING-0009",
+      "nombre": "Sulfato de magnesio",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0010",
+      "nombre": "Fosfato monopotásico",
+      "unidad": "gr",
+      "aspecto": "Mineral",
+      "pc": 0,
+      "pn": 0
+    },
+    {
+      "id": "ING-0011",
+      "nombre": "Sacarosa",
+      "unidad": "gr",
+      "aspecto": "Carbono",
+      "pc": 42,
+      "pn": 0
+    }
+  ],
+  "bl2_logs": [
+    {
+      "id": "LOG-0001",
+      "fecha": "2026-04-12T14:51:44.936Z",
+      "fen_id": "FEN-0001",
+      "nodo_id": "CI-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "CI creado"
+    },
+    {
+      "id": "LOG-0002",
+      "fecha": "2026-04-13T14:51:44.936Z",
+      "fen_id": "FEN-0001",
+      "nodo_id": "CI-0001",
+      "tipo": "crecimiento",
+      "impacto": 1,
+      "nota": "Micelio denso uniforme"
+    }
+  ],
+  "bl2_nodes": [
+    {
+      "id": "CI-0001",
+      "tipo": "CI",
+      "fen_id": "FEN-0001",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "estado": "activo",
+      "origen_id": null,
+      "outputs": [],
+      "meta": {
+        "formula_id": "FRM-001",
+        "placas": 5,
+        "placas_restantes": 5,
+        "vol_total": 500,
+        "vol_placa": 100,
+        "temp": 25,
+        "notas": "Cultivo inicial con MEA Circe"
+      }
+    }
+  ],
+  "bl2_ntypes": {
+    "CI": {
+      "label": "Cultivo In Vitro",
+      "icon": "🧫"
+    },
+    "GR": {
+      "label": "Grano",
+      "icon": "🌾"
+    },
+    "IN": {
+      "label": "Inóculo",
+      "icon": "💉"
+    },
+    "SU": {
+      "label": "Sustrato",
+      "icon": "🧱"
+    },
+    "ST": {
+      "label": "Stock Final",
+      "icon": "📦"
+    },
+    "FR": {
+      "label": "Fructificación",
+      "icon": "🍄"
+    }
+  },
+  "bl2_phenos": [
+    {
+      "id": "FEN-0001",
+      "cepa_id": "STR-0001",
+      "nombre": "F1",
+      "descripcion": "Primera generación",
+      "estado": "activo",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "notas": "Fenotipo más productivo",
+      "nodos": [
+        "CI-0001"
+      ],
+      "timeline": [
+        "LOG-0001",
+        "LOG-0002"
+      ]
+    },
+    {
+      "id": "FEN-0002",
+      "cepa_id": "STR-0001",
+      "nombre": "F2",
+      "descripcion": "Segunda generación",
+      "estado": "activo",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    },
+    {
+      "id": "FEN-0003",
+      "cepa_id": "STR-0002",
+      "nombre": "F1",
+      "descripcion": "Primera generación SIF",
+      "estado": "activo",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    }
+  ],
+  "bl2_seg": [],
+  "bl2_species": [
+    {
+      "id": "ESP-0001",
+      "nombre": "Psilocybe cubensis",
+      "descripcion": "Especie principal de cultivo",
+      "fecha": "2026-04-14T14:51:44.935Z"
+    },
+    {
+      "id": "ESP-0002",
+      "nombre": "Ganoderma lucidum",
+      "descripcion": "Cepa de referencia",
+      "fecha": "2026-04-14T14:51:44.935Z"
+    }
+  ],
+  "bl2_strains": [
+    {
+      "id": "STR-0001",
+      "especie_id": "ESP-0001",
+      "nombre": "Albino Penis Envy",
+      "descripcion": "Alta potencia, micelio blanco",
+      "fecha": "2026-04-14T14:51:44.935Z",
+      "fenotipos": [
+        "FEN-0001",
+        "FEN-0002"
+      ]
+    },
+    {
+      "id": "STR-0002",
+      "especie_id": "ESP-0001",
+      "nombre": "Super Ice Flower",
+      "descripcion": "Híbrido potente",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "fenotipos": [
+        "FEN-0003"
+      ]
+    },
+    {
+      "id": "STR-0003",
+      "especie_id": "ESP-0002",
+      "nombre": "GL-Standard",
+      "descripcion": "Cepa de referencia GL",
+      "fecha": "2026-04-14T14:51:44.936Z",
+      "fenotipos": []
+    }
+  ],
+  "bl2_su_ings": [
+    {
+      "id": "SUI-0001",
+      "nombre": "Coco seco",
+      "unidad": "kg",
+      "estado": "seco",
+      "aspectos": [
+        "estructura",
+        "hidratacion"
+      ],
+      "peso": 1000,
+      "volumen": 4500,
+      "densidad": 0.222
+    },
+    {
+      "id": "SUI-0002",
+      "nombre": "Vermiculita",
+      "unidad": "kg",
+      "estado": "seco",
+      "aspectos": [
+        "estructura"
+      ],
+      "peso": 1000,
+      "volumen": 3000,
+      "densidad": 0.333
+    },
+    {
+      "id": "SUI-0003",
+      "nombre": "Perlita",
+      "unidad": "kg",
+      "estado": "seco",
+      "aspectos": [
+        "estructura"
+      ],
+      "peso": 1000,
+      "volumen": 2500,
+      "densidad": 0.4
+    },
+    {
+      "id": "SUI-0004",
+      "nombre": "Agua",
+      "unidad": "L",
+      "estado": "mojado",
+      "aspectos": [
+        "hidratacion"
+      ],
+      "peso": 1000,
+      "volumen": 1000,
+      "densidad": 1
+    },
+    {
+      "id": "SUI-0005",
+      "nombre": "Levadura",
+      "unidad": "g",
+      "estado": "seco",
+      "aspectos": [
+        "nutricion"
+      ],
+      "peso": 100,
+      "volumen": null,
+      "densidad": null
+    },
+    {
+      "id": "SUI-0006",
+      "nombre": "Yeso",
+      "unidad": "kg",
+      "estado": "seco",
+      "aspectos": [
+        "nutricion"
+      ],
+      "peso": 1000,
+      "volumen": null,
+      "densidad": null
+    }
+  ],
+  "bl2_su_params": {
+    "agua_g": 945,
+    "expansion": 12
+  },
+  "su_biblioteca": {
+    "materiales": [
+      {
+        "id": "MAT-01",
+        "nombre": "Fibra de coco seca",
+        "tipo": "estructura",
+        "estado": "solido",
+        "notas": "Base del sustrato"
+      },
+      {
+        "id": "MAT-02",
+        "nombre": "Vermiculita",
+        "tipo": "estructura",
+        "estado": "solido",
+        "notas": "Retención de agua"
+      },
+      {
+        "id": "MAT-03",
+        "nombre": "Yeso (CaSO4)",
+        "tipo": "aditivo",
+        "estado": "solido",
+        "notas": "Estabiliza pH"
+      },
+      {
+        "id": "MAT-04",
+        "nombre": "Cal agrícola",
+        "tipo": "aditivo",
+        "estado": "solido",
+        "notas": "Regula pH"
+      },
+      {
+        "id": "MAT-05",
+        "nombre": "Café molido",
+        "tipo": "nutricion",
+        "estado": "solido",
+        "notas": "Suplemento"
+      },
+      {
+        "id": "MAT-06",
+        "nombre": "Salvado de trigo",
+        "tipo": "nutricion",
+        "estado": "solido",
+        "notas": "Alto en nitrógeno"
+      },
+      {
+        "id": "MAT-07",
+        "nombre": "Agua",
+        "tipo": "hidratacion",
+        "estado": "liquido",
+        "notas": "Base hídrica"
+      }
+    ]
+  },
+  "sustratos_biblioteca": {
+    "agentes": [
+      {
+        "id": "AG-01",
+        "nombre": "ÁCIDO PERACÉTICO",
+        "concDefault": 5,
+        "notas": "Descontaminante oxidativo"
+      },
+      {
+        "id": "AG-02",
+        "nombre": "HIPOCLORITO DE SODIO",
+        "concDefault": 1,
+        "notas": "Blanqueador disinfectante"
+      },
+      {
+        "id": "AG-03",
+        "nombre": "PERÓXIDO DE HIDRÓGENO",
+        "concDefault": 3,
+        "notas": "Oxidante fuerte"
+      }
+    ],
+    "aditivos": [
+      {
+        "id": "AD-01",
+        "nombre": "CaSO4 (Yeso)",
+        "tipo": "Estructurante",
+        "notas": "Mejora aireación"
+      },
+      {
+        "id": "AD-02",
+        "nombre": "Carbonato de Calcio",
+        "tipo": "Corrector pH",
+        "notas": "Alcalinizante"
+      },
+      {
+        "id": "AD-03",
+        "nombre": "Gesso",
+        "tipo": "Estructurante",
+        "notas": "Similar al yeso"
+      },
+      {
+        "id": "AD-04",
+        "nombre": "Tiza",
+        "tipo": "Estructurante",
+        "notas": "Fuente de calcio"
+      }
+    ],
+    "granos": [
+      {
+        "id": "GR-01",
+        "nombre": "Avena (AV)",
+        "densidadTipica": 0.556,
+        "notas": "Grano fino, alta superficie"
+      },
+      {
+        "id": "GR-02",
+        "nombre": "Maíz (MA)",
+        "densidadTipica": 0.802,
+        "notas": "Grano grueso"
+      },
+      {
+        "id": "GR-03",
+        "nombre": "Trigo (TR)",
+        "densidadTipica": 0.75,
+        "notas": "Grano medio"
+      },
+      {
+        "id": "GR-04",
+        "nombre": "Centeno (CE)",
+        "densidadTipica": 0.7,
+        "notas": "Grano medio"
+      },
+      {
+        "id": "GR-05",
+        "nombre": "Sorgo (SO)",
+        "densidadTipica": 0.75,
+        "notas": "Grano medio"
+      }
+    ]
+  },
+  "sustratos_lotes": [
+    {
+      "id": "113",
+      "mezcla": "MAIZ+AVENA-48horas",
+      "fecha": "2026-03-11",
+      "version": "v1",
+      "componentes": [
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 1310,
+          "densidad": 0.802,
+          "masa": 1050.62,
+          "notas": ""
+        },
+        {
+          "nombre": "Avena (AV)",
+          "volumen": 2350,
+          "densidad": 0.556,
+          "masa": 1306.6,
+          "notas": ""
+        }
+      ],
+      "dc": {
+        "volSol": 5,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 300,
+        "conc": 0.3,
+        "tiempo": 1440,
+        "temp": "AMBIENTE",
+        "agitacion": "PASIVA"
+      },
+      "hm": {
+        "modo": "mixto",
+        "metodo": "INMERSION",
+        "agitacion": "NO",
+        "notas": "",
+        "resultado": "ok",
+        "etapas": [
+          {
+            "step": 1,
+            "tipo": "coccion",
+            "tiempo": 0,
+            "unidad": "h",
+            "notas": "INMERSION EN AGUA HIRVIENDO"
+          },
+          {
+            "step": 2,
+            "tipo": "espera",
+            "tiempo": 24,
+            "unidad": "h",
+            "notas": "ABSORSION"
+          }
+        ],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2357.22,
+        "masaHidr": 6400,
+        "densidad": 630,
+        "aguaAbs": 4042.78,
+        "retencion": 171.5,
+        "volumen": 10.16,
+        "expansion": 177.6
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 630,
+        "pesoFrasco": 315,
+        "cantFrascos": 20
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 120,
+        "medio": "",
+        "objPrimario": "",
+        "objSecundario": "",
+        "riesgos": [
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": "Volver a utilizar este protocolo en el futuro para confirmar datos"
+      }
+    },
+    {
+      "id": "273",
+      "mezcla": "MA100COCCION",
+      "fecha": "2026-03-27",
+      "version": "v1",
+      "componentes": [
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 3000,
+          "densidad": 0.802,
+          "masa": 2406,
+          "notas": ""
+        }
+      ],
+      "dc": {
+        "volSol": 4,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 60,
+        "conc": 0.075,
+        "tiempo": 60,
+        "temp": "AMBIENTE",
+        "agitacion": ""
+      },
+      "hm": {
+        "modo": "",
+        "metodo": "",
+        "agitacion": "",
+        "notas": "",
+        "resultado": "",
+        "etapas": [],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2406,
+        "masaHidr": 5406,
+        "densidad": 901,
+        "aguaAbs": 3000,
+        "retencion": 124.7,
+        "volumen": 6,
+        "expansion": 100
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 901,
+        "pesoFrasco": 450.5,
+        "cantFrascos": 12
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 120,
+        "medio": "",
+        "objPrimario": "",
+        "objSecundario": "",
+        "riesgos": [
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": ""
+      }
+    },
+    {
+      "id": "193",
+      "mezcla": "MA + AV (50/50 vol.)",
+      "fecha": "2024-01-15",
+      "version": "v2.0",
+      "componentes": [
+        {
+          "nombre": "Avena (AV)",
+          "volumen": 2000,
+          "densidad": 0.556,
+          "masa": 1112,
+          "notas": "Grano fino, alta superficie específica"
+        },
+        {
+          "nombre": "Maíz (MA)",
+          "volumen": 2000,
+          "densidad": 0.802,
+          "masa": 1604,
+          "notas": "Grano grueso, mayor resistencia a hidratación"
+        }
+      ],
+      "dc": {
+        "volSol": 4,
+        "agente": "ÁCIDO PERACÉTICO",
+        "concAgente": 5,
+        "volAgente": 60,
+        "conc": 0.075,
+        "tiempo": 60,
+        "temp": "AMBIENTE",
+        "agitacion": ""
+      },
+      "hm": {
+        "modo": "",
+        "metodo": "",
+        "agitacion": "",
+        "notas": "",
+        "resultado": "",
+        "etapas": [],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 2716,
+        "masaHidr": 4316,
+        "densidad": 630,
+        "aguaAbs": 1600,
+        "retencion": 58.9,
+        "volumen": 6.85,
+        "expansion": 71.3
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 630,
+        "pesoFrasco": 315,
+        "cantFrascos": 13
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 150,
+        "medio": "VAPOR SATURADO",
+        "objPrimario": "ESTERILIDAD DEL SUSTRATO",
+        "objSecundario": "HIDRATACIÓN INTERNA DEL MAÍZ",
+        "riesgos": [
+          {
+            "causa": "CaSO4 insuficiente",
+            "nivel": "medio"
+          },
+          {
+            "causa": "CaSO4 excesivo",
+            "nivel": "medio"
+          },
+          {
+            "causa": "Mala distribución en esterilizador",
+            "nivel": "alto"
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {
+        "evaluacion": {
+          "hidratacion": "",
+          "distribucion": "",
+          "eficiencia": ""
+        },
+        "notas": ""
+      }
+    }
+  ],
+  "_exported": "2026-04-14T17:02:36.365Z",
+  "_keys": [
+    "bl2_col_align",
+    "bl2_flow",
+    "bl2_forms",
+    "bl2_ings",
+    "bl2_logs",
+    "bl2_nodes",
+    "bl2_ntypes",
+    "bl2_phenos",
+    "bl2_seg",
+    "bl2_species",
+    "bl2_strains",
+    "bl2_su_ings",
+    "bl2_su_params",
+    "su_biblioteca",
+    "sustratos_biblioteca",
+    "sustratos_lotes"
+  ]
+}
