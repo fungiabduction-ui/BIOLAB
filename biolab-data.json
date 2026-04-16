@@ -5,6 +5,62 @@
       "c": "center"
     }
   },
+  "bl2_ctlogs": [
+    {
+      "id": "CTL-1776295767662",
+      "fecha": "2026-04-15T23:29:27.662Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0003",
+      "campo": "fen_id",
+      "anterior": "",
+      "nuevo": "FEN-0004"
+    },
+    {
+      "id": "CTL-1776295766214",
+      "fecha": "2026-04-15T23:29:26.214Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0003",
+      "campo": "placas",
+      "anterior": "10",
+      "nuevo": "5"
+    },
+    {
+      "id": "CTL-1776295723907",
+      "fecha": "2026-04-15T23:28:43.907Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0002",
+      "campo": "placas",
+      "anterior": "10",
+      "nuevo": "11"
+    },
+    {
+      "id": "CTL-1776295676364",
+      "fecha": "2026-04-15T23:27:56.364Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0002",
+      "campo": "fen_id",
+      "anterior": "",
+      "nuevo": "FEN-0006"
+    },
+    {
+      "id": "CTL-1776295556307",
+      "fecha": "2026-04-15T23:25:56.307Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0001",
+      "campo": "placas",
+      "anterior": "10",
+      "nuevo": "5"
+    },
+    {
+      "id": "CTL-1776295549680",
+      "fecha": "2026-04-15T23:25:49.680Z",
+      "formula_id": "F-0008",
+      "seg_id": "SEG-0001",
+      "campo": "fen_id",
+      "anterior": "",
+      "nuevo": "FEN-0004"
+    }
+  ],
   "bl2_flow": {
     "transiciones": {
       "CI": [
@@ -666,6 +722,42 @@
       "tipo": "crecimiento",
       "impacto": 1,
       "nota": "Micelio denso uniforme"
+    },
+    {
+      "id": "LOG-0003",
+      "fecha": "2026-04-16T00:08:09.303Z",
+      "fen_id": "FEN-0004",
+      "nodo_id": "IN-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "Inóculo creado [GR:Febrero → SU:FEBRERO]"
+    },
+    {
+      "id": "LOG-0004",
+      "fecha": "2026-04-16T00:08:09.304Z",
+      "fen_id": "FEN-0004",
+      "nodo_id": "FR-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "FR auto-creado desde IN:IN-0001 [GR:Febrero + SU:FEBRERO]"
+    },
+    {
+      "id": "LOG-0005",
+      "fecha": "2026-04-16T00:10:52.955Z",
+      "fen_id": "FEN-0004",
+      "nodo_id": "FR-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "FR actualizado — Estado:cosechado BE:0.0% Oleada:2"
+    },
+    {
+      "id": "LOG-0006",
+      "fecha": "2026-04-16T00:11:32.918Z",
+      "fen_id": "FEN-0004",
+      "nodo_id": "FR-0001",
+      "tipo": "observacion",
+      "impacto": 0,
+      "nota": "FR actualizado — Estado:cosechado BE:0.0% Oleada:2"
     }
   ],
   "bl2_nodes": [
@@ -685,6 +777,94 @@
         "vol_placa": 100,
         "temp": 25,
         "notas": "Cultivo inicial con MEA Circe"
+      }
+    },
+    {
+      "id": "IN-0001",
+      "tipo": "IN",
+      "fen_id": "FEN-0004",
+      "fecha": "2026-04-15T23:26",
+      "estado": "activo",
+      "outputs": [
+        "FR-0001"
+      ],
+      "origen_id": null,
+      "meta": {
+        "fase": "expansion",
+        "notas": "HB9326 - GR 1 Frasco - SU 3hs esterilización.",
+        "origen_ci": null,
+        "gr_lote": "Febrero",
+        "su_lote": "FEBRERO",
+        "fr_lote": null,
+        "fr_id": "FR-0001"
+      }
+    },
+    {
+      "id": "FR-0001",
+      "tipo": "FR",
+      "fen_id": "FEN-0004",
+      "fecha": "2026-04-16T00:08:09.304Z",
+      "estado": "activo",
+      "outputs": [],
+      "origen_id": "IN-0001",
+      "meta": {
+        "origen_in": "IN-0001",
+        "gr_lote": "Febrero",
+        "su_lote": "FEBRERO",
+        "ge_nombre": "C1",
+        "cepa_nombre": "Hillbilly",
+        "oleada": 2,
+        "estado_fr": "cosechado",
+        "fecha_armado": "2026-04-16T00:08",
+        "fecha_colon": "",
+        "fecha_pines": "",
+        "fecha_cosecha": "",
+        "peso_humedo": 0,
+        "peso_seco": 0,
+        "peso_sustrato_seco": 0,
+        "tiempo_deshidratacion": 0,
+        "unidad_deshidratacion": "h",
+        "temperatura": 0,
+        "biomasa_seca_pct": 0,
+        "perdida_agua_pct": 0,
+        "eficiencia_biologica": 0,
+        "observaciones": [
+          {
+            "fecha": "2026-04-16T00:08:09.305Z",
+            "texto": "Registro creado automáticamente desde IN-0001. GR: Febrero, SU: FEBRERO. Peso sustrato seco: 0g (desde módulo SU)."
+          },
+          {
+            "fecha": "2026-04-16T00:10:31.669Z",
+            "texto": "Se agrego un poco de agua esteril y se puso a fructificar nuevamente"
+          },
+          {
+            "fecha": "2026-04-16T00:10:35.673Z",
+            "texto": "Oleada 1 cerrada. Peso húmedo: 247g, Peso seco: 0g, BE oleada: 0.0%, BE acumulada: 0%"
+          }
+        ],
+        "oleadas_log": [
+          {
+            "oleada": 1,
+            "fecha_cerrada": "2026-04-16T00:10:35.673Z",
+            "fecha_colon": "",
+            "fecha_pines": "",
+            "fecha_cosecha": "2026-04-14T23:00",
+            "dias_colonizacion": 0,
+            "dias_pines": 0,
+            "dias_cosecha": -2,
+            "temperatura": 0,
+            "peso_humedo": 247,
+            "peso_seco": 0,
+            "tiempo_deshidratacion": 0,
+            "unidad_deshidratacion": "h",
+            "biomasa_seca_pct": 0,
+            "perdida_agua_pct": 100,
+            "eficiencia_biologica": 0
+          }
+        ],
+        "dias_colonizacion": 0,
+        "dias_pines": 0,
+        "dias_cosecha": 0
       }
     }
   ],
@@ -720,7 +900,7 @@
       "cepa_id": "STR-0001",
       "nombre": "F1",
       "descripcion": "Primera generación",
-      "estado": "activo",
+      "estado": "archivado",
       "fecha": "2026-04-14T14:51:44.936Z",
       "notas": "Fenotipo más productivo",
       "nodos": [
@@ -752,9 +932,85 @@
       "notas": "",
       "nodos": [],
       "timeline": []
+    },
+    {
+      "id": "FEN-0004",
+      "cepa_id": "STR-0004",
+      "nombre": "C1",
+      "descripcion": "Clonacion 14/4/2026",
+      "estado": "activo",
+      "fecha": "2026-04-15T23:24:51.714Z",
+      "notas": "",
+      "nodos": [
+        "IN-0001",
+        "FR-0001"
+      ],
+      "timeline": [
+        "LOG-0003",
+        "LOG-0004",
+        "LOG-0005",
+        "LOG-0006"
+      ]
+    },
+    {
+      "id": "FEN-0005",
+      "cepa_id": "STR-0001",
+      "nombre": "R1",
+      "descripcion": "Recomposición multiesporal 14/4/2026",
+      "estado": "activo",
+      "fecha": "2026-04-15T23:25:29.683Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    },
+    {
+      "id": "FEN-0006",
+      "cepa_id": "STR-0004",
+      "nombre": "R1",
+      "descripcion": "Multiespora 14/4/2026",
+      "estado": "activo",
+      "fecha": "2026-04-15T23:27:42.236Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
     }
   ],
-  "bl2_seg": [],
+  "bl2_seg": [
+    {
+      "id": "SEG-0003",
+      "formula_nombre": "J -> HILLIBILLY RESET",
+      "formula_id": "F-0008",
+      "fen_id": "FEN-0004",
+      "placas": 5,
+      "estado": "normal",
+      "notas_array": [
+        {
+          "id": "NT-1776295773991",
+          "fecha": "2026-04-15T23:29:33.991Z",
+          "tipo": "normal",
+          "contenido": "Biopsias clonales de tejido vivo el dia 14/4"
+        }
+      ],
+      "fecha": "2026-04-15T23:29:15.188Z"
+    },
+    {
+      "id": "SEG-0002",
+      "formula_nombre": "J -> HILLIBILLY RESET",
+      "formula_id": "F-0008",
+      "fen_id": "FEN-0006",
+      "placas": 11,
+      "estado": "normal",
+      "notas_array": [
+        {
+          "id": "NT-1776295745113",
+          "fecha": "2026-04-15T23:29:05.113Z",
+          "tipo": "positivo",
+          "contenido": "Reset multiesporal"
+        }
+      ],
+      "fecha": "2026-04-15T23:27:53.542Z"
+    }
+  ],
   "bl2_species": [
     {
       "id": "ESP-0001",
@@ -778,7 +1034,8 @@
       "fecha": "2026-04-14T14:51:44.935Z",
       "fenotipos": [
         "FEN-0001",
-        "FEN-0002"
+        "FEN-0002",
+        "FEN-0005"
       ]
     },
     {
@@ -798,6 +1055,17 @@
       "descripcion": "Cepa de referencia GL",
       "fecha": "2026-04-14T14:51:44.936Z",
       "fenotipos": []
+    },
+    {
+      "id": "STR-0004",
+      "especie_id": "ESP-0001",
+      "nombre": "Hillbilly",
+      "descripcion": "",
+      "fecha": "2026-04-15T23:24:31.305Z",
+      "fenotipos": [
+        "FEN-0004",
+        "FEN-0006"
+      ]
     }
   ],
   "bl2_su_ings": [
@@ -1128,6 +1396,25 @@
       "bolsas": 2,
       "pesoBolsa": 1295,
       "aditivos": []
+    },
+    {
+      "id": "FEBRERO",
+      "fecha": "2026-04-15",
+      "estructura": "",
+      "steril": 0,
+      "notas": "",
+      "fibra": 0,
+      "ratio": 0,
+      "agua": 0,
+      "pesoAgua": 0,
+      "total": 0,
+      "hyd": 0,
+      "modo": "normal",
+      "bolsas": 0,
+      "pesoBolsa": 0,
+      "aditivos": [],
+      "pesoXBolsa": 0,
+      "reNotas": []
     }
   ],
   "sustratos_biblioteca": {
@@ -1557,6 +1844,107 @@
         },
         "notas": ""
       }
+    },
+    {
+      "id": "Febrero",
+      "mezcla": "",
+      "fecha": "2026-04-15",
+      "version": "v1",
+      "componentes": [
+        {
+          "nombre": "",
+          "volumen": 0,
+          "densidad": 0,
+          "masa": 0,
+          "notas": ""
+        }
+      ],
+      "dc": {
+        "volSol": 0,
+        "agente": "",
+        "concAgente": 0,
+        "volAgente": 0,
+        "conc": 0,
+        "tiempo": 0,
+        "temp": "",
+        "agitacion": ""
+      },
+      "hm": {
+        "modo": "",
+        "metodo": "",
+        "agitacion": "",
+        "notas": "",
+        "resultado": "",
+        "etapas": [],
+        "aditivos": []
+      },
+      "dm": {
+        "masaSeca": 0,
+        "masaHidr": 0,
+        "densidad": 630,
+        "aguaAbs": 0,
+        "retencion": 0,
+        "volumen": 0,
+        "expansion": 0
+      },
+      "fr": {
+        "capacidad": 660,
+        "cargaUtil": 500,
+        "headspace": 160,
+        "densidad": 630,
+        "pesoFrasco": 315,
+        "cantFrascos": 0
+      },
+      "adtivos": [],
+      "es": {
+        "tiempo": 0,
+        "medio": "",
+        "objPrimario": "",
+        "objSecundario": "",
+        "riesgos": [
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          },
+          {
+            "causa": "",
+            "nivel": ""
+          }
+        ]
+      },
+      "po": [
+        {
+          "paso": 1,
+          "completado": false
+        },
+        {
+          "paso": 2,
+          "completado": false
+        },
+        {
+          "paso": 3,
+          "completado": false
+        },
+        {
+          "paso": 4,
+          "completado": false
+        },
+        {
+          "paso": 5,
+          "completado": false
+        },
+        {
+          "paso": 6,
+          "completado": false
+        }
+      ],
+      "re": {},
+      "protoNotas": [],
+      "seguimientoNotas": []
     }
   ]
 }
