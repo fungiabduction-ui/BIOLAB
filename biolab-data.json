@@ -896,33 +896,6 @@
   },
   "bl2_phenos": [
     {
-      "id": "FEN-0001",
-      "cepa_id": "STR-0001",
-      "nombre": "F1",
-      "descripcion": "Primera generación",
-      "estado": "archivado",
-      "fecha": "2026-04-14T14:51:44.936Z",
-      "notas": "Fenotipo más productivo",
-      "nodos": [
-        "CI-0001"
-      ],
-      "timeline": [
-        "LOG-0001",
-        "LOG-0002"
-      ]
-    },
-    {
-      "id": "FEN-0002",
-      "cepa_id": "STR-0001",
-      "nombre": "F2",
-      "descripcion": "Segunda generación",
-      "estado": "activo",
-      "fecha": "2026-04-14T14:51:44.936Z",
-      "notas": "",
-      "nodos": [],
-      "timeline": []
-    },
-    {
       "id": "FEN-0003",
       "cepa_id": "STR-0002",
       "nombre": "F1",
@@ -953,17 +926,6 @@
       ]
     },
     {
-      "id": "FEN-0005",
-      "cepa_id": "STR-0001",
-      "nombre": "R1",
-      "descripcion": "Recomposición multiesporal 14/4/2026",
-      "estado": "activo",
-      "fecha": "2026-04-15T23:25:29.683Z",
-      "notas": "",
-      "nodos": [],
-      "timeline": []
-    },
-    {
       "id": "FEN-0006",
       "cepa_id": "STR-0004",
       "nombre": "R1",
@@ -976,6 +938,16 @@
     }
   ],
   "bl2_seg": [
+    {
+      "id": "SEG-0004",
+      "formula_nombre": "J -> HILLIBILLY RESET",
+      "formula_id": "F-0008",
+      "fen_id": "",
+      "placas": 10,
+      "estado": "normal",
+      "notas_array": [],
+      "fecha": "2026-04-16T02:26:24.875Z"
+    },
     {
       "id": "SEG-0003",
       "formula_nombre": "J -> HILLIBILLY RESET",
@@ -1016,28 +988,12 @@
       "id": "ESP-0001",
       "nombre": "Psilocybe cubensis",
       "descripcion": "Especie principal de cultivo",
-      "fecha": "2026-04-14T14:51:44.935Z"
-    },
-    {
-      "id": "ESP-0002",
-      "nombre": "Ganoderma lucidum",
-      "descripcion": "Cepa de referencia",
-      "fecha": "2026-04-14T14:51:44.935Z"
+      "fecha": "2026-04-14T14:51:44.935Z",
+      "icono": "🍄",
+      "color": "#ffffff"
     }
   ],
   "bl2_strains": [
-    {
-      "id": "STR-0001",
-      "especie_id": "ESP-0001",
-      "nombre": "Albino Penis Envy",
-      "descripcion": "Alta potencia, micelio blanco",
-      "fecha": "2026-04-14T14:51:44.935Z",
-      "fenotipos": [
-        "FEN-0001",
-        "FEN-0002",
-        "FEN-0005"
-      ]
-    },
     {
       "id": "STR-0002",
       "especie_id": "ESP-0001",
@@ -1046,15 +1002,9 @@
       "fecha": "2026-04-14T14:51:44.936Z",
       "fenotipos": [
         "FEN-0003"
-      ]
-    },
-    {
-      "id": "STR-0003",
-      "especie_id": "ESP-0002",
-      "nombre": "GL-Standard",
-      "descripcion": "Cepa de referencia GL",
-      "fecha": "2026-04-14T14:51:44.936Z",
-      "fenotipos": []
+      ],
+      "icono": "❄️",
+      "color": "#009dff"
     },
     {
       "id": "STR-0004",
@@ -1065,7 +1015,9 @@
       "fenotipos": [
         "FEN-0004",
         "FEN-0006"
-      ]
+      ],
+      "icono": "🎃",
+      "color": "#ffa200"
     }
   ],
   "bl2_su_ings": [
