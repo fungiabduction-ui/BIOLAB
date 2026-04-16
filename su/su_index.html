@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Sustratos - Módulo SU</title>
+    <link rel="stylesheet" href="su_styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Selector de lote oculto: requerido por su_app.js -->
+        <select id="loteSelector" class="lote-selector" style="display:none">
+            <option value="">-- Nuevo registro --</option>
+        </select>
+
+        <!-- Sub-navegación SU (Formulación / Config) -->
+        <div class="su-subnav">
+            <button type="button" class="su-subtab active" data-subtab="main" onclick="suSubTab('main')">🧱 Formulación de Sustrato</button>
+            <button type="button" class="su-subtab" data-subtab="cfg" onclick="suSubTab('cfg')">⚙️ Config</button>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PANEL PRINCIPAL (Formulación) -->
+        <!-- ============================================ -->
+        <div id="su-sub-main" class="su-subpanel active">
+
+            <!-- PANEL DE MÉTRICAS EN TIEMPO REAL -->
+            <section class="metrics-panel">
+                <h2>📊 Métricas en Tiempo Real</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card su-fibra">
+                        <span class="metric-label">Fibra</span>
+                        <span class="metric-value" id="metricFibra">0</span>
+                        <span class="metric-unit">g</span>
+                    </div>
+                    <div class="metric-card su-agua">
+                        <span class="metric-label">Agua</span>
+                        <span class="metric-value" id="metricAgua">0</span>
+                        <span class="metric-unit">ml</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Peso Agua</span>
+                        <span class="metric-value" id="metricPesoAgua">0</span>
+                        <span class="metric-unit">g</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Aditivos</span>
+                        <span class="metric-value" id="metricAditivos">0</span>
+                        <span class="metric-unit">g</span>
+                    </div>
+                    <div class="metric-card highlight">
+                        <span class="metric-label">Total</span>
+                        <span class="metric-value" id="metricTotal">0</span>
+                        <span class="metric-unit">g</span>
+                    </div>
+                    <div class="metric-card su-hyd highlight">
+                        <span class="metric-label">Hyd %</span>
+                        <span class="metric-value" id="metricHyd">0</span>
+                        <span class="metric-unit">%</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Bolsas</span>
+                        <span class="metric-value" id="metricBolsas">0</span>
+                        <span class="metric-unit">ud</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Peso/Bolsa</span>
+                        <span class="metric-value" id="metricPesoBolsa">0</span>
+                        <span class="metric-unit">g</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DATOS DEL LOTE -->
+            <section class="section-card">
+                <div class="section-header" data-section="lote">
+                    <h2>📋 Datos del Lote</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="lote">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="loteId">ID Registro</label>
+                            <input type="text" id="loteId" placeholder="SU-2504-01 (se genera automáticamente)">
+                        </div>
+                        <div class="form-group">
+                            <label for="loteFecha">Fecha</label>
+                            <input type="date" id="loteFecha">
+                        </div>
+                        <div class="form-group">
+                            <label for="loteEstructura">Estructura (tipo de bolsa)</label>
+                            <input type="text" id="loteEstructura" placeholder="ej: Bolsas 35×42 40 micrones">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CALCULADORA SU -->
+            <section class="section-card">
+                <div class="section-header su-header" data-section="calculadora">
+                    <h2>⚗️ Calculadora SU - FIBRA × RATIO = AGUA</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="calculadora">
+                    
+                    <!-- Fórmula Visual -->
+                    <div class="calc-su-container">
+                        <div class="calc-su-formula">
+                            <div class="form-group fibra">
+                                <label>FIBRA (g)</label>
+                                <input type="number" id="suFibra" value="0" min="0" step="1" style="background:var(--dark)">
+                            </div>
+                            <div class="operator">×</div>
+                            <div class="form-group ratio">
+                                <label>RATIO</label>
+                                <input type="number" id="suRatio" value="0" min="0" step="0.1" style="background:var(--dark)">
+                            </div>
+                            <div class="operator">=</div>
+                            <div class="form-group agua">
+                                <label>AGUA (ml)</label>
+                                <input type="number" id="suAguaInput" readonly style="background:var(--dark)">
+                            </div>
+                        </div>
+                        
+                        <!-- Barra de Composición -->
+                        <div class="composition-bar-container">
+                            <div class="composition-bar-label">
+                                <span>Composición</span>
+                                <span id="compositionLabel"></span>
+                            </div>
+                            <div class="composition-bar" id="compositionBar">
+                                <div class="composition-segment empty">Sin datos</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Resultados secundarios -->
+                        <div class="form-row" style="margin-top:20px">
+                            <div class="form-group">
+                                <label>Peso Agua (g) <span class="calc-badge su">Auto</span></label>
+                                <input type="number" id="suPesoAgua" readonly style="background:var(--dark)">
+                            </div>
+                            <div class="form-group">
+                                <label>Total Teórico (g) <span class="calc-badge su">Auto</span></label>
+                                <input type="number" id="suTotal" readonly style="background:var(--dark)">
+                            </div>
+                            <div class="form-group">
+                                <label>Hyd % <span class="calc-badge">Auto</span></label>
+                                <div style="font-size:1.5rem;font-weight:700;color:var(--su-hyd)" id="suHyd">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ADITIVOS - Debajo de Calculadora -->
+                    <div class="aditivos-container" style="margin-top:20px;margin-bottom:20px">
+                        <h3 style="color:var(--secondary);margin-bottom:15px">🔧 Aditivos e Ingredientes Extra</h3>
+                        <p class="section-desc">Agregue aditivos o suplementos al sustrato</p>
+                        <div id="aditivosContainer">
+                            <!-- Filas de aditivos se agregan dinámicamente -->
+                        </div>
+                        <button type="button" class="btn btn-add" onclick="agregarFilaAditivo()">+ Agregar Aditivo</button>
+                    </div>
+                    
+                    <!-- Producción de Bolsas -->
+                    <div class="produccion-container">
+                        <h3 style="color:var(--highlight);margin-bottom:15px">📦 Producción de Bolsas</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="suModo">Modo</label>
+                                <select id="suModo" style="background:var(--dark)">
+                                    <option value="normal">Normal - defino cantidad de bolsas</option>
+                                    <option value="inverso">Inverso - defino peso por bolsa</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="divBolsas">
+                                <label for="suBolsas">Cantidad de bolsas</label>
+                                <input type="number" id="suBolsas" value="0" min="1" style="background:var(--dark)">
+                            </div>
+                            <div class="form-group" id="divPesoBolsa" style="display:none">
+                                <label for="suPesoBolsa">Peso deseado por bolsa (g)</label>
+                                <input type="number" id="suPesoBolsa" value="0" min="1" step="50" style="background:var(--dark)">
+                            </div>
+                        </div>
+                        <div class="produccion-resultado" id="suProdResultado">
+                            <span style="color:var(--text-muted)">Ingrese fibra y ratio para calcular</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Steril y Notas - Debajo de Producción de Bolsas -->
+                    <div class="form-row" style="margin-top:20px">
+                        <div class="form-group">
+                            <label for="loteSteril">Tiempo esterilización (min)</label>
+                            <input type="number" id="loteSteril" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="loteNotas">Notas</label>
+                            <input type="text" id="loteNotas" placeholder="Observaciones del lote...">
+                        </div>
+                    </div>
+                    
+                </div>
+            </section>
+
+            <!-- RESULTADOS Y SEGUIMIENTO DEL LOTE -->
+            <section class="section-card results-section">
+                <div class="section-header" data-section="suRe">
+                    <h2>📊 Resumen del Lote</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="suRe">
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-label">Fibra</div>
+                            <div class="result-value" id="suReFibra">0</div>
+                            <div class="result-unit">g</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Agua</div>
+                            <div class="result-value" id="suReAgua">0</div>
+                            <div class="result-unit">ml</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Total</div>
+                            <div class="result-value" id="suReTotal">0</div>
+                            <div class="result-unit">g</div>
+                        </div>
+                        <div class="result-card highlight">
+                            <div class="result-label">Hyd %</div>
+                            <div class="result-value" id="suReHyd">0</div>
+                            <div class="result-unit">%</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Bolsas</div>
+                            <div class="result-value" id="suReBolsas">0</div>
+                            <div class="result-unit">ud</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Peso/Bolsa</div>
+                            <div class="result-value" id="suRePesoBolsa">0</div>
+                            <div class="result-unit">g</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Aditivos</div>
+                            <div class="result-value" id="suReAditivos">0</div>
+                            <div class="result-unit">g</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seguimiento del Lote -->
+                    <div style="margin-top:20px;">
+                        <h3 class="subsection-title">📋 Seguimiento del Lote</h3>
+                        <div id="suReNotas" style="margin-bottom:15px;"></div>
+                        
+                        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+                            <select id="suReEstado" style="padding:8px;border-radius:6px;background:var(--dark-tertiary);color:var(--text-light);border:1px solid var(--border);">
+                                <option value="none">⚪ Normal</option>
+                                <option value="green">🟢 Positivo</option>
+                                <option value="yellow">🟡 Atención</option>
+                                <option value="red">🔴 Peligro</option>
+                            </select>
+                            <div style="display:flex;align-items:center;gap:5px;">
+                                <label style="font-size:0.85rem;">Bolsas:</label>
+                                <input type="number" id="suReBolsas" min="0" value="0" style="width:60px;padding:6px;background:var(--dark-tertiary);color:var(--text-light);border:1px solid var(--border);border-radius:4px;">
+                            </div>
+                        </div>
+                        
+                        <textarea id="suReNotaInput" rows="2" placeholder="Escriba una nota de seguimiento..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--dark-tertiary);color:var(--text-light);font-size:0.9rem;margin-bottom:10px;resize:vertical"></textarea>
+                        
+                        <button type="button" class="btn btn-su" onclick="suAddReNota()" style="padding:10px 16px;">📝 Agregar Nota</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- REGISTRO DE LOTES -->
+            <section class="section-card">
+                <div class="section-header" data-section="registro">
+                    <h2>📋 Registros Guardados</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="registro">
+                    <div style="margin-bottom:10px">
+                        <button type="button" id="btnEditRegistros" class="btn btn-secondary" onclick="toggleEdicionRegistros()">✏️ Edit</button>
+                    </div>
+                    <table class="data-table" id="tablaRegistros">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>ID</th>
+                                <th>Estructura</th>
+                                <th>Fibra</th>
+                                <th>Ratio</th>
+                                <th>Agua</th>
+                                <th>Total</th>
+                                <th>Bolsas</th>
+                                <th>Steril</th>
+                                <th>Notas</th>
+                                <th class="col-acciones">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registroLotesBody">
+                            <!-- Se llena con JS -->
+                        </tbody>
+                    </table>
+                    <p id="noLotesMsg" class="empty-state" style="display:none">
+                        No hay registros guardados aún.
+                    </p>
+                    
+                    <div class="import-buttons" style="margin-top:15px;display:flex;gap:10px;justify-content:center">
+                        <label class="btn btn-export" style="cursor:pointer">
+                            📥 Importar JSON
+                            <input type="file" id="btnImportJson" accept=".json" style="display:none" onchange="importarJSON(event)">
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACCIONES -->
+            <div class="actions-bar">
+                <button id="btnGuardar" class="btn btn-su">💾 Guardar Registro</button>
+                <button id="btnNuevoLote" class="btn btn-secondary" onclick="nuevoLote()">➕ Nuevo Registro</button>
+                <div class="export-buttons">
+                    <button id="btnExportJson" class="btn btn-export">📥 Exportar JSON</button>
+                    <button id="btnExportExcel" class="btn btn-export">📊 Exportar Excel</button>
+                </div>
+            </div>
+
+        </div><!-- /#su-sub-main -->
+
+        <!-- ============================================ -->
+        <!-- PANEL CONFIG (Biblioteca de Materiales) -->
+        <!-- ============================================ -->
+        <div id="su-sub-cfg" class="su-subpanel">
+
+            <!-- Panel de métricas resumen -->
+            <section class="metrics-panel">
+                <h2>📊 Resumen</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Materiales</span>
+                        <span class="metric-value" id="cfgMetricTotalMateriales">0</span>
+                        <span class="metric-unit">registrados</span>
+                    </div>
+                    <div class="metric-card su-fibra">
+                        <span class="metric-label">Estructura</span>
+                        <span class="metric-value" id="cfgMetricEstructura">0</span>
+                        <span class="metric-unit">tipos</span>
+                    </div>
+                    <div class="metric-card su-agua">
+                        <span class="metric-label">Nutrición</span>
+                        <span class="metric-value" id="cfgMetricNutricion">0</span>
+                        <span class="metric-unit">tipos</span>
+                    </div>
+                    <div class="metric-card highlight">
+                        <span class="metric-label">Registros</span>
+                        <span class="metric-value" id="cfgMetricRegistros">0</span>
+                        <span class="metric-unit">lotes</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BIBLIOTECA DE MATERIALES -->
+            <section class="section-card active">
+                <div class="section-header" data-section="biblioteca">
+                    <h2>🧱 Biblioteca de Materiales</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="cfgBiblioteca">
+                    <div style="margin-bottom:10px">
+                        <button type="button" id="cfgBtnEditMat" class="btn btn-secondary" onclick="cfgToggleEdicionMateriales()">✏️ Edit</button>
+                    </div>
+                    <table class="data-table" id="cfgTablaMateriales">
+                        <thead>
+                            <tr>
+                                <th>ING-ID</th>
+                                <th>Nombre</th>
+                                <th>Estado</th>
+                                <th>Tipo</th>
+                                <th>Unidad</th>
+                                <th>Peso (g)</th>
+                                <th>Volumen (ml)</th>
+                                <th>Densidad (g/ml)</th>
+                                <th>Notas</th>
+                                <th class="col-acciones"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cfgBibliotecaTable">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- AGREGAR NUEVO MATERIAL -->
+            <section class="section-card">
+                <div class="section-header" data-section="agregar">
+                    <h2>➕ Agregar Nuevo Material</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="cfgAgregar">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cfgMatNombre">Nombre</label>
+                            <input type="text" id="cfgMatNombre" placeholder="ej: Fibra de coco">
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgMatTipo">Tipo</label>
+                            <select id="cfgMatTipo">
+                                <option value="estructura">Estructura</option>
+                                <option value="base">Base</option>
+                                <option value="nutricion">Nutrición</option>
+                                <option value="aditivo">Aditivo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgMatEstado">Estado</label>
+                            <select id="cfgMatEstado">
+                                <option value="solido">Sólido / Seco</option>
+                                <option value="liquido">Líquido / Mojado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgMatUnidad">Unidad</label>
+                            <select id="cfgMatUnidad">
+                                <option value="g">g</option>
+                                <option value="ml">ml</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cfgMatPeso">Peso (g)</label>
+                            <input type="number" id="cfgMatPeso" step="0.001" placeholder="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgMatVolumen">Volumen (ml)</label>
+                            <input type="number" id="cfgMatVolumen" step="0.001" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="cfgMatDensidad">Densidad (g/ml)</label>
+                            <input type="number" id="cfgMatDensidad" step="0.001" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="cfgMatNotas">Notas</label>
+                        <input type="text" id="cfgMatNotas" placeholder="Notas sobre el material...">
+                    </div>
+                    <button type="button" class="btn btn-su" onclick="cfgAgregarMaterial()">+ Agregar Material</button>
+                </div>
+            </section>
+
+            <!-- IMPORTAR DATOS -->
+            <section class="section-card">
+                <div class="section-header" data-section="importar">
+                    <h2>📥 Importar Datos</h2>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content" id="cfgImportar">
+                    <p class="section-desc">Importar materiales y registros desde un archivo JSON</p>
+                    <button type="button" class="btn btn-secondary" onclick="cfgImportarDatos()">📂 Importar JSON</button>
+                </div>
+            </section>
+
+        </div><!-- /#su-sub-cfg -->
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>Módulo SU - Calculadora de Sustratos v1.0 | Cultivo de Hongos</p>
+        </footer>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="su_app.js"></script>
+</body>
+</html>
