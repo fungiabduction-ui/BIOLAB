@@ -7,6 +7,42 @@
   },
   "bl2_ctlogs": [
     {
+      "id": "CTL-1776310676781",
+      "fecha": "2026-04-16T03:37:56.781Z",
+      "formula_id": "CI-0001",
+      "seg_id": "SEG-0006",
+      "campo": "fen_id",
+      "anterior": "",
+      "nuevo": "FEN-0006"
+    },
+    {
+      "id": "CTL-1776310668901",
+      "fecha": "2026-04-16T03:37:48.901Z",
+      "formula_id": "CI-0001",
+      "seg_id": "SEG-0006",
+      "campo": "placas",
+      "anterior": "10",
+      "nuevo": "11"
+    },
+    {
+      "id": "CTL-1776310644560",
+      "fecha": "2026-04-16T03:37:24.560Z",
+      "formula_id": "CI-0001",
+      "seg_id": "SEG-0005",
+      "campo": "placas",
+      "anterior": "10",
+      "nuevo": "5"
+    },
+    {
+      "id": "CTL-1776310638549",
+      "fecha": "2026-04-16T03:37:18.549Z",
+      "formula_id": "CI-0001",
+      "seg_id": "SEG-0005",
+      "campo": "fen_id",
+      "anterior": "",
+      "nuevo": "FEN-0004"
+    },
+    {
       "id": "CTL-1776295767662",
       "fecha": "2026-04-15T23:29:27.662Z",
       "formula_id": "F-0008",
@@ -85,533 +121,71 @@
   },
   "bl2_forms": [
     {
-      "id": "F-0001",
-      "nombre": "B",
-      "version": "v1",
-      "fecha": "2026-01-08T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 3.5,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 3,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 12,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 1,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.5,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.5,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 11
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0002",
-      "nombre": "C",
-      "version": "v1",
-      "fecha": "2026-01-28T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 3,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 12,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 3,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.2,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.2,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 11
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 12
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0003",
-      "nombre": "D",
-      "version": "v1",
-      "fecha": "2026-02-17T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 3,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 12,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 3,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.2,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.2,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 11
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 12
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0004",
-      "nombre": "E",
-      "version": "v1",
-      "fecha": "2026-03-10T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 20,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 3.5,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 10,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 3,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.2,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.2,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 18,
-          "orden": 11
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0005",
-      "nombre": "H",
-      "version": "v1",
-      "fecha": "2026-04-01T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 18,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 4,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 10,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 3,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.2,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.2,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 18,
-          "orden": 11
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 12
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 13
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0006",
-      "nombre": "I a",
-      "version": "v1",
-      "fecha": "2026-04-01T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 1000,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 18,
-          "orden": 1
-        },
-        {
-          "id": "ING-0003",
-          "qty": 1,
-          "orden": 2
-        },
-        {
-          "id": "ING-0004",
-          "qty": 4,
-          "orden": 3
-        },
-        {
-          "id": "ING-0005",
-          "qty": 6,
-          "orden": 4
-        },
-        {
-          "id": "ING-0006",
-          "qty": 5,
-          "orden": 5
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 6
-        },
-        {
-          "id": "ING-0001",
-          "qty": 3,
-          "orden": 7
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.45,
-          "orden": 8
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.45,
-          "orden": 9
-        },
-        {
-          "id": "ING-0001",
-          "qty": 500,
-          "orden": 10
-        },
-        {
-          "id": "ING-0002",
-          "qty": 9,
-          "orden": 11
-        },
-        {
-          "id": "ING-0004",
-          "qty": 2,
-          "orden": 12
-        },
-        {
-          "id": "ING-0005",
-          "qty": 5,
-          "orden": 13
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0007",
-      "nombre": "I b",
-      "version": "v1",
-      "fecha": "2026-04-01T00:00:00.000Z",
-      "ingredientes": [
-        {
-          "id": "ING-0001",
-          "qty": 500,
-          "orden": 0
-        },
-        {
-          "id": "ING-0002",
-          "qty": 9,
-          "orden": 1
-        },
-        {
-          "id": "ING-0004",
-          "qty": 2,
-          "orden": 2
-        },
-        {
-          "id": "ING-0005",
-          "qty": 5,
-          "orden": 3
-        },
-        {
-          "id": "ING-0007",
-          "qty": 0.5,
-          "orden": 4
-        },
-        {
-          "id": "ING-0001",
-          "qty": 1.5,
-          "orden": 5
-        },
-        {
-          "id": "ING-0009",
-          "qty": 0.25,
-          "orden": 6
-        },
-        {
-          "id": "ING-0010",
-          "qty": 0.25,
-          "orden": 7
-        }
-      ],
-      "customCols": []
-    },
-    {
-      "id": "F-0008",
+      "id": "CI-0001",
       "nombre": "J -> HILLIBILLY RESET",
       "version": "v1",
-      "fecha": "2026-04-14T16:44:00.000Z",
+      "fecha": "2026-04-16T03:36:25.876Z",
       "ingredientes": [
         {
           "id": "ING-0001",
           "qty": 500,
-          "orden": 0
+          "orden": 0,
+          "proy": 0
         },
         {
           "id": "ING-0002",
           "qty": 8,
-          "orden": 1
+          "orden": 1,
+          "proy": 0
         },
         {
           "id": "ING-0011",
           "qty": 1,
-          "orden": 2
+          "orden": 2,
+          "proy": 0
         },
         {
           "id": "ING-0006",
           "qty": 5,
-          "orden": 3
+          "orden": 3,
+          "proy": 0
         },
         {
           "id": "ING-0004",
           "qty": 1,
-          "orden": 4
+          "orden": 4,
+          "proy": 0
+        },
+        {
+          "id": "ING-0004",
+          "cant": 10,
+          "proy": 0,
+          "orden": 5,
+          "qty": 1
+        },
+        {
+          "id": "ING-0008",
+          "cant": 10,
+          "proy": 0,
+          "orden": 6,
+          "qty": 1
+        },
+        {
+          "id": "ING-0010",
+          "cant": 10,
+          "proy": 0,
+          "orden": 7,
+          "qty": 0.25
+        },
+        {
+          "id": "ING-0009",
+          "cant": 10,
+          "proy": 0,
+          "orden": 8,
+          "qty": 0.25
         }
       ],
-      "customCols": [
-        "dsfdsf"
-      ]
+      "customCols": []
     }
   ],
   "bl2_ings": [
@@ -923,7 +497,9 @@
         "LOG-0004",
         "LOG-0005",
         "LOG-0006"
-      ]
+      ],
+      "icono": "🧪",
+      "color": "#7c6fff"
     },
     {
       "id": "FEN-0006",
@@ -939,48 +515,38 @@
   ],
   "bl2_seg": [
     {
-      "id": "SEG-0004",
+      "id": "SEG-0006",
       "formula_nombre": "J -> HILLIBILLY RESET",
-      "formula_id": "F-0008",
-      "fen_id": "",
-      "placas": 10,
-      "estado": "normal",
-      "notas_array": [],
-      "fecha": "2026-04-16T02:26:24.875Z"
-    },
-    {
-      "id": "SEG-0003",
-      "formula_nombre": "J -> HILLIBILLY RESET",
-      "formula_id": "F-0008",
-      "fen_id": "FEN-0004",
-      "placas": 5,
-      "estado": "normal",
-      "notas_array": [
-        {
-          "id": "NT-1776295773991",
-          "fecha": "2026-04-15T23:29:33.991Z",
-          "tipo": "normal",
-          "contenido": "Biopsias clonales de tejido vivo el dia 14/4"
-        }
-      ],
-      "fecha": "2026-04-15T23:29:15.188Z"
-    },
-    {
-      "id": "SEG-0002",
-      "formula_nombre": "J -> HILLIBILLY RESET",
-      "formula_id": "F-0008",
+      "formula_id": "CI-0001",
       "fen_id": "FEN-0006",
       "placas": 11,
       "estado": "normal",
       "notas_array": [
         {
-          "id": "NT-1776295745113",
-          "fecha": "2026-04-15T23:29:05.113Z",
-          "tipo": "positivo",
-          "contenido": "Reset multiesporal"
+          "id": "NT-1776310700355",
+          "fecha": "2026-04-16T03:38:20.355Z",
+          "tipo": "normal",
+          "contenido": "Recomposición multiesporal"
         }
       ],
-      "fecha": "2026-04-15T23:27:53.542Z"
+      "fecha": "2026-04-16T03:37:41.385Z"
+    },
+    {
+      "id": "SEG-0005",
+      "formula_nombre": "J -> HILLIBILLY RESET",
+      "formula_id": "CI-0001",
+      "fen_id": "FEN-0004",
+      "placas": 5,
+      "estado": "normal",
+      "notas_array": [
+        {
+          "id": "NT-1776310651529",
+          "fecha": "2026-04-16T03:37:31.529Z",
+          "tipo": "normal",
+          "contenido": "Biopsias clonales de tejido vivo el dia 14/4"
+        }
+      ],
+      "fecha": "2026-04-16T03:37:10.830Z"
     }
   ],
   "bl2_species": [
