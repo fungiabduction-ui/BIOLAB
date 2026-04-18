@@ -511,6 +511,45 @@
       "notas": "",
       "nodos": [],
       "timeline": []
+    },
+    {
+      "id": "FEN-0007",
+      "cepa_id": "STR-0002",
+      "nombre": "244",
+      "icono": "🧪",
+      "color": "#1500ff",
+      "descripcion": "",
+      "estado": "activo",
+      "fecha": "2026-04-18T01:07:40.567Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    },
+    {
+      "id": "FEN-0008",
+      "cepa_id": "STR-0002",
+      "nombre": "210",
+      "icono": "🧪",
+      "color": "#ff0000",
+      "descripcion": "",
+      "estado": "activo",
+      "fecha": "2026-04-18T01:07:55.903Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
+    },
+    {
+      "id": "FEN-0009",
+      "cepa_id": "STR-0002",
+      "nombre": "F2B 103",
+      "icono": "🧪",
+      "color": "#9900ff",
+      "descripcion": "",
+      "estado": "activo",
+      "fecha": "2026-04-18T01:08:17.135Z",
+      "notas": "",
+      "nodos": [],
+      "timeline": []
     }
   ],
   "bl2_seg": [
@@ -527,6 +566,12 @@
           "fecha": "2026-04-16T03:38:20.355Z",
           "tipo": "normal",
           "contenido": "Recomposición multiesporal"
+        },
+        {
+          "id": "NT-1776473112880",
+          "fecha": "2026-04-18T00:45:12.880Z",
+          "tipo": "peligro",
+          "contenido": "CONTAMINACION"
         }
       ],
       "fecha": "2026-04-16T03:37:41.385Z"
@@ -567,7 +612,10 @@
       "descripcion": "Híbrido potente",
       "fecha": "2026-04-14T14:51:44.936Z",
       "fenotipos": [
-        "FEN-0003"
+        "FEN-0003",
+        "FEN-0007",
+        "FEN-0008",
+        "FEN-0009"
       ],
       "icono": "❄️",
       "color": "#009dff"
@@ -1146,7 +1194,7 @@
     },
     {
       "id": "273",
-      "mezcla": "MA100COCCION",
+      "nombre": "",
       "fecha": "2026-03-27",
       "version": "v1",
       "componentes": [
@@ -1194,27 +1242,35 @@
         "pesoFrasco": 450.5,
         "cantFrascos": 12
       },
-      "adtivos": [],
-      "es": {
-        "tiempo": 120,
-        "medio": "",
-        "objPrimario": "",
-        "objSecundario": "",
-        "riesgos": [
-          {
-            "causa": "",
-            "nivel": ""
-          },
-          {
-            "causa": "",
-            "nivel": ""
-          },
-          {
-            "causa": "",
-            "nivel": ""
-          }
-        ]
-      },
+      "dg": [
+        {
+          "tanda": "ASDASD",
+          "frascos": 5,
+          "fen_id": "FEN-0003",
+          "genetica": "Super Ice Flower / F1",
+          "fechaInoculacion": "2026-04-18",
+          "contaminados": 1,
+          "colonizacion": "2026-04-22"
+        },
+        {
+          "tanda": "65465465",
+          "frascos": 0,
+          "fen_id": "FEN-0006",
+          "genetica": "Hillbilly / R1",
+          "fechaInoculacion": null,
+          "contaminados": 0,
+          "colonizacion": null
+        },
+        {
+          "tanda": "3424324234432",
+          "frascos": 0,
+          "fen_id": "FEN-0003",
+          "genetica": "Super Ice Flower / F1",
+          "fechaInoculacion": null,
+          "contaminados": 0,
+          "colonizacion": null
+        }
+      ],
       "po": [
         {
           "paso": 1,
@@ -1241,14 +1297,46 @@
           "completado": false
         }
       ],
-      "re": {
-        "evaluacion": {
-          "hidratacion": "",
-          "distribucion": "",
-          "eficiencia": ""
+      "re": {},
+      "protoNotas": [],
+      "seguimientoNotas": [
+        {
+          "ts": "17/04",
+          "tipo": "inoculacion",
+          "texto": "ASDASD - Super Ice Flower / F1: 5 frascos inoculados",
+          "estado": "yellow"
         },
-        "notas": ""
-      }
+        {
+          "ts": "17/04",
+          "tipo": "contaminacion",
+          "texto": "ASDASD - Super Ice Flower / F1: 2 frasco(s) contaminado(s)",
+          "estado": "red"
+        },
+        {
+          "ts": "17/04",
+          "tipo": "contaminacion",
+          "texto": "ASDASD - Super Ice Flower / F1: 5 frasco(s) contaminado(s)",
+          "estado": "red"
+        },
+        {
+          "ts": "17/04",
+          "tipo": "contaminacion",
+          "texto": "ASDASD - Super Ice Flower / F1: 2 frasco(s) contaminado(s)",
+          "estado": "red"
+        },
+        {
+          "ts": "17/04",
+          "tipo": "contaminacion",
+          "texto": "ASDASD - Super Ice Flower / F1: 1 frasco(s) contaminado(s)",
+          "estado": "red"
+        },
+        {
+          "ts": "17/04",
+          "tipo": "colonizacion",
+          "texto": "ASDASD - Super Ice Flower / F1: colonización en 4 días",
+          "estado": "green"
+        }
+      ]
     },
     {
       "id": "193",
