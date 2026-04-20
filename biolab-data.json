@@ -713,6 +713,7 @@
     "agua_g": 945,
     "expansion": 12
   },
+  "gr_usados": {},
   "su_biblioteca": {
     "materiales": [
       {
@@ -1245,29 +1246,35 @@
       "dg": [
         {
           "tanda": "ASDASD",
-          "frascos": 5,
+          "frascos": 20,
           "fen_id": "FEN-0003",
           "genetica": "Super Ice Flower / F1",
           "fechaInoculacion": "2026-04-18",
           "contaminados": 1,
+          "usadosSnapshot": 0,
+          "disponiblesSnapshot": 19,
           "colonizacion": "2026-04-22"
         },
         {
           "tanda": "65465465",
-          "frascos": 0,
+          "frascos": 20,
           "fen_id": "FEN-0006",
           "genetica": "Hillbilly / R1",
           "fechaInoculacion": null,
           "contaminados": 0,
+          "usadosSnapshot": 0,
+          "disponiblesSnapshot": 20,
           "colonizacion": null
         },
         {
           "tanda": "3424324234432",
-          "frascos": 0,
+          "frascos": 10,
           "fen_id": "FEN-0003",
           "genetica": "Super Ice Flower / F1",
           "fechaInoculacion": null,
           "contaminados": 0,
+          "usadosSnapshot": 0,
+          "disponiblesSnapshot": 10,
           "colonizacion": null
         }
       ],
