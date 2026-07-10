@@ -2152,22 +2152,19 @@ function suDbEscapeHtml(s) {
 //   Retorna siempre un array — nunca null ni undefined.
 // ---------------------------------------------------------------
 function suDbNormSources(row, grLoteDefault) {
+    // Delegado a shared/gr_su_sources.js (unificado 2026-07-10, ver ese archivo
+    // para la implementación real — antes esta función tenía su propia copia
+    // divergente de la de GR).
+    if (window.GrSuSources && typeof window.GrSuSources.normalize === 'function') {
+        return window.GrSuSources.normalize(row, grLoteDefault);
+    }
+    // Fallback defensivo si la lib compartida no cargó por algún motivo.
+    console.warn('[SU] GrSuSources no disponible, usando fallback local');
     var lo = grLoteDefault || '';
-    if (Array.isArray(row.grSources) && row.grSources.length > 0) {
-        return row.grSources.map(function(s) {
-            return {
-                grLoteId:  String(s.grLoteId  || lo  || '').trim() || null,
-                grTandaId: String(s.grTandaId || '').trim() || null,
-                grUsados:  parseInt(s.grUsados) || 0
-            };
-        }).filter(function(s) { return s.grLoteId && s.grTandaId; });
-    }
-    // Fallback legacy: campos flat en la fila
-    var loteId  = String(row.grLoteId  || lo  || '').trim() || null;
+    if (!row || typeof row !== 'object') return [];
+    var loteId  = String(row.grLoteId || lo || '').trim() || null;
     var tandaId = String(row.grTandaId || row.grano || '').trim() || null;
-    if (loteId && tandaId) {
-        return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(row.grUsados) || 0 }];
-    }
+    if (loteId && tandaId) return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(row.grUsados, 10) || 0 }];
     return [];
 }
 window.suDbNormSources = suDbNormSources;

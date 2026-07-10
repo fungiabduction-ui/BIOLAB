@@ -241,22 +241,18 @@ function grSaveUsadosRefMap(ref) {
  *   Devuelve siempre un array (puede ser vacío).
  */
 function grNormSources(r, grLoteDefault) {
-    if (Array.isArray(r.grSources) && r.grSources.length > 0) {
-        return r.grSources
-            .map(function(s) {
-                return {
-                    grLoteId:  (String(s.grLoteId  || '').trim()) || null,
-                    grTandaId: (String(s.grTandaId || '').trim()) || null,
-                    grUsados:  parseInt(s.grUsados) || 0
-                };
-            })
-            .filter(function(s) { return s.grLoteId && s.grTandaId; });
+    // Delegado a shared/gr_su_sources.js (unificado 2026-07-10, ver ese archivo
+    // para la implementación real — antes esta función tenía su propia copia
+    // divergente de la de SU).
+    if (window.GrSuSources && typeof window.GrSuSources.normalize === 'function') {
+        return window.GrSuSources.normalize(r, grLoteDefault);
     }
-    var loteId  = (String(r.grLoteId  || grLoteDefault || '').trim()) || null;
-    var tandaId = (String(r.grTandaId || r.grano       || '').trim()) || null;
-    if (loteId && tandaId) {
-        return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(r.grUsados) || 0 }];
-    }
+    // Fallback defensivo si la lib compartida no cargó por algún motivo.
+    console.warn('[GR] GrSuSources no disponible, usando fallback local');
+    if (!r || typeof r !== 'object') return [];
+    var loteId  = (String(r.grLoteId || grLoteDefault || '').trim()) || null;
+    var tandaId = (String(r.grTandaId || r.grano || '').trim()) || null;
+    if (loteId && tandaId) return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(r.grUsados, 10) || 0 }];
     return [];
 }
 
