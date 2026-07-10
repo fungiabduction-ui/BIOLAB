@@ -352,7 +352,7 @@ creBackfillLogs()
 ## 6. Invariantes críticos
 
 - **`creWrite()` invalida el modelo OLS** — cualquier cambio en bl2_crec requiere recalcular Inteligencia
-- **`formulaSnapshot` es inmutable** — se guarda al crear el record, nunca se actualiza aunque cambie la fórmula
+- **`formulaSnapshot` es inmutable frente a ediciones posteriores de la fórmula** — se guarda al crear el record, nunca se actualiza aunque el usuario edite `bl2_forms` después. **Excepción única y deliberada (aclarado 2026-07-10):** `_creBackfillExtras`/`_creExtrasBackfill`/`_creExtrasBackfillV2` SÍ mutan `formulaSnapshot.ings` de records ya creados, pero solo para completar retroactivamente "extras" de `bl2_experimentos` que un bug de normalización volumétrica (corregido 2026-06-09, ver `EXTRAS DE EXPERIMENTOS` en `CLAUDE.md`) impidió capturar bien en el snapshot original. Es un repair one-shot **por record** — cada record trackea su propio `rec._extrasBackfilled`/`rec._extrasBackfilledV2`, así que una vez backfilleado nunca se vuelve a tocar. No es una violación del invariante: no reescribe qué fórmula se usó, completa un dato que el snapshot debió capturar desde el principio.
 - **No modifica CI** — solo escribe en `bl2_seg_notas`, nunca toca `bl2_cultivos`, `bl2_forms`, ni `bl2_ings`
 - **Schema versioning**: `CRE_SCHEMA_VERSION = 1`. `migrateCreRecord()` es idempotente
 - **`_creFilterMotorRecords()`** — excluye fórmulas desacopladas del motor
