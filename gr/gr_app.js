@@ -1013,29 +1013,6 @@ function actualizarSelectoresCT() {
         'tiza': { nombre: 'Tiza' }
     };
 
-    function addAdRow() {
-        const tbody = document.getElementById('dgTable').querySelector('tbody');
-        const row = document.createElement('tr');
-        row.className = 'ad-row';
-        row.innerHTML = `
-            <td><input type="text" class="ad-tanda" placeholder="Ej: 194DA"></td>
-            <td><input type="number" class="ad-frascos" value="0" min="0"></td>
-            <td><input type="text" class="ad-nombre" placeholder="Ej: CaSO4"></td>
-            <td><input type="number" class="ad-cant" value="0" min="0" step="0.1"></td>
-            <td><input type="number" class="ad-conc" value="0" min="0" step="0.1"></td>
-            <td>
-                <select class="ad-estado">
-                    <option value="">Seleccionar...</option>
-                    <option value="ejecutado">Ejecutado</option>
-                    <option value="programado">Programado</option>
-                    <option value="pendiente">Pendiente</option>
-                </select>
-            </td>
-            <td><button type="button" class="btn-remove" onclick="removeRow(this)">✕</button></td>
-        `;
-        tbody.appendChild(row);
-    }
-
     // ==========================================
     // LOCALSTORAGE - GESTIÓN DE LOTES
     // ==========================================
@@ -2212,30 +2189,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (typeof grRenderNotas === 'function') grRenderNotas();
         if (typeof window.grRenderSeguimientoNotas === 'function') window.grRenderSeguimientoNotas();
     }
-
-    // Función global para agregar fila AD
-    GR.addAdRow = window.addAdRow = function() {
-        const tbody = document.getElementById('dgTable').querySelector('tbody');
-        const row = document.createElement('tr');
-        row.className = 'ad-row';
-        row.innerHTML = `
-            <td><input type="text" class="ad-tanda" placeholder="Ej: 194DA"></td>
-            <td><input type="number" class="ad-frascos" value="0" min="0"></td>
-            <td><input type="text" class="ad-nombre" placeholder="Ej: CaSO4"></td>
-            <td><input type="number" class="ad-cant" value="0" min="0" step="0.1"></td>
-            <td><input type="number" class="ad-conc" value="0" min="0" step="0.1"></td>
-            <td>
-                <select class="ad-estado">
-                    <option value="">Seleccionar...</option>
-                    <option value="ejecutado">Ejecutado</option>
-                    <option value="programado">Programado</option>
-                    <option value="pendiente">Pendiente</option>
-                </select>
-            </td>
-            <td><button type="button" class="btn-remove" onclick="removeRow(this)">✕</button></td>
-        `;
-        tbody.appendChild(row);
-    };
 
     // Función global para eliminar filas
     GR.removeRow = window.removeRow = function(btn) {
