@@ -1628,6 +1628,10 @@ window.grEliminarRegistro = grEliminarRegistro;
                     });
                 }
                 
+                // Datos importados pueden traer dg[].inoculoSource:null de exports viejos —
+                // el guard one-shot de _migrarInoculoSourceNull ya corrió en este load y no
+                // volverá a barrerlos, así que se normaliza acá explícitamente (2026-07-10).
+                _normalizarInoculoSourceNullEnLotes(lotesData);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
                 actualizarSelectorLotes();
                 renderizarBibliotecaEnConfig();
@@ -3422,6 +3426,29 @@ window.grEliminarSeguimientoNota = function(index) {
 // ==========================================
 // MIGRACIÓN inoculoSource null → 'LEGACY'
 // ==========================================
+    /**
+     * Barre lote.dg[].inoculoSource null/undefined → 'LEGACY' en memoria (no persiste).
+     * Extraída de _migrarInoculoSourceNull (guard one-shot) para reusarla en importarJSON:
+     * un JSON importado puede traer dg[] con inoculoSource:null de datos viejos, y el guard
+     * one-shot de _migrarInoculoSourceNull ya habrá corrido en el load actual, así que nunca
+     * volvería a barrerlos si no se llama explícitamente acá (2026-07-10, hallazgo de code review).
+     * Devuelve la cantidad de campos corregidos.
+     */
+    function _normalizarInoculoSourceNullEnLotes(lotes) {
+        var cambiados = 0;
+        if (!Array.isArray(lotes)) return cambiados;
+        lotes.forEach(function(lote) {
+            if (!lote || !Array.isArray(lote.dg)) return;
+            lote.dg.forEach(function(dg) {
+                if (dg.inoculoSource === null || dg.inoculoSource === undefined) {
+                    dg.inoculoSource = 'LEGACY';
+                    cambiados++;
+                }
+            });
+        });
+        return cambiados;
+    }
+
     function _migrarInoculoSourceNull() {
         var MIGRACION_INOCULO_KEY = 'biolab_migracion_gr_inoculo_source_v1';
         try {
@@ -3430,16 +3457,7 @@ window.grEliminarSeguimientoNota = function(index) {
             if (!raw) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
             var lotes = JSON.parse(raw);
             if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
-            var cambiados = 0;
-            lotes.forEach(function(lote) {
-                if (!Array.isArray(lote.dg)) return;
-                lote.dg.forEach(function(dg) {
-                    if (dg.inoculoSource === null || dg.inoculoSource === undefined) {
-                        dg.inoculoSource = 'LEGACY';
-                        cambiados++;
-                    }
-                });
-            });
+            var cambiados = _normalizarInoculoSourceNullEnLotes(lotes);
             if (cambiados > 0) {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lotes));
                 console.log('[GR] Migración inoculoSource: ' + cambiados + ' registros actualizados a LEGACY');
