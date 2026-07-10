@@ -5019,7 +5019,7 @@ function renderCultivosTab() {
         <td>${esc(c.geneticaSnapshot?.label || c.geneticaId || '—')}</td>
         <td><span style="font-size:11px;color:var(--tx2)">${esc(c.tipo)}</span></td>
         <td><span style="font-weight:600;color:${estCol};font-size:11px">${esc(c.estado)}</span></td>
-        <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px">${Math.max(0, c.cantidadDisponible - totalConsumido)}/${c.cantidadInicial}</span></td>
+        <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px">${Math.max(0, c.cantidadInicial - totalConsumido)}/${c.cantidadInicial}</span></td>
         <td><span style="font-size:11px;color:var(--tx2)">${esc(fmtFecha)}</span></td>
         <td><span style="font-size:11px;color:var(--tx2)">${formulaNombre}</span></td>
         <td>${grCol}</td>
