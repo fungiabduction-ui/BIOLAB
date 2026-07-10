@@ -6072,6 +6072,14 @@ Object.assign(window, {
       if (el.parentNode === document.body) document.body.removeChild(el);
     });
 
+    // Cancelar suscripciones a IngStore de filas del constructor de fórmula
+    // que hayan quedado sin guardar — mismo patrón que ciNewSessionInit().
+    // Sin esto, cambiar de módulo con filas sin guardar en "Nueva Fórmula"
+    // dejaba la suscripción viva apuntando a un <div> ya desmontado del DOM.
+    document.querySelectorAll('#ci-new-rows .drag-item').forEach(row => {
+      if (typeof row._ingUnsub === 'function') row._ingUnsub();
+    });
+
     if (ciNewPieChart) ciNewPieChart.destroy();
   };
 

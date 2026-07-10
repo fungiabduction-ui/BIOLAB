@@ -37,14 +37,10 @@
   }
 
   /* ── Escritura ─────────────────────────────────────────── */
-
-  /** Persiste arr en localStorage, actualiza cache y notifica suscriptores. */
-  function set(arr) {
-    if (!Array.isArray(arr)) return;
-    _cache = arr;
-    try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch { /* cuota */ }
-    _notify();
-  }
+  // IngStore es puramente un lector reactivo — CILAB (cilab_app.js) es el
+  // único escritor real de bl2_ings. No existe función set()/write() acá
+  // a propósito: escribir desde este store bypassearía el merge/validación
+  // de CILAB y crearía un segundo escritor descoordinado de la SSoT.
 
   /** Descarta cache y recarga desde localStorage, luego notifica. */
   function invalidate() {
@@ -77,13 +73,16 @@
     invalidate();
   });
 
-  // Cambios desde otra pestaña del navegador.
+  // Cambios desde otra pestaña del navegador. e.key === null es el caso
+  // localStorage.clear() (ej. CFG → importAll() restaurando un backup
+  // completo) — sin este chequeo, un clear() en otra pestaña dejaba el
+  // cache de esta pestaña sirviendo ingredientes ya borrados.
   window.addEventListener('storage', function (e) {
-    if (e.key === KEY) invalidate();
+    if (e.key === KEY || e.key === null) invalidate();
   });
 
   /* ── Exposición global ─────────────────────────────────── */
 
-  window.IngStore = { get, set, subscribe, invalidate };
+  window.IngStore = { get, subscribe, invalidate };
 
 })();
