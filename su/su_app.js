@@ -1682,8 +1682,27 @@ function toggleEdicionRegistros() {
 
             var val = input.value.trim();
 
-            // Campos numéricos
-            if (dbfield === 'bolsas' || dbfield === 'grUsados') {
+            // Campo "bolsas": el badge FR de las cards (frMap[i] en renderizarRegistroLotes,
+            // vía _suGetFRMap) solo coincide con FR cuando TODAS las filas tienen bolsas:1.
+            // Si el lote ya tiene bolsas FR vinculadas y se cambia "bolsas" a algo distinto
+            // de 1 en una fila existente, avisar antes de aplicar el cambio.
+            if (dbfield === 'bolsas') {
+                var nuevoValorBolsas = parseInt(val) || 0;
+                var valorActualBolsas = lotesData[idx].db[dbidx].bolsas;
+                if (nuevoValorBolsas !== valorActualBolsas && nuevoValorBolsas !== 1) {
+                    var frMapCheck = _suGetFRMap(lotesData[idx]);
+                    if (Object.keys(frMapCheck).length > 0) {
+                        var msgBolsas = 'Este lote ya tiene bolsas FR vinculadas (fue enviado a Fructificación).\n\n' +
+                            'Cambiar "bolsas" a un valor distinto de 1 en una fila existente puede desalinear ' +
+                            'la insignia FR mostrada en esta fila y en todas las filas siguientes del mismo lote.\n\n' +
+                            '¿Confirmás el cambio de todos modos?';
+                        if (!confirm(msgBolsas)) {
+                            return; // cancelado: no se aplica el cambio de bolsas en esta fila
+                        }
+                    }
+                }
+                lotesData[idx].db[dbidx][dbfield] = nuevoValorBolsas;
+            } else if (dbfield === 'grUsados') {
                 lotesData[idx].db[dbidx][dbfield] = parseInt(val) || 0;
             } else {
                 lotesData[idx].db[dbidx][dbfield] = val;
