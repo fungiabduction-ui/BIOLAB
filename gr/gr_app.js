@@ -672,16 +672,6 @@ function actualizarSelectoresCT() {
         // CT - Event listeners para cálculos
         inicializarEventosCT();
         
-        // DC - Biblioteca de agentes (legacy — IDs antiguos pueden no existir tras migración a PROTOCOLO)
-        const _dcBib = document.getElementById('dcBibliotecaAgentes');
-        if (_dcBib) _dcBib.addEventListener('change', seleccionarAgenteBiblioteca);
-        const _dcVolSol = document.getElementById('dcVolSol');
-        if (_dcVolSol) _dcVolSol.addEventListener('input', calcularConcentracionFinal);
-        const _dcConcAg = document.getElementById('dcConcAgente');
-        if (_dcConcAg) _dcConcAg.addEventListener('input', calcularConcentracionFinal);
-        const _dcVolAg = document.getElementById('dcVolAgente');
-        if (_dcVolAg) _dcVolAg.addEventListener('input', calcularConcentracionFinal);
-        
         // DG - Tabla de distribución de grano
         const dgTable = document.getElementById('dgTable');
         if (dgTable) {
@@ -848,35 +838,6 @@ function actualizarSelectoresCT() {
             tbody.appendChild(row);
         }
     };
-
-    function seleccionarAgenteBiblioteca() {
-        const select = document.getElementById('dcBibliotecaAgentes');
-        const agente = select.value;
-        const agenteInput = document.getElementById('dcAgente');
-        const concAgenteInput = document.getElementById('dcConcAgente');
-        
-        if (agente === 'otro' || agente === '') {
-            // No hacer nada, el usuario escribirá manualmente
-            return;
-        }
-        
-        if (bibliotecaAgentes[agente]) {
-            agenteInput.value = bibliotecaAgentes[agente].nombre;
-            concAgenteInput.value = bibliotecaAgentes[agente].conc;
-            calcularConcentracionFinal();
-        }
-    }
-
-    function calcularConcentracionFinal() {
-        const volSol = parseFloat(document.getElementById('dcVolSol').value) || 0;
-        const volAgente = parseFloat(document.getElementById('dcVolAgente').value) || 0;
-        const concAgente = parseFloat(document.getElementById('dcConcAgente').value) || 0;
-        
-        // Fórmula: (Vol_agente_ml × Conc_agente%) / (Vol_sol_L × 1000) = %
-        // O más simple: (volAgente / (volSol * 1000)) * 100 * (concAgente / 100)
-        const concentracion = (volSol > 0 && concAgente > 0) ? (volAgente * concAgente) / (volSol * 1000) : 0;
-        document.getElementById('dcConc').value = concentracion.toFixed(3);
-    }
 
     // ==========================================
     // UF - UNIDAD FÍSICA Y PRODUCCIÓN
