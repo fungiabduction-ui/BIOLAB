@@ -4511,11 +4511,15 @@
     }
 
     function _migrarFrInoculoSourceNull() {
+        var KEY_MIG = 'biolab_migracion_fr_inoculo_source_v1';
+        try {
+            if (localStorage.getItem(KEY_MIG) === '1') return;
+        } catch (e) { return; }
         try {
             var raw = localStorage.getItem(FR_KEY);
-            if (!raw) return;
+            if (!raw) { try { localStorage.setItem(KEY_MIG, '1'); } catch(e) {} return; }
             var bolsas = JSON.parse(raw);
-            if (!Array.isArray(bolsas)) return;
+            if (!Array.isArray(bolsas)) { try { localStorage.setItem(KEY_MIG, '1'); } catch(e) {} return; }
             var cambiados = 0;
             bolsas.forEach(function(b) {
                 if (!Array.isArray(b.grSources)) return;
@@ -4530,6 +4534,7 @@
                 localStorage.setItem(FR_KEY, JSON.stringify(bolsas));
                 console.log('[FR] Migración inoculoSource: ' + cambiados + ' registros actualizados a LEGACY');
             }
+            try { localStorage.setItem(KEY_MIG, '1'); } catch (e) {}
         } catch(e) {
             console.error('[FR] Error en migración inoculoSource:', e);
         }
