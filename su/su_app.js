@@ -119,7 +119,6 @@ window.SU.init = function suInit() {
             _loteIdInitEl.value = suGenerarId(_loteFechaInitEl.value);
         }
     } catch (e) { console.warn('SU.init generarId:', e); }
-    try { renderizarBiblioteca(); }        catch (e) { console.warn('SU.init renderBib:', e); }
     try { renderizarRegistroLotes(); }     catch (e) { console.warn('SU.init renderReg:', e); }
     try { suReRenderNotas(); }             catch (e) { console.warn('SU.init notas:', e); }
     try { cargarLoteDesdeBiblioteca(); }   catch (e) { console.warn('SU.init biblioteca:', e); }
@@ -260,6 +259,20 @@ function inicializarEventos() {
     const btnImportJson = document.getElementById('btnImportJson');
     if (btnImportJson) {
         btnImportJson.addEventListener('change', importarJSON);
+    }
+
+    // Exportar / Importar — copias del panel Config (mismos handlers que arriba)
+    const btnExportJsonCfg = document.getElementById('btnExportJsonCfg');
+    if (btnExportJsonCfg) {
+        btnExportJsonCfg.addEventListener('click', exportarJSON);
+    }
+    const btnExportExcelCfg = document.getElementById('btnExportExcelCfg');
+    if (btnExportExcelCfg) {
+        btnExportExcelCfg.addEventListener('click', exportarExcel);
+    }
+    const btnImportJsonCfg = document.getElementById('btnImportJsonCfg');
+    if (btnImportJsonCfg) {
+        btnImportJsonCfg.addEventListener('change', importarJSON);
     }
 
     // Auto-generar ID al cambiar la fecha (solo si es lote nuevo, sin _uuid)
@@ -494,65 +507,6 @@ function cargarBibliotecaDesdeStorage() {
 
 function guardarBiblioteca() {
     localStorage.setItem(SU_BIBLIOTECA_KEY, JSON.stringify(biblioteca));
-}
-
-function renderizarBiblioteca() {
-    const tbody = document.getElementById('bibliotecaTable');
-    if (!tbody) return;
-    
-    if (!biblioteca.materiales.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin materiales registrados</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = biblioteca.materiales.map(m => `
-        <tr>
-            <td>${m.id}</td>
-            <td>${m.nombre}</td>
-            <td>${m.tipo}</td>
-            <td>${m.estado}</td>
-            <td>${m.notas || '-'}</td>
-            <td><button class="btn-remove" onclick="eliminarMaterial('${m.id}')">✕</button></td>
-        </tr>
-    `).join('');
-}
-
-function agregarMaterial() {
-    const nombre = document.getElementById('matNombre').value.trim();
-    const tipo = document.getElementById('matTipo').value;
-    const estado = document.getElementById('matEstado').value;
-    const notas = document.getElementById('matNotas').value.trim();
-    
-    if (!nombre) {
-        alert('Ingrese el nombre del material');
-        return;
-    }
-    
-    const nuevo = {
-        id: 'MAT-' + String(biblioteca.materiales.length + 1).padStart(2, '0'),
-        nombre,
-        tipo,
-        estado,
-        notas
-    };
-    
-    biblioteca.materiales.push(nuevo);
-    guardarBiblioteca();
-    renderizarBiblioteca();
-    
-    // Limpiar formulario
-    document.getElementById('matNombre').value = '';
-    document.getElementById('matNotas').value = '';
-    
-    alert('Material agregado');
-}
-
-function eliminarMaterial(id) {
-    if (!confirm('¿Eliminar este material?')) return;
-    
-    biblioteca.materiales = biblioteca.materiales.filter(m => m.id !== id);
-    guardarBiblioteca();
-    renderizarBiblioteca();
 }
 
 // ==========================================
@@ -1431,9 +1385,8 @@ function importarJSON(event) {
                         }
                     });
                     guardarBiblioteca();
-                    renderizarBiblioteca();
                 }
-                
+
                 // Importar registros
                 let nuevosReg = 0;
                 if (Array.isArray(data.registros)) {
@@ -1619,7 +1572,6 @@ function importarMaterialesDesdeJSON() {
                         }
                     });
                     guardarBiblioteca();
-                    renderizarBiblioteca();
                     alert('Materiales importados: ' + data.length);
                 }
             } catch(err) {
@@ -1730,8 +1682,27 @@ function toggleEdicionRegistros() {
 
             var val = input.value.trim();
 
-            // Campos numéricos
-            if (dbfield === 'bolsas' || dbfield === 'grUsados') {
+            // Campo "bolsas": el badge FR de las cards (frMap[i] en renderizarRegistroLotes,
+            // vía _suGetFRMap) solo coincide con FR cuando TODAS las filas tienen bolsas:1.
+            // Si el lote ya tiene bolsas FR vinculadas y se cambia "bolsas" a algo distinto
+            // de 1 en una fila existente, avisar antes de aplicar el cambio.
+            if (dbfield === 'bolsas') {
+                var nuevoValorBolsas = parseInt(val) || 0;
+                var valorActualBolsas = lotesData[idx].db[dbidx].bolsas;
+                if (nuevoValorBolsas !== valorActualBolsas && nuevoValorBolsas !== 1) {
+                    var frMapCheck = _suGetFRMap(lotesData[idx]);
+                    if (Object.keys(frMapCheck).length > 0) {
+                        var msgBolsas = 'Este lote ya tiene bolsas FR vinculadas (fue enviado a Fructificación).\n\n' +
+                            'Cambiar "bolsas" a un valor distinto de 1 en una fila existente puede desalinear ' +
+                            'la insignia FR mostrada en esta fila y en todas las filas siguientes del mismo lote.\n\n' +
+                            '¿Confirmás el cambio de todos modos?';
+                        if (!confirm(msgBolsas)) {
+                            return; // cancelado: no se aplica el cambio de bolsas en esta fila
+                        }
+                    }
+                }
+                lotesData[idx].db[dbidx][dbfield] = nuevoValorBolsas;
+            } else if (dbfield === 'grUsados') {
                 lotesData[idx].db[dbidx][dbfield] = parseInt(val) || 0;
             } else {
                 lotesData[idx].db[dbidx][dbfield] = val;
@@ -2152,22 +2123,19 @@ function suDbEscapeHtml(s) {
 //   Retorna siempre un array — nunca null ni undefined.
 // ---------------------------------------------------------------
 function suDbNormSources(row, grLoteDefault) {
+    // Delegado a shared/gr_su_sources.js (unificado 2026-07-10, ver ese archivo
+    // para la implementación real — antes esta función tenía su propia copia
+    // divergente de la de GR).
+    if (window.GrSuSources && typeof window.GrSuSources.normalize === 'function') {
+        return window.GrSuSources.normalize(row, grLoteDefault);
+    }
+    // Fallback defensivo si la lib compartida no cargó por algún motivo.
+    console.warn('[SU] GrSuSources no disponible, usando fallback local');
     var lo = grLoteDefault || '';
-    if (Array.isArray(row.grSources) && row.grSources.length > 0) {
-        return row.grSources.map(function(s) {
-            return {
-                grLoteId:  String(s.grLoteId  || lo  || '').trim() || null,
-                grTandaId: String(s.grTandaId || '').trim() || null,
-                grUsados:  parseInt(s.grUsados) || 0
-            };
-        }).filter(function(s) { return s.grLoteId && s.grTandaId; });
-    }
-    // Fallback legacy: campos flat en la fila
-    var loteId  = String(row.grLoteId  || lo  || '').trim() || null;
+    if (!row || typeof row !== 'object') return [];
+    var loteId  = String(row.grLoteId || lo || '').trim() || null;
     var tandaId = String(row.grTandaId || row.grano || '').trim() || null;
-    if (loteId && tandaId) {
-        return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(row.grUsados) || 0 }];
-    }
+    if (loteId && tandaId) return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(row.grUsados, 10) || 0 }];
     return [];
 }
 window.suDbNormSources = suDbNormSources;
@@ -3278,9 +3246,6 @@ Object.assign(window, {
     importarExcel,
     importarMaterialesDesdeJSON,
     importarRegistrosDesdeJSON,
-    // Biblioteca de materiales
-    agregarMaterial,
-    eliminarMaterial,
     // Registros de lotes
     cargarRegistro,
     eliminarRegistro,

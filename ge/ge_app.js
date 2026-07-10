@@ -1746,6 +1746,10 @@
       document.removeEventListener('keydown', _keydownHandler);
       _keydownHandler = null;
     }
+    if (_toastTimer) {
+      clearTimeout(_toastTimer);
+      _toastTimer = null;
+    }
   };
 
   global.ge     = ge;

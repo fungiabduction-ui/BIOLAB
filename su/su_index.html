@@ -294,7 +294,7 @@
             <!-- ACCIONES -->
             <div class="actions-bar">
                 <button id="btnGuardar" class="btn btn-su">💾 Guardar Registro</button>
-                <button id="btnNuevoLote" class="btn btn-secondary" onclick="nuevoLote()">➕ Nuevo Registro</button>
+                <button id="btnNuevoLote" class="btn btn-secondary">➕ Nuevo Registro</button>
                 <div class="export-buttons">
                     <button id="btnExportJson" class="btn btn-export">📥 Exportar JSON</button>
                     <button id="btnExportExcel" class="btn btn-export">📊 Exportar Excel</button>
@@ -464,11 +464,11 @@
                 </div>
                 <div class="section-content" id="cfgImportar">
                     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-                        <button type="button" id="btnExportJson" class="btn btn-secondary">💾 Exportar JSON</button>
-                        <button type="button" id="btnExportExcel" class="btn btn-secondary">📊 Exportar Excel</button>
+                        <button type="button" id="btnExportJsonCfg" class="btn btn-secondary">💾 Exportar JSON</button>
+                        <button type="button" id="btnExportExcelCfg" class="btn btn-secondary">📊 Exportar Excel</button>
                         <label class="btn btn-su" style="cursor:pointer">
                             📥 Importar JSON
-                            <input type="file" id="btnImportJson" accept=".json" style="display:none">
+                            <input type="file" id="btnImportJsonCfg" accept=".json" style="display:none">
                         </label>
                         <label class="btn btn-secondary" style="cursor:pointer">
                             📄 Importar Excel
@@ -488,6 +488,8 @@
 
     <!-- Librería XLSX (para exportar/importar Excel) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Lib compartida: normalización de fuentes GR (grNormSources/suDbNormSources) -->
+    <script src="../shared/gr_su_sources.js"></script>
     <!-- Lógica del módulo SU -->
     <script src="su_app.js"></script>
 </body>

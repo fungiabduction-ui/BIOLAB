@@ -234,7 +234,6 @@
                     <textarea id="grProtoNotaInput" rows="2" placeholder="Escriba una nota del protocolo..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--tx);font-size:0.9rem;margin-bottom:10px;resize:vertical"></textarea>
                     <div style="display:flex;gap:10px">
                         <button class="gbtn gr" onclick="grAddProtoNota()" style="padding:10px 16px;border-radius:8px;border:none;background:#FFA000;color:#1D1D1D;font-weight:600;cursor:pointer">Agregar Nota</button>
-                        <button id="grBtnCerrar" class="btn btn-s" style="padding:10px 16px;border-radius:8px;border:none;background:#70AD47;color:white;font-weight:600;cursor:pointer" onclick="grCerrarProtocolo()">Cerrar Protocolo</button>
                     </div>
                     <div id="grProtoCerrado" class="gr-proto-closed" style="display:none;margin-top:12px;padding:12px;border:1px solid var(--highlight);border-radius:8px;background:var(--bg-tertiary);color:var(--tx)"></div>
                 </div>
@@ -695,6 +694,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="../shared/gr_su_sources.js"></script>
     <script src="gr_app.js"></script>
 </body>
 </html>

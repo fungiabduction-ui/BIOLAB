@@ -22,7 +22,6 @@ let _grStorageListener = null;
 let _grVisibilityListener = null;
 let _grFocusListener = null;
 let _grUsadosChangedListener = null;
-let _grMessageListener = null;
 let _grCultivosChangedListener = null;  // [Fase 4] refresca dropdowns de inóculo cuando CI cambia
 let _grSortMode = 'fecha_desc'; // 'fecha_desc' | 'fecha_asc' | 'id_asc' | 'disp_desc' | 'nombre'
 const GR_COLONIZACION_ALERTA_DIAS = 30;
@@ -241,22 +240,18 @@ function grSaveUsadosRefMap(ref) {
  *   Devuelve siempre un array (puede ser vacío).
  */
 function grNormSources(r, grLoteDefault) {
-    if (Array.isArray(r.grSources) && r.grSources.length > 0) {
-        return r.grSources
-            .map(function(s) {
-                return {
-                    grLoteId:  (String(s.grLoteId  || '').trim()) || null,
-                    grTandaId: (String(s.grTandaId || '').trim()) || null,
-                    grUsados:  parseInt(s.grUsados) || 0
-                };
-            })
-            .filter(function(s) { return s.grLoteId && s.grTandaId; });
+    // Delegado a shared/gr_su_sources.js (unificado 2026-07-10, ver ese archivo
+    // para la implementación real — antes esta función tenía su propia copia
+    // divergente de la de SU).
+    if (window.GrSuSources && typeof window.GrSuSources.normalize === 'function') {
+        return window.GrSuSources.normalize(r, grLoteDefault);
     }
-    var loteId  = (String(r.grLoteId  || grLoteDefault || '').trim()) || null;
-    var tandaId = (String(r.grTandaId || r.grano       || '').trim()) || null;
-    if (loteId && tandaId) {
-        return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(r.grUsados) || 0 }];
-    }
+    // Fallback defensivo si la lib compartida no cargó por algún motivo.
+    console.warn('[GR] GrSuSources no disponible, usando fallback local');
+    if (!r || typeof r !== 'object') return [];
+    var loteId  = (String(r.grLoteId || grLoteDefault || '').trim()) || null;
+    var tandaId = (String(r.grTandaId || r.grano || '').trim()) || null;
+    if (loteId && tandaId) return [{ grLoteId: loteId, grTandaId: tandaId, grUsados: parseInt(r.grUsados, 10) || 0 }];
     return [];
 }
 
@@ -484,7 +479,6 @@ GR.init = function initGR() {
         actualizarSelectoresGenetica();
 
         setTimeout(function() {
-            GR.calcularDG();
             actualizarTotalesCT();
             grActualizarTotalesGenetica();
             updateUnidadFisica();
@@ -676,16 +670,6 @@ function actualizarSelectoresCT() {
         // CT - Event listeners para cálculos
         inicializarEventosCT();
         
-        // DC - Biblioteca de agentes (legacy — IDs antiguos pueden no existir tras migración a PROTOCOLO)
-        const _dcBib = document.getElementById('dcBibliotecaAgentes');
-        if (_dcBib) _dcBib.addEventListener('change', seleccionarAgenteBiblioteca);
-        const _dcVolSol = document.getElementById('dcVolSol');
-        if (_dcVolSol) _dcVolSol.addEventListener('input', calcularConcentracionFinal);
-        const _dcConcAg = document.getElementById('dcConcAgente');
-        if (_dcConcAg) _dcConcAg.addEventListener('input', calcularConcentracionFinal);
-        const _dcVolAg = document.getElementById('dcVolAgente');
-        if (_dcVolAg) _dcVolAg.addEventListener('input', calcularConcentracionFinal);
-        
         // DG - Tabla de distribución de grano
         const dgTable = document.getElementById('dgTable');
         if (dgTable) {
@@ -701,19 +685,6 @@ function actualizarSelectoresCT() {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', updateUnidadFisica);
         });
-
-        // Escuchar mensajes de gr_config.html
-        if (_grMessageListener) {
-            window.removeEventListener('message', _grMessageListener);
-        }
-        _grMessageListener = function(event) {
-            if (event.data && event.data.type === 'bibliotecaActualizada') {
-                cargarBibliotecaDesdeStorage();
-                renderizarBibliotecaEnConfig();
-                actualizarSelectoresCT();
-            }
-        };
-        window.addEventListener('message', _grMessageListener);
     }
 
     // ==========================================
@@ -852,35 +823,6 @@ function actualizarSelectoresCT() {
             tbody.appendChild(row);
         }
     };
-
-    function seleccionarAgenteBiblioteca() {
-        const select = document.getElementById('dcBibliotecaAgentes');
-        const agente = select.value;
-        const agenteInput = document.getElementById('dcAgente');
-        const concAgenteInput = document.getElementById('dcConcAgente');
-        
-        if (agente === 'otro' || agente === '') {
-            // No hacer nada, el usuario escribirá manualmente
-            return;
-        }
-        
-        if (bibliotecaAgentes[agente]) {
-            agenteInput.value = bibliotecaAgentes[agente].nombre;
-            concAgenteInput.value = bibliotecaAgentes[agente].conc;
-            calcularConcentracionFinal();
-        }
-    }
-
-    function calcularConcentracionFinal() {
-        const volSol = parseFloat(document.getElementById('dcVolSol').value) || 0;
-        const volAgente = parseFloat(document.getElementById('dcVolAgente').value) || 0;
-        const concAgente = parseFloat(document.getElementById('dcConcAgente').value) || 0;
-        
-        // Fórmula: (Vol_agente_ml × Conc_agente%) / (Vol_sol_L × 1000) = %
-        // O más simple: (volAgente / (volSol * 1000)) * 100 * (concAgente / 100)
-        const concentracion = (volSol > 0 && concAgente > 0) ? (volAgente * concAgente) / (volSol * 1000) : 0;
-        document.getElementById('dcConc').value = concentracion.toFixed(3);
-    }
 
     // ==========================================
     // UF - UNIDAD FÍSICA Y PRODUCCIÓN
@@ -1055,29 +997,6 @@ function actualizarSelectoresCT() {
         'gesso': { nombre: 'Gesso' },
         'tiza': { nombre: 'Tiza' }
     };
-
-    function addAdRow() {
-        const tbody = document.getElementById('dgTable').querySelector('tbody');
-        const row = document.createElement('tr');
-        row.className = 'ad-row';
-        row.innerHTML = `
-            <td><input type="text" class="ad-tanda" placeholder="Ej: 194DA"></td>
-            <td><input type="number" class="ad-frascos" value="0" min="0"></td>
-            <td><input type="text" class="ad-nombre" placeholder="Ej: CaSO4"></td>
-            <td><input type="number" class="ad-cant" value="0" min="0" step="0.1"></td>
-            <td><input type="number" class="ad-conc" value="0" min="0" step="0.1"></td>
-            <td>
-                <select class="ad-estado">
-                    <option value="">Seleccionar...</option>
-                    <option value="ejecutado">Ejecutado</option>
-                    <option value="programado">Programado</option>
-                    <option value="pendiente">Pendiente</option>
-                </select>
-            </td>
-            <td><button type="button" class="btn-remove" onclick="removeRow(this)">✕</button></td>
-        `;
-        tbody.appendChild(row);
-    }
 
     // ==========================================
     // LOCALSTORAGE - GESTIÓN DE LOTES
@@ -1348,9 +1267,10 @@ function _grRenderKpiBar(lotes) {
             const u  = (r.tanda && usadosLote[r.tanda] != null)
                 ? (parseInt(usadosLote[r.tanda]) || 0)
                 : (parseInt(r.usadosSnapshot) || 0);
+            const uEx = grGetExUsadosGR(l.id, r.tanda);
             totalFrascos += fr;
             totalContam  += co;
-            loteDisp     += Math.max(0, fr - co - u);
+            loteDisp     += Math.max(0, fr - co - u - uEx);
         });
         totalDisp += loteDisp;
         if (loteDisp > 0) totalLotesActivos++;
@@ -1443,28 +1363,6 @@ window.grRenderizarRegistroLotes = grRenderizarRegistroLotes;
 window.grCargarRegistro = grCargarRegistro;
 window.grEliminarRegistro = grEliminarRegistro;
     
-    // Función para cargar lote desde el registro
-    GR.cargarLoteDesdeRegistro = window.cargarLoteDesdeRegistro = function(index) {
-        if (lotesData[index]) {
-            cargarDatosLote(lotesData[index]);
-            document.getElementById('loteSelector').value = index;
-        }
-    };
-    
-    // Función para eliminar lote desde el registro
-    GR.eliminarLoteDesdeRegistro = window.eliminarLoteDesdeRegistro = function(index) {
-        const lote = lotesData[index];
-        if (!lote) return;
-        
-        if (!confirm(`¿Eliminar el lote "${lote.id}" del sistema?`)) return;
-        
-        lotesData.splice(index, 1);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
-        grRenderizarRegistroLotes();
-        actualizarSelectorLotes();
-        alert('Lote eliminado');
-    };
-
     function guardarLote() {
         
         const lote = recolectarDatosLote();
@@ -1679,7 +1577,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                     // Importar biblioteca si existe
                     if (data.biblioteca) {
                         GR.biblioteca = data.biblioteca;
-                        localStorage.setItem('sustratos_biblioteca', JSON.stringify(GR.biblioteca));
+                        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(GR.biblioteca));
                     }
                     
                     // Importar lotesRegistrados
@@ -1730,6 +1628,10 @@ window.grEliminarRegistro = grEliminarRegistro;
                     });
                 }
                 
+                // Datos importados pueden traer dg[].inoculoSource:null de exports viejos —
+                // el guard one-shot de _migrarInoculoSourceNull ya corrió en este load y no
+                // volverá a barrerlos, así que se normaliza acá explícitamente (2026-07-10).
+                _normalizarInoculoSourceNullEnLotes(lotesData);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
                 actualizarSelectorLotes();
                 renderizarBibliotecaEnConfig();
@@ -1998,7 +1900,7 @@ window.grEliminarRegistro = grEliminarRegistro;
 
             // [Fase 4] Resolver source CI vs GE desde el value del select
             const inoc = (typeof _grResolverInoculo === 'function') ? _grResolverInoculo(rawSelValue) : null;
-            let inoculoSource = null;
+            let inoculoSource = 'LEGACY';
             let cultivoCiId = null;
             let fenId = null;
             let geneticaNombre = null;
@@ -2038,7 +1940,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                 frascos: frascos,
                 fen_id: fenId,
                 genetica: geneticaNombre,
-                inoculoSource: inoculoSource,   // [Fase 4] 'CI' | 'GE' | null
+                inoculoSource: inoculoSource,   // [Fase 4] 'CI' | 'GE' | 'LEGACY'
                 cultivoCiId: cultivoCiId,        // [Fase 4] presente solo si inoculoSource === 'CI'
                 formulaNombre: formulaNombreCi,  // nombre de fórmula CI (trazabilidad display)
                 placasUsadas: placasUsadas,      // [Fase 4 patch²] universal (CI + GE)
@@ -2254,30 +2156,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (typeof grRenderNotas === 'function') grRenderNotas();
         if (typeof window.grRenderSeguimientoNotas === 'function') window.grRenderSeguimientoNotas();
     }
-
-    // Función global para agregar fila AD
-    GR.addAdRow = window.addAdRow = function() {
-        const tbody = document.getElementById('dgTable').querySelector('tbody');
-        const row = document.createElement('tr');
-        row.className = 'ad-row';
-        row.innerHTML = `
-            <td><input type="text" class="ad-tanda" placeholder="Ej: 194DA"></td>
-            <td><input type="number" class="ad-frascos" value="0" min="0"></td>
-            <td><input type="text" class="ad-nombre" placeholder="Ej: CaSO4"></td>
-            <td><input type="number" class="ad-cant" value="0" min="0" step="0.1"></td>
-            <td><input type="number" class="ad-conc" value="0" min="0" step="0.1"></td>
-            <td>
-                <select class="ad-estado">
-                    <option value="">Seleccionar...</option>
-                    <option value="ejecutado">Ejecutado</option>
-                    <option value="programado">Programado</option>
-                    <option value="pendiente">Pendiente</option>
-                </select>
-            </td>
-            <td><button type="button" class="btn-remove" onclick="removeRow(this)">✕</button></td>
-        `;
-        tbody.appendChild(row);
-    };
 
     // Función global para eliminar filas
     GR.removeRow = window.removeRow = function(btn) {
@@ -2538,37 +2416,6 @@ window.grEliminarRegistro = grEliminarRegistro;
             document.getElementById('panel-' + this.dataset.tab).classList.add('active');
         });
     });
-
-    // ==========================================
-    // DG - DISTRIBUCIÓN DE GRANO
-    // ==========================================
-
-    GR.cambiarEstructura = window.cambiarEstructura = function() {
-        const tipo = document.getElementById('dgTipoEstructura');
-        const capacidad = document.getElementById('dgCapacidad');
-        if (tipo && capacidad) {
-            capacidad.value = tipo.value === 'frasco' ? 660 : 1000;
-            calcularDG();
-        }
-    };
-
-    GR.calcularDG = window.calcularDG = function() {
-        const capacidad = document.getElementById('dgCapacidad');
-        const llenado = document.getElementById('dgLlenado');
-        const dgHeadspace = document.getElementById('dgHeadspace');
-        const dgOxigeno = document.getElementById('dgOxigeno');
-        
-        if (!capacidad || !llenado || !dgHeadspace || !dgOxigeno) return;
-        
-        const capacidadVal = parseFloat(capacidad.value) || 0;
-        const llenadoVal = parseFloat(llenado.value) || 0;
-        const headspace = capacidadVal - llenadoVal;
-        // oxígeno % frasco = headspace / capacidadTotal * 100
-        const oxigeno = capacidadVal > 0 ? (headspace / capacidadVal) * 100 : 0;
-        
-        dgHeadspace.textContent = headspace.toFixed(0);
-        dgOxigeno.textContent = oxigeno.toFixed(1);
-    };
 
     // ==========================================
     // GENÉTICA - Cargar desde GE via window.ge.getSelectableGenetics()
@@ -3321,169 +3168,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         row.querySelector('.dg-conc').value = conc.toFixed(3);
     };
 
-    // Legacy functions (deprecated but kept for compatibility)
-    GR.agregarAgente = window.agregarAgente = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.agregarAditivo = window.agregarAditivo = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.agregarGrano = window.agregarGrano = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.eliminarIngrediente = window.eliminarIngrediente = function() { alert('Use la sección Config para eliminar ingredientes'); };
     function renderizarBiblioteca() { renderizarBibliotecaEnConfig(); }
-
-    // ==========================================
-    // CARGAR LOTE 1903 (EJEMPLO)
-    // ==========================================
-
-    function cargarLote1903() {
-        const lote1903 = {
-            id: '1903-MA-AV',
-            nombre: 'MA + AV (50/50 vol.)',
-            fecha: '2024-01-15',
-            version: 'v2.0',
-            componentes: [
-                { nombre: 'Avena (AV)', volumen: 2000, masa: 1112, densidad: 0.556, notas: 'Grano fino, alta superficie específica' },
-                { nombre: 'Maíz (MA)', volumen: 2000, masa: 1604, densidad: 0.802, notas: 'Grano grueso, mayor resistencia a hidratación' }
-            ],
-            dc: {
-                volSol: 4,
-                agente: 'ÁCIDO PERACÉTICO',
-                concAgente: 5,
-                volAgente: 60,
-                conc: 0.075,
-                tiempo: 60
-            },
-            hm: {
-                estadoAgua: 'EBULICIÓN - 100°C',
-                estadoGrano: 'TEMPERATURA AMBIENTE',
-                metodo: 'INMERSIÓN DIRECTA',
-                tiempoCoccion: 20,
-                regimenCalor: 'FUEGO MÁXIMO CONSTANTE',
-                agitacion: 'CADA 5 MINUTOS'
-            },
-            aditivos: [
-                { tanda: '193GA', frascos: 4, nombre: 'CaSO4 (Yeso)', cantidad: 1.6, conc: 0.5, estado: 'ejecutado' },
-                { tanda: '193GB', frascos: 4, nombre: 'CaSO4 (Yeso)', cantidad: 3.0, conc: 1.0, estado: 'programado' },
-                { tanda: '193GC', frascos: 6, nombre: 'CaSO4 (Yeso)', cantidad: 6.3, conc: 2.0, estado: 'pendiente' }
-            ],
-            es: {
-                tiempo: 150,
-                medio: 'VAPOR SATURADO',
-                objPrimario: 'ESTERILIDAD DEL SUSTRATO',
-                objSecundario: 'HIDRATACIÓN INTERNA DEL MAÍZ',
-                riesgos: [
-                    { causa: 'CaSO4 insuficiente', nivel: 'medio' },
-                    { causa: 'CaSO4 excesivo', nivel: 'medio' },
-                    { causa: 'Mala distribución en esterilizador', nivel: 'alto' }
-                ]
-            },
-            dg: [
-                { tanda: '193GA', frascos: 4, nombre: 'CaSO4 (Yeso)', cantidad: 1.6, conc: 0.5, estado: 'ejecutado' },
-                { tanda: '193GB', frascos: 4, nombre: 'CaSO4 (Yeso)', cantidad: 3.0, conc: 1.0, estado: 'programado' },
-                { tanda: '193GC', frascos: 6, nombre: 'CaSO4 (Yeso)', cantidad: 6.3, conc: 2.0, estado: 'pendiente' }
-            ],
-            re: {
-                evaluacion: {
-                    hidratacion: 'correcto',
-                    distribucion: 'problema',
-                    eficiencia: 'optimo'
-                }
-            }
-        };
-        
-        return lote1903;
-    }
-
-    // Función para cargar el lote de ejemplo y registrarlo
-    GR.cargarLote1903Demo = window.cargarLote1903Demo = function() {
-        const lote = cargarLote1903();
-        
-        // Verificar si ya existe
-        const existe = lotesData.some(l => l.id === lote.id);
-        
-        if (existe) {
-            alert('El lote 1903-MA-AV ya está registrado');
-            cargarDatosLote(lote);
-            return;
-        }
-        
-        // Agregar al array
-        lotesData.push(lote);
-        
-        // Guardar en localStorage
-        guardarEnStorage();
-        
-        // Mostrar en UI
-        cargarDatosLote(lote);
-        
-        alert('LOTE 1903-MA-AV registrado correctamente');
-    };
-
-    // ==========================================
-    // CARGAR LOTE MAÍZ 2024 (EJEMPLO)
-    // ==========================================
-
-    function cargarLoteMaiz2024() {
-        const loteMaiz = {
-            id: 'MA-2024',
-            nombre: 'Maíz 100%',
-            fecha: '2024-01-20',
-            version: 'v1.0',
-            componentes: [
-                { nombre: 'Maíz (MA)', volumen: 3000, masa: 2406, densidad: 0.802, notas: 'Grano seco' }
-            ],
-            dc: {
-                volSol: 3.5,
-                agente: 'ÁCIDO PERACÉTICO',
-                concAgente: 5,
-                volAgente: 60,
-                conc: 0.086,
-                tiempo: 60
-            },
-            hm: {
-                estadoAgua: 'EBULICIÓN - 100°C',
-                estadoGrano: 'TEMPERATURA AMBIENTE',
-                metodo: 'INMERSIÓN DIRECTA',
-                tiempoCoccion: 70,
-                regimenCalor: 'FUEGO MÁXIMO + FUEGO MÍNIMO',
-                agitacion: '15 MIN/CICLO × 4 CICLOS'
-            },
-            dg: [],
-            es: {},
-            re: {
-                evaluacion: {
-                    hidratacion: 'correcto',
-                    distribucion: 'correcto',
-                    eficiencia: 'optimo'
-                },
-                notas: 'Expansión x2 (100%) - Punto óptimo. Relación agua/maíz 1:1. 12 frascos obtenidos.'
-            }
-        };
-        
-        return loteMaiz;
-    }
-
-    // Función para cargar el lote de maíz y registrarlo
-    GR.cargarLoteMaiz2024Demo = window.cargarLoteMaiz2024Demo = function() {
-        const lote = cargarLoteMaiz2024();
-        
-        // Verificar si ya existe
-        const existe = lotesData.some(l => l.id === lote.id);
-        
-        if (existe) {
-            alert('El lote MA-2024 ya está registrado');
-            cargarDatosLote(lote);
-            return;
-        }
-        
-        // Agregar al array
-        lotesData.push(lote);
-        
-        // Guardar en localStorage
-        guardarEnStorage();
-        
-        // Mostrar en UI
-        cargarDatosLote(lote);
-        
-        alert('LOTE MA-2024 registrado correctamente');
-    };
 
     // Inicialización unificada en GR.init() al inicio del archivo.
 
@@ -3496,7 +3181,6 @@ GR.goToConfig = window.goToConfig = function goToConfig() {
         GR.subTab('cfg');
         return;
     }
-    window.location.href = 'gr_config.html';
 };
 GR.goToIndex = window.goToIndex = function goToIndex() {
     // Si existe el sub-panel embebido, volver al panel principal
@@ -3742,26 +3426,43 @@ window.grEliminarSeguimientoNota = function(index) {
 // ==========================================
 // MIGRACIÓN inoculoSource null → 'LEGACY'
 // ==========================================
-    function _migrarInoculoSourceNull() {
-        try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-            var lotes = JSON.parse(raw);
-            if (!Array.isArray(lotes)) return;
-            var cambiados = 0;
-            lotes.forEach(function(lote) {
-                if (!Array.isArray(lote.dg)) return;
-                lote.dg.forEach(function(dg) {
-                    if (dg.inoculoSource === null || dg.inoculoSource === undefined) {
-                        dg.inoculoSource = 'LEGACY';
-                        cambiados++;
-                    }
-                });
+    /**
+     * Barre lote.dg[].inoculoSource null/undefined → 'LEGACY' en memoria (no persiste).
+     * Extraída de _migrarInoculoSourceNull (guard one-shot) para reusarla en importarJSON:
+     * un JSON importado puede traer dg[] con inoculoSource:null de datos viejos, y el guard
+     * one-shot de _migrarInoculoSourceNull ya habrá corrido en el load actual, así que nunca
+     * volvería a barrerlos si no se llama explícitamente acá (2026-07-10, hallazgo de code review).
+     * Devuelve la cantidad de campos corregidos.
+     */
+    function _normalizarInoculoSourceNullEnLotes(lotes) {
+        var cambiados = 0;
+        if (!Array.isArray(lotes)) return cambiados;
+        lotes.forEach(function(lote) {
+            if (!lote || !Array.isArray(lote.dg)) return;
+            lote.dg.forEach(function(dg) {
+                if (dg.inoculoSource === null || dg.inoculoSource === undefined) {
+                    dg.inoculoSource = 'LEGACY';
+                    cambiados++;
+                }
             });
+        });
+        return cambiados;
+    }
+
+    function _migrarInoculoSourceNull() {
+        var MIGRACION_INOCULO_KEY = 'biolab_migracion_gr_inoculo_source_v1';
+        try {
+            if (localStorage.getItem(MIGRACION_INOCULO_KEY) === '1') return;
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
+            var lotes = JSON.parse(raw);
+            if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
+            var cambiados = _normalizarInoculoSourceNullEnLotes(lotes);
             if (cambiados > 0) {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lotes));
                 console.log('[GR] Migración inoculoSource: ' + cambiados + ' registros actualizados a LEGACY');
             }
+            localStorage.setItem(MIGRACION_INOCULO_KEY, '1');
         } catch(e) {
             console.error('[GR] Error en migración inoculoSource:', e);
         }
@@ -4298,6 +3999,7 @@ function grInit() {
 window.grInit       = grInit;
 window.addCtRow     = (typeof addCtRow === 'function') ? addCtRow : window.addCtRow;
 window.importarJSON = (typeof importarJSON === 'function') ? importarJSON : window.importarJSON;
+window.actualizarTotalesCT = (typeof actualizarTotalesCT === 'function') ? actualizarTotalesCT : window.actualizarTotalesCT;
 
 // ==========================================
 // LIMPIEZA PROFUNDA — Elimina lotes inválidos de localStorage
@@ -4374,10 +4076,6 @@ window.onModuleUnload = function () {
     if (_grCultivosChangedListener) {
         window.removeEventListener('ci-cultivos-changed', _grCultivosChangedListener);
         _grCultivosChangedListener = null;
-    }
-    if (_grMessageListener) {
-        window.removeEventListener('message', _grMessageListener);
-        _grMessageListener = null;
     }
 };
 

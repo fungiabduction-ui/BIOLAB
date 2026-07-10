@@ -580,29 +580,41 @@
                     var exBolsa = (uuidKey && existMapUuid[uuidKey]) || existMapLote[loteKey] || null;
 
                     if (exBolsa && suUuid && exBolsa.suLoteId !== lote.id) {
-                        exBolsa.suLoteId = lote.id;
-                        exBolsa._suUuid  = suUuid;
-                        res.colonizacionSync++;
+                        // SOLO en bolsas pendientes — mismo gate que los 4 campos de abajo.
+                        // Code review de la sesión 2026-07-10 encontró este bloque sin el gate
+                        // que sí se agregó ahí (commit 3b1509a): mismo riesgo de reescribir
+                        // trazabilidad de una bolsa ya sellada si SU reasigna/dedupe su id/_uuid.
+                        if (esPendiente(exBolsa)) {
+                            exBolsa.suLoteId = lote.id;
+                            exBolsa._suUuid  = suUuid;
+                            res.colonizacionSync++;
+                        }
                     }
 
                     if (exBolsa) {
                         var ex = exBolsa;
-                        // Sincronizar métricas derivadas de SU
-                        if (granoPorBolsaTanda != null && ex.granoPorBolsa !== granoPorBolsaTanda) {
-                            ex.granoPorBolsa = granoPorBolsaTanda;
-                            res.colonizacionSync++;
-                        }
-                        if (hidratadoPorBolsaTanda != null && ex.pesoHumedoHidratado !== hidratadoPorBolsaTanda) {
-                            ex.pesoHumedoHidratado = hidratadoPorBolsaTanda;
-                            res.colonizacionSync++;
-                        }
-                        if (sustratoPorBolsa > 0 && ex.pesoSustratoSeco !== sustratoPorBolsa) {
-                            ex.pesoSustratoSeco = sustratoPorBolsa;
-                            res.colonizacionSync++;
-                        }
-                        if (fechaRegGR && !ex.fechaRegistroGR) {
-                            ex.fechaRegistroGR = fechaRegGR;
-                            res.colonizacionSync++;
+                        // Sincronizar métricas derivadas de SU — SOLO en bolsas pendientes.
+                        // Una bolsa sellada (pendienteConfirmacion:false) tiene estos valores
+                        // congelados por el operador; auditoría forense 2026-07-10 confirmó
+                        // que sin este gate, sincronizarTodo() reescribía granoPorBolsa en
+                        // bolsas ya selladas sin dejar rastro (bolsas FR15b/FR15d, 2026-05-01).
+                        if (esPendiente(ex)) {
+                            if (granoPorBolsaTanda != null && ex.granoPorBolsa !== granoPorBolsaTanda) {
+                                ex.granoPorBolsa = granoPorBolsaTanda;
+                                res.colonizacionSync++;
+                            }
+                            if (hidratadoPorBolsaTanda != null && ex.pesoHumedoHidratado !== hidratadoPorBolsaTanda) {
+                                ex.pesoHumedoHidratado = hidratadoPorBolsaTanda;
+                                res.colonizacionSync++;
+                            }
+                            if (sustratoPorBolsa > 0 && ex.pesoSustratoSeco !== sustratoPorBolsa) {
+                                ex.pesoSustratoSeco = sustratoPorBolsa;
+                                res.colonizacionSync++;
+                            }
+                            if (fechaRegGR && !ex.fechaRegistroGR) {
+                                ex.fechaRegistroGR = fechaRegGR;
+                                res.colonizacionSync++;
+                            }
                         }
                         // Sincronizar fuentes GR: si SU cambió la trazabilidad, propagar a FR.
                         // Solo se actualiza en bolsas pendientes — una bolsa confirmada tiene
@@ -4505,11 +4517,15 @@
     }
 
     function _migrarFrInoculoSourceNull() {
+        var KEY_MIG = 'biolab_migracion_fr_inoculo_source_v1';
+        try {
+            if (localStorage.getItem(KEY_MIG) === '1') return;
+        } catch (e) { return; }
         try {
             var raw = localStorage.getItem(FR_KEY);
-            if (!raw) return;
+            if (!raw) { try { localStorage.setItem(KEY_MIG, '1'); } catch(e) {} return; }
             var bolsas = JSON.parse(raw);
-            if (!Array.isArray(bolsas)) return;
+            if (!Array.isArray(bolsas)) { try { localStorage.setItem(KEY_MIG, '1'); } catch(e) {} return; }
             var cambiados = 0;
             bolsas.forEach(function(b) {
                 if (!Array.isArray(b.grSources)) return;
@@ -4524,6 +4540,7 @@
                 localStorage.setItem(FR_KEY, JSON.stringify(bolsas));
                 console.log('[FR] Migración inoculoSource: ' + cambiados + ' registros actualizados a LEGACY');
             }
+            try { localStorage.setItem(KEY_MIG, '1'); } catch (e) {}
         } catch(e) {
             console.error('[FR] Error en migración inoculoSource:', e);
         }
