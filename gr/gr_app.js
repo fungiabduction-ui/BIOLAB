@@ -1675,7 +1675,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                     // Importar biblioteca si existe
                     if (data.biblioteca) {
                         GR.biblioteca = data.biblioteca;
-                        localStorage.setItem('sustratos_biblioteca', JSON.stringify(GR.biblioteca));
+                        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(GR.biblioteca));
                     }
                     
                     // Importar lotesRegistrados
