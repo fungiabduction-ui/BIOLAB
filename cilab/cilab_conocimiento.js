@@ -4306,6 +4306,20 @@ function creScrubStart(evt, formulaId, geneticaId, faseId) {
   document.addEventListener('pointerup', _creOnScrubEnd);
 }
 
+// Limpieza de emergencia: si el módulo CILAB se descarga en medio de un drag
+// (pointerdown sin su pointerup, ej. navegando a otro módulo), estos listeners
+// document-level quedaban vivos para siempre y window._creScrubbingState seguía
+// apuntando a un trackEl ya desmontado — el próximo pointerup en CUALQUIER parte
+// de la app disparaba _creOnScrubEnd sobre un nodo detached (rect en cero → NaN)
+// y escribía una fase con dia:NaN en bl2_crec_fases. Expuesta para que
+// cilabUnload() (cilab_app.js) la llame en onModuleUnload (bug de auditoría
+// ronda 2, 2026-07-10).
+window._creScrubCleanup = function () {
+  document.removeEventListener('pointermove', _creOnScrubMove);
+  document.removeEventListener('pointerup', _creOnScrubEnd);
+  window._creScrubbingState = null;
+};
+
 function _creOnScrubMove(evt) {
   var s = window._creScrubbingState;
   if (!s) return;
