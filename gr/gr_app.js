@@ -3191,7 +3191,6 @@ GR.goToConfig = window.goToConfig = function goToConfig() {
         GR.subTab('cfg');
         return;
     }
-    window.location.href = 'gr_config.html';
 };
 GR.goToIndex = window.goToIndex = function goToIndex() {
     // Si existe el sub-panel embebido, volver al panel principal
