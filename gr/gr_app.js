@@ -664,8 +664,6 @@ function actualizarSelectoresCT() {
         // Importar
         const btnImportJson = document.getElementById('btnImportJson');
         if (btnImportJson) btnImportJson.addEventListener('change', importarJSON);
-        const btnImportExcel = document.getElementById('btnImportExcel');
-        if (btnImportExcel) btnImportExcel.addEventListener('change', importarExcel);
 
         // CT - Event listeners para cálculos
         inicializarEventosCT();
@@ -1655,86 +1653,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         reader.readAsText(file);
     }
 
-    // ==========================================
-    // IMPORTAR EXCEL
-    // ==========================================
-    function importarExcel(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        if (typeof XLSX === 'undefined') {
-            alert('Biblioteca Excel no cargada. Intenta de nuevo.');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Leer primera hoja - debe tener datos del lote
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                
-                // Buscar el ID del lote en la primera columna (fila 2 típicamente)
-                // y reconstruir el objeto lote desde las filas
-                // Por ahora, intentar parsear como objeto simple
-                
-                // Intentar obtener datos directamente de la primera hoja
-                let loteData = {};
-                jsonData.forEach((row, idx) => {
-                    if (idx >= 1 && row[0]) { // Skip header, start from row 1
-                        const key = row[0];
-                        const value = row[1];
-                        if (key && value !== undefined) {
-                            loteData[key] = value;
-                        }
-                    }
-                });
-                
-                // Si es un formato de objeto simple
-                if (loteData.Lote || loteData.id) {
-                    const existe = lotesData.some(l => l.id === (loteData.Lote || loteData.id));
-                    
-                    if (!existe) {
-                        // Reconstruir objeto lote completo
-                        const lote = {
-                            id: loteData.Lote || loteData.id || 'IMPORT-' + Date.now(),
-                            nombre: loteData.Nombre || loteData.nombre || loteData.Mezcla || loteData.mezcla || '',
-                            fecha: loteData.Fecha || loteData.fecha || new Date().toISOString().split('T')[0],
-                            version: loteData.Versión || loteData.version || 'v1',
-                            componentes: [],
-                            dc: {},
-                            hm: {},
-                            dg: [],
-                            es: {},
-                            re: {}
-                        };
-                        
-                        lotesData.push(lote);
-                        
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
-                        actualizarSelectorLotes();
-                        
-                        alert('Lote importado correctamente');
-                    } else {
-                        alert('El lote ya existe en el sistema');
-                    }
-                } else {
-                    alert('No se pudo extraer información del Excel. Verifica el formato.');
-                }
-                
-                // Limpiar input
-                event.target.value = '';
-            } catch (err) {
-                alert('Error al leer el archivo Excel. Verifica el formato.');
-                console.error(err);
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
     function cargarLoteSeleccionado() {
         const selector = document.getElementById('loteSelector');
         const index = selector.value;
@@ -1751,22 +1669,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         // Verificar que btnEliminarLote existe
         const btnEliminar = document.getElementById('btnEliminarLote');
         if (btnEliminar) btnEliminar.disabled = false;
-    }
-
-    function eliminarLote() {
-        const selector = document.getElementById('loteSelector');
-        const index = selector.value;
-        
-        if (index === '') return;
-        
-        const lote = lotesData[index];
-        
-        if (confirm(`¿Estás seguro de eliminar el lote "${lote.id}"?`)) {
-            lotesData.splice(index, 1);
-            guardarEnStorage();
-            nuevoLote();
-            alert('Lote eliminado');
-        }
     }
 
     GR.nuevoLote = window.nuevoLote = function() {

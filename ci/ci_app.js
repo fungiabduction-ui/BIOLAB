@@ -4763,94 +4763,6 @@ function _ciCultivoEditarBlandos(id, partial) {
   return { ok: true };
 }
 
-// ─── Operaciones de consumo (Fase 4 — invocadas por GR) ───
-
-function _ciCultivoConsumir(cultivoId, cantidad, ref) {
-  // ref = { refType: 'GR', refId: <string>, fecha?: <iso>, notas?: <string> }
-  // Atómica: re-lee storage, valida estado y stock, descuenta, registra consumo,
-  // auto-transición a AGOTADO si cantidadDisponible llega a 0, persiste y dispatcha.
-  if (typeof cultivoId !== 'string' || !cultivoId)
-    return { ok: false, motivo: 'cultivoId requerido' };
-  if (!Number.isInteger(cantidad) || cantidad <= 0)
-    return { ok: false, motivo: 'cantidad debe ser entero positivo' };
-  if (!ref || typeof ref !== 'object' || typeof ref.refId !== 'string' || !ref.refId)
-    return { ok: false, motivo: 'ref con refId requerido' };
-
-  const cultivos = _ciCultivosLoad();
-  const idx = cultivos.findIndex(c => c && c.id === cultivoId);
-  if (idx === -1) return { ok: false, motivo: 'cultivo no encontrado' };
-
-  const c = cultivos[idx];
-  if (c.estado === 'DESCARTADO') return { ok: false, motivo: 'cultivo descartado' };
-  if (c.estado === 'AGOTADO')    return { ok: false, motivo: 'cultivo agotado' };
-  if (c.estado !== 'DISPONIBLE') return { ok: false, motivo: 'cultivo en estado no consumible: ' + c.estado };
-  if (typeof c.cantidadDisponible !== 'number' || c.cantidadDisponible < cantidad)
-    return { ok: false, motivo: 'sin stock suficiente' };
-
-  c.cantidadDisponible -= cantidad;
-  if (!Array.isArray(c.consumos)) c.consumos = [];
-  c.consumos.push({
-    refType:  ref.refType || 'GR',
-    refId:    ref.refId,
-    cantidad,
-    fecha:    (typeof ref.fecha === 'string' && ref.fecha) ? ref.fecha : new Date().toISOString(),
-    notas:    (typeof ref.notas === 'string' && ref.notas) ? ref.notas : undefined,
-  });
-  if (c.cantidadDisponible === 0) c.estado = 'AGOTADO';
-
-  if (!_ciCultivosSave(cultivos)) return { ok: false, motivo: 'fallo persistencia' };
-  _ciDispatchCultivosChanged('consumido', cultivoId);
-  return { ok: true, cantidadRestante: c.cantidadDisponible, estado: c.estado };
-}
-
-function _ciCultivoDevolverConsumoPorRef(refIdOrPrefix, opciones) {
-  // Devuelve TODOS los consumos cuyo refId === refIdOrPrefix (modo exacto, default)
-  // o cuyo refId comienza con refIdOrPrefix (modo prefijo, useful para "wipe lote").
-  // opciones = { prefijo?: boolean, cultivoId?: string }
-  // - Si cultivoId se especifica, solo opera sobre ese cultivo; si no, recorre todos.
-  // - Si AGOTADO se desbloquea por la devolución, vuelve a DISPONIBLE.
-  if (typeof refIdOrPrefix !== 'string' || !refIdOrPrefix)
-    return { ok: false, motivo: 'refId requerido' };
-
-  const opts        = (opciones && typeof opciones === 'object') ? opciones : {};
-  const usarPrefijo = !!opts.prefijo;
-  const targetCid   = (typeof opts.cultivoId === 'string' && opts.cultivoId) ? opts.cultivoId : null;
-
-  const cultivos = _ciCultivosLoad();
-  let hubo = false;
-  let totalDevuelto = 0;
-  const cultivosTocados = [];
-
-  for (let i = 0; i < cultivos.length; i++) {
-    const c = cultivos[i];
-    if (!c || !Array.isArray(c.consumos)) continue;
-    if (targetCid && c.id !== targetCid) continue;
-
-    let devueltoEsta = 0;
-    c.consumos = c.consumos.filter(co => {
-      if (!co || typeof co.refId !== 'string') return true;
-      const match = usarPrefijo ? co.refId.startsWith(refIdOrPrefix) : co.refId === refIdOrPrefix;
-      if (match) { devueltoEsta += (co.cantidad || 0); return false; }
-      return true;
-    });
-
-    if (devueltoEsta > 0) {
-      c.cantidadDisponible = (typeof c.cantidadDisponible === 'number' ? c.cantidadDisponible : 0) + devueltoEsta;
-      // Si estaba AGOTADO y vuelve a tener stock, volvemos a DISPONIBLE.
-      // DESCARTADO es terminal: NO se reactiva (auditoría científica).
-      if (c.estado === 'AGOTADO' && c.cantidadDisponible > 0) c.estado = 'DISPONIBLE';
-      hubo = true;
-      totalDevuelto += devueltoEsta;
-      cultivosTocados.push(c.id);
-    }
-  }
-
-  if (!hubo) return { ok: true, devuelto: 0, cultivosTocados: [] };
-  if (!_ciCultivosSave(cultivos)) return { ok: false, motivo: 'fallo persistencia' };
-  cultivosTocados.forEach(id => _ciDispatchCultivosChanged('devuelto', id));
-  return { ok: true, devuelto: totalDevuelto, cultivosTocados };
-}
-
 // ─── Notificación de cambios ───
 
 function _ciDispatchCultivosChanged(tipo, cultivoId) {
@@ -4879,9 +4791,6 @@ Object.assign(window, {
     getCultivosByGenetica:   ciGetCultivosByGenetica,
     getConsumosByCultivo:    ciGetConsumosByCultivo,
     getSchemaVersion:        ciGetSchemaVersion,
-    // Fase 4 — escritura: consumo y devolución
-    consumirCantidad:        _ciCultivoConsumir,
-    devolverConsumoPorRef:   _ciCultivoDevolverConsumoPorRef,
   }
 });
 
