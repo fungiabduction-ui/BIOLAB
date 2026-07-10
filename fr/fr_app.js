@@ -587,22 +587,28 @@
 
                     if (exBolsa) {
                         var ex = exBolsa;
-                        // Sincronizar métricas derivadas de SU
-                        if (granoPorBolsaTanda != null && ex.granoPorBolsa !== granoPorBolsaTanda) {
-                            ex.granoPorBolsa = granoPorBolsaTanda;
-                            res.colonizacionSync++;
-                        }
-                        if (hidratadoPorBolsaTanda != null && ex.pesoHumedoHidratado !== hidratadoPorBolsaTanda) {
-                            ex.pesoHumedoHidratado = hidratadoPorBolsaTanda;
-                            res.colonizacionSync++;
-                        }
-                        if (sustratoPorBolsa > 0 && ex.pesoSustratoSeco !== sustratoPorBolsa) {
-                            ex.pesoSustratoSeco = sustratoPorBolsa;
-                            res.colonizacionSync++;
-                        }
-                        if (fechaRegGR && !ex.fechaRegistroGR) {
-                            ex.fechaRegistroGR = fechaRegGR;
-                            res.colonizacionSync++;
+                        // Sincronizar métricas derivadas de SU — SOLO en bolsas pendientes.
+                        // Una bolsa sellada (pendienteConfirmacion:false) tiene estos valores
+                        // congelados por el operador; auditoría forense 2026-07-10 confirmó
+                        // que sin este gate, sincronizarTodo() reescribía granoPorBolsa en
+                        // bolsas ya selladas sin dejar rastro (bolsas FR15b/FR15d, 2026-05-01).
+                        if (esPendiente(ex)) {
+                            if (granoPorBolsaTanda != null && ex.granoPorBolsa !== granoPorBolsaTanda) {
+                                ex.granoPorBolsa = granoPorBolsaTanda;
+                                res.colonizacionSync++;
+                            }
+                            if (hidratadoPorBolsaTanda != null && ex.pesoHumedoHidratado !== hidratadoPorBolsaTanda) {
+                                ex.pesoHumedoHidratado = hidratadoPorBolsaTanda;
+                                res.colonizacionSync++;
+                            }
+                            if (sustratoPorBolsa > 0 && ex.pesoSustratoSeco !== sustratoPorBolsa) {
+                                ex.pesoSustratoSeco = sustratoPorBolsa;
+                                res.colonizacionSync++;
+                            }
+                            if (fechaRegGR && !ex.fechaRegistroGR) {
+                                ex.fechaRegistroGR = fechaRegGR;
+                                res.colonizacionSync++;
+                            }
                         }
                         // Sincronizar fuentes GR: si SU cambió la trazabilidad, propagar a FR.
                         // Solo se actualiza en bolsas pendientes — una bolsa confirmada tiene
