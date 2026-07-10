@@ -22,7 +22,6 @@ let _grStorageListener = null;
 let _grVisibilityListener = null;
 let _grFocusListener = null;
 let _grUsadosChangedListener = null;
-let _grMessageListener = null;
 let _grCultivosChangedListener = null;  // [Fase 4] refresca dropdowns de inóculo cuando CI cambia
 let _grSortMode = 'fecha_desc'; // 'fecha_desc' | 'fecha_asc' | 'id_asc' | 'disp_desc' | 'nombre'
 const GR_COLONIZACION_ALERTA_DIAS = 30;
@@ -686,19 +685,6 @@ function actualizarSelectoresCT() {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', updateUnidadFisica);
         });
-
-        // Escuchar mensajes de gr_config.html
-        if (_grMessageListener) {
-            window.removeEventListener('message', _grMessageListener);
-        }
-        _grMessageListener = function(event) {
-            if (event.data && event.data.type === 'bibliotecaActualizada') {
-                cargarBibliotecaDesdeStorage();
-                renderizarBibliotecaEnConfig();
-                actualizarSelectoresCT();
-            }
-        };
-        window.addEventListener('message', _grMessageListener);
     }
 
     // ==========================================
@@ -4072,10 +4058,6 @@ window.onModuleUnload = function () {
     if (_grCultivosChangedListener) {
         window.removeEventListener('ci-cultivos-changed', _grCultivosChangedListener);
         _grCultivosChangedListener = null;
-    }
-    if (_grMessageListener) {
-        window.removeEventListener('message', _grMessageListener);
-        _grMessageListener = null;
     }
 };
 
