@@ -549,7 +549,10 @@ function _ridgeRegression(X, y, lambda) {
   if (!beta) {
     var zeroBeta = [];
     for (var zi = 0; zi < p; zi++) zeroBeta[zi] = 0;
-    return { beta: zeroBeta, r2: 0, intercept: yMean };
+    // intercept debe ir en la misma escala 0-100 que el retorno normal de abajo
+    // (×10, y estaba en 0-1) — bug encontrado en auditoría ronda 2 (2026-07-10):
+    // este fallback devolvía yMean sin escalar, ~10x menor de lo esperado.
+    return { beta: zeroBeta, r2: 0, intercept: Math.round(yMean * 10 * 100) / 100 };
   }
 
   // Intercept
@@ -2096,6 +2099,11 @@ function renderInteligencia() {
       localStorage.setItem(K_CREC, JSON.stringify(arr));
     } catch(e) { alert('Error al eliminar el registro: ' + e.message); return; }
     invalidate();
+    // invalidate() solo limpia bl2_inteligencia_model — esta es la única escritura a
+    // bl2_crec que no pasa por creWrite() (cilab_conocimiento.js), que sí invalida
+    // ambos caches siempre. Se replica el mismo par acá (bug encontrado en auditoría
+    // ronda 2, 2026-07-10): bl2_formula_intel quedaba con datos stale tras un delete.
+    try { localStorage.removeItem('bl2_formula_intel'); } catch(e) {}
     cilabInt.showAudit();
   };
 

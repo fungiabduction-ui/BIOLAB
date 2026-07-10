@@ -152,6 +152,10 @@ function _buildExperimentAdvice() {
   // Uncertainty per ingredient: high |coef| + low n = high priority to test
   var uncertainties = [];
   Object.keys(coefs).forEach(function(ingId) {
+    // Features auxiliares (__cn__, __quad__*) no son ingredientes reales — sin este
+    // filtro (ya usado en cilab_inteligencia.js) aparecían en el panel de Optimizador
+    // como si fueran un ingrediente a probar (bug encontrado en auditoría ronda 2, 2026-07-10).
+    if (ingId.indexOf('__') === 0) return;
     var entry   = coefs[ingId];
     var absCoef = Math.abs(entry.coef); // already in 0-100 scale
     var unc     = absCoef / (entry.n + 1);
