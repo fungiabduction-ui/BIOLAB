@@ -2454,15 +2454,6 @@ window.grEliminarRegistro = grEliminarRegistro;
     // DG - DISTRIBUCIÓN DE GRANO
     // ==========================================
 
-    GR.cambiarEstructura = window.cambiarEstructura = function() {
-        const tipo = document.getElementById('dgTipoEstructura');
-        const capacidad = document.getElementById('dgCapacidad');
-        if (tipo && capacidad) {
-            capacidad.value = tipo.value === 'frasco' ? 660 : 1000;
-            calcularDG();
-        }
-    };
-
     GR.calcularDG = window.calcularDG = function() {
         const capacidad = document.getElementById('dgCapacidad');
         const llenado = document.getElementById('dgLlenado');
