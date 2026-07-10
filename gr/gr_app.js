@@ -1344,9 +1344,10 @@ function _grRenderKpiBar(lotes) {
             const u  = (r.tanda && usadosLote[r.tanda] != null)
                 ? (parseInt(usadosLote[r.tanda]) || 0)
                 : (parseInt(r.usadosSnapshot) || 0);
+            const uEx = grGetExUsadosGR(l.id, r.tanda);
             totalFrascos += fr;
             totalContam  += co;
-            loteDisp     += Math.max(0, fr - co - u);
+            loteDisp     += Math.max(0, fr - co - u - uEx);
         });
         totalDisp += loteDisp;
         if (loteDisp > 0) totalLotesActivos++;
