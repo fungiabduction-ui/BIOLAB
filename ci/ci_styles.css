@@ -2770,3 +2770,86 @@ tr.seg-note-drawer:hover {
   background: rgba(68,170,255,0.18);
   border-color: rgba(68,170,255,0.8);
 }
+
+/* ── Cultivos: cards agrupadas por fórmula (2026-07-10) ── */
+.ci-cultivos-cards { display: flex; flex-direction: column; gap: 22px; }
+
+.ci-cultivos-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tx);
+}
+.ci-cultivos-group-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--tx3);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ci-cultivos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.ci-cultivo-card {
+  background: var(--bg-secondary, var(--bg2));
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.ci-cultivo-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.ci-cultivo-card-codigo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--ac);
+  font-weight: 700;
+}
+
+.ci-cultivo-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--tx2);
+}
+.ci-cultivo-card-row b { color: var(--tx); font-weight: 600; }
+
+.ci-cultivo-card-acciones {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.ci-cultivo-card-consumos {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light, var(--border));
+  font-size: 10px;
+}
+.ci-cultivo-card-consumos-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}

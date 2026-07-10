@@ -4936,12 +4936,26 @@ function _ciResolverGeneticaSnapshot(geneticaId) {
 // ─── Listado de cultivos en el subtab ───
 let _ciCultivosFiltroEstadoDefault = 'DISPONIBLE';
 
+// Días de vida útil de un cultivo DISPONIBLE antes del auto-caducado (_ciCultivosAutoArchivar).
+// Usado también para el gradiente de urgencia de las cards — mismo umbral, no duplicar el número en otro lado.
+const _CI_CULTIVO_LIMITE_MS = 60 * 24 * 60 * 60 * 1000;
+const _CI_CULTIVO_ORDEN_ESTADO = { DISPONIBLE: 0, AGOTADO: 1, CADUCADO: 2, DESCARTADO: 3 };
+
+// Hue HSL (120=verde, 60=amarillo, 0=rojo) según cercanía al auto-caducado. Solo tiene sentido para DISPONIBLE.
+function _ciCultivoUrgenciaHue(c) {
+  if (!c || c.estado !== 'DISPONIBLE' || !c.fechaCreacion) return null;
+  const created = new Date(c.fechaCreacion).getTime();
+  if (!created) return null;
+  const progreso = Math.max(0, Math.min(1, (Date.now() - created) / _CI_CULTIVO_LIMITE_MS));
+  return 120 - 120 * progreso;
+}
+
 function renderCultivosTab() {
   _ciCultivosAutoArchivar();
-  const tbody = document.getElementById('ci-cultivos-tbody');
+  const cont  = document.getElementById('ci-cultivos-cards');
   const empty = document.getElementById('ci-cultivos-empty');
   const stats = document.getElementById('ci-cultivos-stats');
-  if (!tbody) return;
+  if (!cont) return;
 
   const cultivos = _ciCultivosLoad();
   const fEstado = document.getElementById('ci-cultivos-filter-estado')?.value ?? _ciCultivosFiltroEstadoDefault;
@@ -4963,10 +4977,6 @@ function renderCultivosTab() {
       if (!hay.includes(fQ)) return false;
     }
     return true;
-  }).sort((a, b) => {
-    const nameA = formsMap[a.medioFormulaId] || a.medioFormulaId || '';
-    const nameB = formsMap[b.medioFormulaId] || b.medioFormulaId || '';
-    return nameA.localeCompare(nameB);
   });
 
   if (stats) {
@@ -4978,57 +4988,95 @@ function renderCultivosTab() {
   }
 
   if (!filtrados.length) {
-    tbody.innerHTML = '';
+    cont.innerHTML = '';
     if (empty) empty.style.display = '';
     return;
   }
   if (empty) empty.style.display = 'none';
 
-  // Limpiar filas expandidas de consumos antes de re-render
-  tbody.querySelectorAll('tr[id^="ci-consumos-row-"]').forEach(function(r) { r.remove(); });
-  // Cargar links de CiGrLinks una sola vez para toda la tabla
+  // Cargar links de CiGrLinks una sola vez para toda la vista
   const allLinks = (() => {
     try { return JSON.parse(localStorage.getItem('bl2_ci_gr_links')) || []; } catch(e) { return []; }
   })();
 
-  tbody.innerHTML = filtrados.map(c => {
-    const estCol = c.estado === 'DISPONIBLE' ? 'var(--ac)'
-                 : c.estado === 'AGOTADO'    ? 'var(--wn)'
-                 : c.estado === 'CADUCADO'   ? 'var(--er)'
-                 : c.estado === 'DESCARTADO' ? 'var(--tx3)'
-                 : 'var(--tx2)';
-    const fmtFecha = c.fechaValidacion ? ciFormatDate(c.fechaValidacion) : '—';
-    const formulaNombre = c.medioFormulaId ? esc(formsMap[c.medioFormulaId] || c.medioFormulaId) : '—';
+  // Agrupar por fórmula, mismo orden alfabético que antes
+  const grupos = new Map();
+  filtrados.forEach(c => {
+    const key = c.medioFormulaId || '(sin fórmula)';
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key).push(c);
+  });
+  const gruposOrdenados = [...grupos.entries()].sort((a, b) => {
+    const nameA = formsMap[a[0]] || a[0] || '';
+    const nameB = formsMap[b[0]] || b[0] || '';
+    return nameA.localeCompare(nameB);
+  });
 
-    // Columna GR: leer desde bl2_ci_gr_links (fuente de verdad), no desde c.consumos[]
-    const links = Array.isArray(allLinks)
-      ? allLinks.filter(l => l && l.estado === 'ACTIVO' && l.cultivoCiId === c.id) : [];
-    const totalConsumido = links.reduce((a, l) => a + (l.cantidad || 0), 0);
-    const grRefs = [...new Set(links.filter(l => l.grLoteId).map(l => l.grLoteId))];
-    const grCol = links.length === 0
-      ? '<span style="color:var(--tx3);font-size:11px">—</span>'
-      : `<span style="font-size:11px;color:var(--wn)">${totalConsumido} ud</span>`
-        + (grRefs.length ? `<br><span style="font-size:10px;color:var(--tx3)">${grRefs.map(r => esc(r)).join(', ')}</span>` : '');
+  cont.innerHTML = gruposOrdenados.map(([formId, items]) => {
+    const formulaNombre = esc(formsMap[formId] || formId);
 
-    const accDescarte = c.estado !== 'DESCARTADO'
-      ? `<button type="button" class="btn btn-s" onclick="ciDescartarCultivo('${c.id}')" title="Descartar" style="font-size:10px;padding:3px 8px">✕</button>`
-      : '';
+    const itemsOrdenados = items.slice().sort((a, b) => {
+      const oa = _CI_CULTIVO_ORDEN_ESTADO[a.estado] ?? 9;
+      const ob = _CI_CULTIVO_ORDEN_ESTADO[b.estado] ?? 9;
+      if (oa !== ob) return oa - ob;
+      if (a.estado === 'DISPONIBLE') {
+        return new Date(a.fechaCreacion || 0) - new Date(b.fechaCreacion || 0); // más viejo (más urgente) primero
+      }
+      return 0;
+    });
+
+    const cardsHtml = itemsOrdenados.map(c => {
+      const estCol = c.estado === 'DISPONIBLE' ? 'var(--ac)'
+                   : c.estado === 'AGOTADO'    ? 'var(--wn)'
+                   : c.estado === 'CADUCADO'   ? 'var(--er)'
+                   : c.estado === 'DESCARTADO' ? 'var(--tx3)'
+                   : 'var(--tx2)';
+      const fmtFecha = c.fechaValidacion ? ciFormatDate(c.fechaValidacion) : '—';
+
+      // Consumo GR: leer desde bl2_ci_gr_links (fuente de verdad), no desde c.consumos[]
+      const links = Array.isArray(allLinks)
+        ? allLinks.filter(l => l && l.estado === 'ACTIVO' && l.cultivoCiId === c.id) : [];
+      const totalConsumido = links.reduce((a, l) => a + (l.cantidad || 0), 0);
+      const grRefs = [...new Set(links.filter(l => l.grLoteId).map(l => l.grLoteId))];
+      const grTxt = links.length === 0
+        ? '<span style="color:var(--tx3)">—</span>'
+        : `<span style="color:var(--wn)">${totalConsumido} ud</span>`
+          + (grRefs.length ? ` <span style="color:var(--tx3);font-size:10px">(${grRefs.map(r => esc(r)).join(', ')})</span>` : '');
+
+      const accDescarte = c.estado !== 'DESCARTADO'
+        ? `<button type="button" class="btn btn-s" onclick="ciDescartarCultivo('${c.id}')" title="Descartar" style="font-size:10px;padding:3px 8px">✕</button>`
+        : '';
+
+      const hue = _ciCultivoUrgenciaHue(c);
+      const borderStyle = hue != null
+        ? `border-left-color:hsl(${hue.toFixed(0)},55%,45%);background:hsla(${hue.toFixed(0)},55%,45%,0.07)`
+        : '';
+
+      return `
+        <div class="ci-cultivo-card" data-cultivo-id="${c.id}" style="${borderStyle}">
+          <div class="ci-cultivo-card-top">
+            <span class="ci-cultivo-card-codigo">${esc(c.codigo)}</span>
+            <span style="font-weight:600;color:${estCol};font-size:10px">${esc(c.estado)}</span>
+          </div>
+          <div class="ci-cultivo-card-row"><span>${esc(c.geneticaSnapshot?.label || c.geneticaId || '—')}</span></div>
+          <div class="ci-cultivo-card-row"><span>Tipo</span><b>${esc(c.tipo)}</b></div>
+          <div class="ci-cultivo-card-row"><span>Stock</span><b>${Math.max(0, c.cantidadInicial - totalConsumido)}/${c.cantidadInicial}</b></div>
+          <div class="ci-cultivo-card-row"><span>Validación</span><b>${esc(fmtFecha)}</b></div>
+          <div class="ci-cultivo-card-row"><span>Consumo GR</span>${grTxt}</div>
+          <div class="ci-cultivo-card-acciones">
+            <button type="button" class="btn btn-s" onclick="ciToggleConsumos('${c.id}')" title="Detalle consumos GR" style="font-size:10px;padding:3px 8px">🔍</button>
+            <button type="button" class="btn btn-s" onclick="ciEditarCultivoNotas('${c.id}')" title="Editar notas" style="font-size:10px;padding:3px 8px">✎</button>
+            ${accDescarte}
+          </div>
+          <div class="ci-cultivo-card-consumos" id="ci-consumos-panel-${c.id}" style="display:none"></div>
+        </div>`;
+    }).join('');
+
     return `
-      <tr data-cultivo-id="${c.id}">
-        <td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ac)">${esc(c.codigo)}</code></td>
-        <td>${esc(c.geneticaSnapshot?.label || c.geneticaId || '—')}</td>
-        <td><span style="font-size:11px;color:var(--tx2)">${esc(c.tipo)}</span></td>
-        <td><span style="font-weight:600;color:${estCol};font-size:11px">${esc(c.estado)}</span></td>
-        <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px">${Math.max(0, c.cantidadInicial - totalConsumido)}/${c.cantidadInicial}</span></td>
-        <td><span style="font-size:11px;color:var(--tx2)">${esc(fmtFecha)}</span></td>
-        <td><span style="font-size:11px;color:var(--tx2)">${formulaNombre}</span></td>
-        <td>${grCol}</td>
-        <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-          <button type="button" class="btn btn-s" onclick="ciToggleConsumos('${c.id}')" title="Detalle consumos GR" style="font-size:10px;padding:3px 8px">🔍</button>
-          <button type="button" class="btn btn-s" onclick="ciEditarCultivoNotas('${c.id}')" title="Editar notas" style="font-size:10px;padding:3px 8px">✎</button>
-          ${accDescarte}
-        </td>
-      </tr>`;
+      <div class="ci-cultivos-group">
+        <div class="ci-cultivos-group-header">${formulaNombre} <span class="ci-cultivos-group-count">${items.length} cultivo${items.length === 1 ? '' : 's'}</span></div>
+        <div class="ci-cultivos-grid">${cardsHtml}</div>
+      </div>`;
   }).join('');
 }
 
@@ -5058,12 +5106,12 @@ function ciEditarCultivoNotas(id) {
 
 function ciToggleConsumos(id) {
   if (!id) return;
-  var tbody = document.getElementById('ci-cultivos-tbody');
-  if (!tbody) return;
+  var panel = document.getElementById('ci-consumos-panel-' + id);
+  if (!panel) return;
 
-  var existingRow = document.getElementById('ci-consumos-row-' + id);
-  if (existingRow) {
-    existingRow.remove();
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
     return;
   }
 
@@ -5071,29 +5119,21 @@ function ciToggleConsumos(id) {
   if (!c) return;
   var consumos = ciGetConsumosByCultivo(id);
 
-  var srcRow = tbody.querySelector('tr[data-cultivo-id="' + id + '"]');
-  if (!srcRow) return;
-
   var consumosHtml = consumos.length
     ? consumos.map(function(co) {
         var ref = co.refType === 'GR' ? 'GR/' + co.refId : (co.refType || '?') + '/' + (co.refId || '?');
         var fecha = co.fecha ? ciFormatDate(co.fecha) : '—';
-        return '<div style="display:flex;gap:12px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light)">'
-          + '<span style="color:var(--tx3);font-size:11px;min-width:80px">' + esc(fecha) + '</span>'
-          + '<span style="color:var(--ac2);font-family:\'JetBrains Mono\',monospace;font-size:11px;min-width:30px">' + esc(String(co.cantidad || 0)) + ' ud</span>'
-          + '<span style="color:var(--ac4);font-size:11px">' + esc(ref) + '</span>'
-          + (co.notas ? '<span style="color:var(--tx2);font-size:11px">' + esc(co.notas) + '</span>' : '')
+        return '<div class="ci-cultivo-card-consumos-row">'
+          + '<span style="color:var(--tx3);min-width:70px">' + esc(fecha) + '</span>'
+          + '<span style="color:var(--ac2);font-family:\'JetBrains Mono\',monospace;min-width:28px">' + esc(String(co.cantidad || 0)) + ' ud</span>'
+          + '<span style="color:var(--ac4)">' + esc(ref) + '</span>'
+          + (co.notas ? '<span style="color:var(--tx2)">' + esc(co.notas) + '</span>' : '')
           + '</div>';
       }).join('')
-    : '<span style="color:var(--tx3);font-size:11px">Sin consumos registrados</span>';
+    : '<span style="color:var(--tx3)">Sin consumos registrados</span>';
 
-  var tr = document.createElement('tr');
-  tr.id = 'ci-consumos-row-' + id;
-  tr.innerHTML = '<td colspan="9" style="padding:8px 14px 8px 24px;background:var(--bg2)">'
-    + '<div style="font-size:11px;color:var(--tx3);margin-bottom:4px">Consumos de GR</div>'
-    + consumosHtml
-    + '</td>';
-  srcRow.insertAdjacentElement('afterend', tr);
+  panel.innerHTML = '<div style="color:var(--tx3);margin-bottom:4px">Consumos de GR</div>' + consumosHtml;
+  panel.style.display = '';
 }
 
 // ════════════════════════════════════════════
