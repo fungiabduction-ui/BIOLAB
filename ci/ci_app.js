@@ -4682,9 +4682,13 @@ function _ciSyncCultivosFromSeg(frmId) {
       changed = true;
     } else {
       const c = cultivos[idx];
-      const sumConsumos = Array.isArray(c.consumos)
-        ? c.consumos.reduce(function(a, co) { return a + (co.cantidad || 0); }, 0)
-        : 0;
+      // Bug corregido (2026-07-10, ronda 2): sumConsumos leía c.consumos[], campo legacy
+      // sin ningún writer desde que GR migró a CiGrLinks.aplicarConsumos() — siempre daba 0,
+      // así que cada autosave de SEG resucitaba a DISPONIBLE cultivos ya consumidos vía GR
+      // (bl2_ci_gr_links es la fuente de verdad real, ver shared/ci_gr_links.js).
+      const sumConsumos = (window.CiGrLinks && typeof window.CiGrLinks.stockConsumidoByCultivo === 'function')
+        ? window.CiGrLinks.stockConsumidoByCultivo(c.id)
+        : (Array.isArray(c.consumos) ? c.consumos.reduce(function(a, co) { return a + (co.cantidad || 0); }, 0) : 0);
       const newDisp = Math.max(0, sanas - sumConsumos);
       if (c.cantidadInicial !== sanas || c.cantidadDisponible !== newDisp) {
         c.cantidadInicial = sanas;
@@ -5956,6 +5960,7 @@ Object.assign(window, {
   segOnChangePlacas,
   segOnChangeContaminados,
   segOnChangeColonizacion,
+  segOnChangeInoculoFecha,
   segActualizarResumen,
   segAddSeguimientoNota,
   segOnImgSelect,
