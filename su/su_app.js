@@ -262,6 +262,20 @@ function inicializarEventos() {
         btnImportJson.addEventListener('change', importarJSON);
     }
 
+    // Exportar / Importar — copias del panel Config (mismos handlers que arriba)
+    const btnExportJsonCfg = document.getElementById('btnExportJsonCfg');
+    if (btnExportJsonCfg) {
+        btnExportJsonCfg.addEventListener('click', exportarJSON);
+    }
+    const btnExportExcelCfg = document.getElementById('btnExportExcelCfg');
+    if (btnExportExcelCfg) {
+        btnExportExcelCfg.addEventListener('click', exportarExcel);
+    }
+    const btnImportJsonCfg = document.getElementById('btnImportJsonCfg');
+    if (btnImportJsonCfg) {
+        btnImportJsonCfg.addEventListener('change', importarJSON);
+    }
+
     // Auto-generar ID al cambiar la fecha (solo si es lote nuevo, sin _uuid)
     const loteIdEl = document.getElementById('loteId');
     const loteFechaEl = document.getElementById('loteFecha');
