@@ -2801,7 +2801,7 @@ tr.seg-note-drawer:hover {
 .ci-cultivo-card {
   background: var(--bg-secondary, var(--bg2));
   border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
+  border-left: 6px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;

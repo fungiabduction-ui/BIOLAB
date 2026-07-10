@@ -5049,7 +5049,7 @@ function renderCultivosTab() {
 
       const hue = _ciCultivoUrgenciaHue(c);
       const borderStyle = hue != null
-        ? `border-left-color:hsl(${hue.toFixed(0)},55%,45%);background:hsla(${hue.toFixed(0)},55%,45%,0.07)`
+        ? `border-left-color:hsl(${hue.toFixed(0)},80%,55%);background:hsla(${hue.toFixed(0)},80%,50%,0.22)`
         : '';
 
       return `
