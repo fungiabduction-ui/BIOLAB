@@ -1377,28 +1377,6 @@ window.grRenderizarRegistroLotes = grRenderizarRegistroLotes;
 window.grCargarRegistro = grCargarRegistro;
 window.grEliminarRegistro = grEliminarRegistro;
     
-    // Función para cargar lote desde el registro
-    GR.cargarLoteDesdeRegistro = window.cargarLoteDesdeRegistro = function(index) {
-        if (lotesData[index]) {
-            cargarDatosLote(lotesData[index]);
-            document.getElementById('loteSelector').value = index;
-        }
-    };
-    
-    // Función para eliminar lote desde el registro
-    GR.eliminarLoteDesdeRegistro = window.eliminarLoteDesdeRegistro = function(index) {
-        const lote = lotesData[index];
-        if (!lote) return;
-        
-        if (!confirm(`¿Eliminar el lote "${lote.id}" del sistema?`)) return;
-        
-        lotesData.splice(index, 1);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
-        grRenderizarRegistroLotes();
-        actualizarSelectorLotes();
-        alert('Lote eliminado');
-    };
-
     function guardarLote() {
         
         const lote = recolectarDatosLote();
