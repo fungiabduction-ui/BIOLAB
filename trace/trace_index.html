@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trazabilidad — Módulo TRACE</title>
+  <link rel="stylesheet" href="trace_styles.css">
+</head>
+<body>
+
+  <div class="app-container trace-container">
+
+    <!-- ── Sub-navegación TRACE ── -->
+    <div class="trace-subnav">
+      <button type="button" class="trace-subtab active" data-tracetab="global"
+              onclick="traceSetTab('global')">🔗 Trace Global</button>
+      <button type="button" class="trace-subtab" data-tracetab="frtrace"
+              onclick="traceSetTab('frtrace')">🔍 FR Trace ★</button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         PANEL 1 — TRACE GLOBAL
+         Cadena completa GE → CI → GR → SU → FR desde cualquier anchor.
+         ══════════════════════════════════════════════════════ -->
+    <div id="trace-panel-global" class="trace-panel active">
+      <div id="trace-global-content" class="trace-content">
+        <!-- Renderizado por trace_app.js → renderGlobalView() -->
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         PANEL 3 — FR TRACE ★ (nuevo)
+         Trazabilidad bottom-up desde bolsa FR.
+         ══════════════════════════════════════════════════════ -->
+    <div id="trace-panel-frtrace" class="trace-panel">
+      <div id="trace-frtrace-content" class="trace-content trace-frtrace-wrap">
+        <!-- Renderizado por trace_app.js → renderFrTraceView() -->
+      </div>
+    </div>
+
+  </div>
+
+  <script src="trace_app.js"></script>
+
+</body>
+</html>

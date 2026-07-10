@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOLAB ENGINE v4 — GE (Árbol Genético)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="ge_styles.css">
+</head>
+<body>
+
+  <!-- ═════════════════ HEADER ═════════════════ -->
+  <header class="ge-header">
+    <div class="logo-wrap">
+      <div class="logo">
+        <h1>BIOLAB ENGINE v4 — 🌳 Genética (GE)</h1>
+        <span class="logo-sub">árbol jerárquico · fuente de verdad</span>
+      </div>
+    </div>
+    <div class="hdr-stats" title="Estado del árbol">
+      <span class="hs"><span class="hs-k">🧬 Especies</span><b id="hdr-species">0</b></span>
+      <span class="hs"><span class="hs-k">🧪 Cepas</span><b id="hdr-strains">0</b></span>
+      <span class="hs"><span class="hs-k">🧫 Fenotipos</span><b id="hdr-phenotypes">0</b></span>
+      <span class="hs"><span class="hs-k">🔌 Seleccionables</span><b id="hdr-selectable">0</b></span>
+      <span class="hs hs-archived"><span class="hs-k">📦 Archivados</span><b id="hdr-archived">0</b></span>
+      <span class="hs hs-dim"><span class="hs-k">📜 Historial</span><b id="hdr-records">0</b></span>
+    </div>
+  </header>
+
+  <!-- ═════════════════ NAV ═════════════════ -->
+  <nav class="nav">
+    <button class="tab active" data-view-tab="tree"    onclick="ge.setView('tree')">🌳 Árbol</button>
+    <button class="tab"        data-view-tab="graph"   onclick="ge.setView('graph')">🕸 Grafo</button>
+    <button class="tab"        data-view-tab="catalog" onclick="ge.setView('catalog')">📦 Catálogo</button>
+    <button class="tab"        data-view-tab="api"     onclick="ge.setView('api')">🔌 API</button>
+    <button class="tab"        data-view-tab="history" onclick="ge.setView('history')">📜 Historial</button>
+    <button class="tab"        data-view-tab="config"  onclick="ge.setView('config')">⚙️ Config</button>
+  </nav>
+
+  <!-- ═════════════════ MAIN ═════════════════ -->
+  <main id="ge-main">
+
+    <!-- ───── VIEW: ÁRBOL ───── -->
+    <section class="view view-tree" data-view="tree">
+      <div class="tree-toolbar">
+        <button class="btn btn-primary"   onclick="ge.openCreate('species',null)">➕ Nueva Especie</button>
+        <button class="btn btn-secondary" onclick="ge.expandAll()">⊞ Expandir</button>
+        <button class="btn btn-secondary" onclick="ge.collapseAll()">⊟ Colapsar</button>
+        <div class="search-wrap">
+          <input type="text" id="tree-search" placeholder="🔍 Buscar en el árbol..." oninput="ge.setSearch(this.value)" />
+        </div>
+      </div>
+
+      <div class="split">
+        <aside class="split-panel">
+          <div class="split-cap">
+            <span>📋 Detalle del Nodo</span>
+            <span class="split-cap-sub">notas · imágenes · estado · acciones</span>
+          </div>
+          <div id="ge-panel" class="panel-host"></div>
+        </aside>
+        <div class="split-tree">
+          <div class="split-cap">
+            <span>🌳 Árbol Genético</span>
+            <span class="split-cap-sub">click = seleccionar · doble click = editar nombre · ➕ = crear hijo</span>
+          </div>
+          <div id="ge-tree" class="tree-host"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── VIEW: GRAFO VISUAL ───── -->
+    <section class="view hidden view-graph" data-view="graph">
+      <div class="ge-graph-toolbar">
+        <span class="ge-graph-hint">🕸 Grafo Visual — click en un nodo para seleccionarlo · regresa al <button class="btn btn-secondary ge-graph-back" onclick="ge.setView('tree')">🌳 Árbol</button></span>
+      </div>
+      <div id="ge-graph-wrap" class="ge-graph-container"></div>
+    </section>
+
+    <!-- ───── VIEW: CATÁLOGO ───── -->
+    <section class="view hidden view-catalog" data-view="catalog">
+      <div class="card pad">
+        <div class="ct">📦 Catálogo de Genéticos</div>
+        <p class="ct-sub">
+          Tabla operativa de todos los nodos seleccionables (fenotipos y cepas hoja).
+          Los <b>activos</b> están disponibles para CI y otros módulos.
+          Los <b>archivados</b> quedan en el historial del árbol pero no son seleccionables externamente.
+          Sus descendientes activos sí siguen disponibles.
+        </p>
+        <div id="catalog-body"></div>
+      </div>
+    </section>
+
+    <!-- ───── VIEW: API ───── -->
+    <section class="view hidden view-api" data-view="api">
+      <div class="card pad">
+        <div class="ct">🔌 Contrato con otros módulos</div>
+        <p class="ct-sub">
+          Los módulos externos (CI, etc.) consumen únicamente:
+        </p>
+        <pre class="code-block">ge.getSelectableGenetics()
+→ devuelve SOLO nodos activos seleccionables, con lineage resuelto</pre>
+
+        <div class="ct">📦 Resultado en vivo</div>
+        <div id="api-output" class="sel-list"></div>
+
+        <details class="api-details">
+          <summary>Ver JSON crudo (máx 50)</summary>
+          <pre id="api-json" class="code-block"></pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- ───── VIEW: HISTORIAL ───── -->
+    <section class="view hidden view-history" data-view="history">
+      <div class="card pad">
+        <div class="ct">📜 Historial (auditoría)</div>
+        <p class="ct-sub">
+          <code class="mono">records[]</code> registra todas las acciones: CREATE, UPDATE, DELETE, ARCHIVE, RESTORE, NOTE_ADD, etc.
+          Solo para trazabilidad — nunca se usa para render ni selección.
+        </p>
+        <div id="hist-body" class="hist-host"></div>
+      </div>
+    </section>
+
+    <!-- ───── VIEW: CONFIG ───── -->
+    <section class="view hidden view-config" data-view="config">
+      <div class="config-grid">
+        <div class="card pad">
+          <div class="ct">📦 Backup</div>
+          <p class="ct-sub">Descarga un JSON con todos los nodos (incluyendo status) y el historial completo.</p>
+          <button class="btn btn-primary" onclick="ge.exportJSON()">⬇️ Exportar JSON</button>
+        </div>
+
+        <div class="card pad">
+          <div class="ct">⬆️ Importar</div>
+          <p class="ct-sub">Reemplaza <b>todos</b> los datos. Los nodos sin campo <code>status</code> recibirán <code>active</code> automáticamente.</p>
+          <button class="btn btn-secondary" onclick="document.getElementById('cfg-import').click()">⬆️ Importar JSON</button>
+          <input type="file" id="cfg-import" accept=".json,application/json" style="display:none" onchange="ge.importJSON(event)" />
+        </div>
+
+        <div class="card pad card-danger">
+          <div class="ct">⚠️ Reset completo</div>
+          <p class="ct-sub">Elimina árbol e historial. No se puede deshacer.</p>
+          <button class="btn btn-danger" onclick="ge.resetAll()">🗑️ Borrar todo</button>
+        </div>
+
+        <div class="card pad">
+          <div class="ct">📚 Modelo de datos</div>
+          <pre class="code-block">nodes[] = [{
+  id: "NODE-...",
+  type: "species" | "strain" | "phenotype",
+  parentId: null | "NODE-...",
+  status: "active" | "archived",   // ← independiente por nodo
+  name, icon, color, descripcion,
+  notas: [], imagenes: [],
+  createdAt, updatedAt
+}]</pre>
+          <div class="rules">
+            <div class="rule"><b>species</b>   → parentId = <code>null</code></div>
+            <div class="rule"><b>strain</b>    → hijo de <code>species</code> o <code>phenotype</code></div>
+            <div class="rule"><b>phenotype</b> → hijo de <code>strain</code> o <code>phenotype</code></div>
+            <div class="rule"><b>status</b>    → cada nodo tiene su propio estado, sin cascada</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="modal-host"></div>
+  <div id="lightbox-host"></div>
+  <div id="toast" class="toast"></div>
+
+  <script src="ge_app.js"></script>
+</body>
+</html>

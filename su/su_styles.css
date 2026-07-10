@@ -1,0 +1,2004 @@
+/* ========================================
+   MODULO SU - SUSTRATOS
+   Estilos basados en Calculadora_Sustratos
+   ======================================== */
+
+:root {
+    --primary: #1F4E79;
+    --primary-light: #2E7DCC;
+    --secondary: #4472C4;
+    --accent: #5B9BD5;
+    --highlight: #70AD47;
+    --warning: #ED7D31;
+    --danger: #C00000;
+    --dark: #1D1D1D;
+    --dark-secondary: #2D2D2D;
+    --dark-tertiary: #3D3D3D;
+    --text-light: #F5F5F5;
+    --text-muted: #A0A0A0;
+    --border: #404040;
+    --border-light: #505050;
+    
+    /* Colores SU específicos */
+    --su-fibra: #8B5A2B;
+    --su-agua: #44aaff;
+    --su-aditivo: #70AD47;
+    --su-hyd: #ED7D31;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--dark);
+    color: var(--text-light);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ========================================
+   HEADER
+   ======================================== */
+
+.app-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #8B5A2B 0%, #6B4423 100%);
+    border-radius: 12px;
+}
+
+.app-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.app-header .subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    align-items: center;
+}
+
+.lote-selector {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--dark-secondary);
+    color: var(--text-light);
+    font-size: 1rem;
+    min-width: 250px;
+}
+
+.lote-selector:focus {
+    outline: none;
+    border-color: var(--su-fibra);
+}
+
+/* ========================================
+   METRICS PANEL
+   ======================================== */
+
+.metrics-panel {
+    background: var(--dark-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border);
+}
+
+.metrics-panel h2 {
+    font-size: 1.1rem;
+    color: var(--su-fibra);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.metric-card {
+    background: var(--dark-tertiary);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+}
+
+.metric-card.highlight {
+    border-color: var(--highlight);
+    background: rgba(112, 173, 71, 0.1);
+}
+
+.metric-card.su-fibra {
+    border-color: var(--su-fibra);
+    background: rgba(139, 90, 43, 0.15);
+}
+
+.metric-card.su-agua {
+    border-color: var(--su-agua);
+    background: rgba(68, 170, 255, 0.15);
+}
+
+.metric-card.su-hyd {
+    border-color: var(--su-hyd);
+    background: rgba(237, 125, 49, 0.15);
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.metric-card.highlight .metric-value {
+    color: var(--highlight);
+}
+
+.metric-card.su-fibra .metric-value {
+    color: var(--su-fibra);
+}
+
+.metric-card.su-agua .metric-value {
+    color: var(--su-agua);
+}
+
+.metric-card.su-hyd .metric-value {
+    color: var(--su-hyd);
+}
+
+.metric-unit {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ========================================
+   BARRA DE COMPOSICIÓN
+   ======================================== */
+
+.composition-bar-container {
+    margin: 15px 0;
+}
+
+.composition-bar-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.composition-bar {
+    display: flex;
+    height: 24px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--dark);
+    border: 1px solid var(--border);
+}
+
+.composition-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+    transition: width 0.3s ease;
+    min-width: 30px;
+}
+
+.composition-segment.fibra {
+    background: var(--su-fibra);
+}
+
+.composition-segment.agua {
+    background: var(--su-agua);
+}
+
+.composition-segment.aditivos {
+    background: var(--su-aditivo);
+}
+
+.composition-segment.empty {
+    background: var(--dark-tertiary);
+    color: var(--text-muted);
+    flex: 1;
+}
+
+/* ========================================
+   SECTIONS (ACORDEONES)
+   ======================================== */
+
+.section-card {
+    background: var(--dark-secondary);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: border-color 0.3s;
+}
+
+.section-card:hover {
+    border-color: var(--border-light);
+}
+
+.section-card.active {
+    border-color: var(--su-fibra);
+}
+
+.section-header {
+    background: var(--dark-tertiary);
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.section-header:hover {
+    background: #454545;
+}
+
+.section-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+.section-header.su-header h2 {
+    color: var(--su-fibra);
+}
+
+.toggle-icon {
+    color: var(--text-muted);
+    transition: transform 0.3s;
+    font-size: 0.8rem;
+}
+
+.section-card.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.section-card.collapsed .section-content {
+    display: none;
+}
+
+.section-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-content {
+    padding: 20px;
+}
+
+/* ========================================
+   FORMULARIOS
+   ======================================== */
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--su-fibra);
+    box-shadow: 0 0 0 3px rgba(139, 90, 43, 0.2);
+}
+
+.form-group input[readonly] {
+    background: var(--dark);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.calc-badge {
+    font-size: 0.7rem;
+    background: var(--highlight);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    width: fit-content;
+    margin-top: 4px;
+}
+
+.calc-badge.su {
+    background: var(--su-fibra);
+}
+
+/* ========================================
+   ADITIVOS
+   ======================================== */
+
+.aditivo-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: var(--dark-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.aditivo-select,
+.aditivo-cant {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--dark);
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.aditivo-select {
+    flex: 2;
+    min-width: 150px;
+}
+
+.aditivo-cant {
+    flex: 1;
+    min-width: 100px;
+}
+
+.aditivo-row .btn-remove {
+    padding: 8px 12px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.aditivo-row .btn-remove:hover {
+    background: #a00000;
+}
+
+.btn-add {
+    background: var(--su-aditivo);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.btn-add:hover {
+    background: #5a8a37;
+}
+
+/* ========================================
+   CALCULADORA SU - FIBRA × RATIO = AGUA
+   ======================================== */
+
+.calc-su-container {
+    background: var(--dark-tertiary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--su-fibra);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.calc-su-formula {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 20px;
+}
+
+.calc-su-formula .form-group {
+    margin: 0;
+}
+
+.calc-su-formula .form-group label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.calc-su-formula .form-group.fibra label {
+    color: var(--su-fibra);
+}
+
+.calc-su-formula .form-group.ratio label {
+    color: var(--su-agua);
+}
+
+.calc-su-formula .form-group.agua label {
+    color: var(--su-agua);
+}
+
+.calc-su-formula input {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 15px;
+}
+
+.calc-su-formula .operator {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    padding-bottom: 10px;
+}
+
+.calc-su-result {
+    background: var(--dark);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    margin-top: 15px;
+}
+
+.calc-su-result .result-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--su-agua);
+}
+
+/* ========================================
+   PRODUCCIÓN DE BOLSAS
+   ======================================== */
+
+.produccion-container {
+    background: var(--dark-tertiary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--highlight);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.produccion-resultado {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-top: 15px;
+}
+
+.produccion-resultado .destacado {
+    color: var(--highlight);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   TABLAS
+   ======================================== */
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.data-table th {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.data-table th:first-child {
+    border-radius: 8px 0 0 0;
+}
+
+.data-table th:last-child {
+    border-radius: 0 8px 0 0;
+}
+
+.data-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table input,
+.data-table select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.data-table input:focus,
+.data-table select:focus {
+    outline: none;
+    border-color: var(--su-fibra);
+}
+
+.btn-remove {
+    background: var(--danger);
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-remove:hover {
+    background: #a00000;
+}
+
+/* ========================================
+   CALCULATED METRICS
+   ======================================== */
+
+.calculated-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.calc-metric {
+    background: var(--dark-tertiary);
+    padding: 12px 15px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.calc-metric .label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.calc-metric .value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.calc-metric .unit {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.calc-metric.highlight {
+    background: rgba(112, 173, 71, 0.15);
+    border: 1px solid var(--highlight);
+}
+
+.calc-metric.highlight .value {
+    color: var(--highlight);
+}
+
+/* ========================================
+   BOTONES
+   ======================================== */
+
+.actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    padding: 25px;
+    background: var(--dark-secondary);
+    border-radius: 12px;
+    margin-top: 25px;
+    border: 1px solid var(--border);
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-light);
+}
+
+.btn-secondary {
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: #454545;
+}
+
+.btn-su {
+    background: var(--su-fibra);
+    color: white;
+}
+
+.btn-su:hover {
+    background: #6B4423;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #a00000;
+}
+
+.btn-add {
+    background: transparent;
+    border: 2px dashed var(--border);
+    color: var(--text-muted);
+    width: 100%;
+    padding: 12px;
+}
+
+.btn-add:hover {
+    border-color: var(--su-fibra);
+    color: var(--su-fibra);
+    background: rgba(139, 90, 43, 0.1);
+}
+
+.export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-left: 20px;
+    padding-left: 20px;
+    border-left: 1px solid var(--border);
+}
+
+.btn-export {
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+}
+
+.btn-export:hover {
+    background: #454545;
+    border-color: var(--accent);
+}
+
+/* ========================================
+   RESULTS GRID
+   ======================================== */
+
+.results-section {
+    border: 2px solid var(--su-primary);
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.result-card {
+    background: var(--dark-tertiary);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.result-card.highlight {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: var(--su-primary);
+}
+
+.result-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.result-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.result-card.highlight .result-value {
+    color: var(--su-primary);
+}
+
+.result-unit {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+
+.app-footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 30px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    .app-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+    }
+    
+    .lote-selector {
+        width: 100%;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .calc-su-formula {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .calc-su-formula .operator {
+        display: none;
+    }
+    
+    .actions-bar {
+        flex-direction: column;
+    }
+    
+    .export-buttons {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        width: 100%;
+    }
+    
+    .export-buttons .btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-value {
+        font-size: 1.5rem;
+    }
+}
+
+/* ========================================
+   ANIMACIONES
+   ======================================== */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.section-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.section-card:nth-child(2) { animation-delay: 0.05s; }
+.section-card:nth-child(3) { animation-delay: 0.1s; }
+.section-card:nth-child(4) { animation-delay: 0.15s; }
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state .icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.empty-state p {
+    font-size: 1rem;
+}
+
+/* ========================================
+   CONFIG TABS
+   ======================================== */
+
+.config-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+}
+
+.config-tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.config-tab:hover {
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+}
+
+.config-tab.active {
+    background: var(--su-fibra);
+    border-color: var(--su-fibra);
+    color: white;
+}
+
+.config-panel {
+    display: none;
+}
+
+.config-panel.active {
+    display: block;
+}
+
+.config-list-title {
+    font-size: 0.95rem;
+    color: var(--secondary);
+    margin: 20px 0 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+}
+
+/* ========================================
+   MODO EDICIÓN BIBLIOTECA
+   ======================================== */
+
+.edit-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: var(--su-fibra);
+}
+
+.edit-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.view-only {
+    display: table-cell;
+}
+
+.modo-edicion .view-only {
+    display: none;
+}
+
+.modo-edicion {
+    display: table-row;
+}
+
+#tablaMateriales.modo-edicion .view-only {
+    display: none;
+}
+
+#tablaMateriales.modo-edicion .modo-edicion {
+    display: table-cell;
+}
+
+.table-delete-btn {
+    background: var(--danger);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: none;
+}
+
+.col-delete {
+    display: none;
+}
+
+#tablaMateriales.modo-edicion .table-delete-btn {
+    display: inline-block;
+}
+
+#tablaMateriales.modo-edicion .col-delete {
+    display: table-cell;
+}
+
+.btn-delete-row {
+    background: var(--danger);
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-delete-row:hover {
+    background: #a00000;
+}
+
+.col-acciones {
+    display: none !important;
+}
+
+.col-acciones.visible {
+    display: table-cell !important;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.btn-small.cargar {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-small.eliminar {
+    background: var(--danger);
+    color: white;
+}
+
+#tablaMateriales.modo-edicion .col-delete {
+    display: table-cell;
+}
+
+.btn-delete-row {
+    background: var(--danger);
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-delete-row:hover {
+    background: #a00000;
+}
+
+/* ========================================
+   SUBNAV SU (Formulación / Config)
+   ======================================== */
+.su-subnav {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    padding: 0;
+    flex-wrap: wrap;
+}
+
+.su-subtab {
+    padding: 10px 18px;
+    background: var(--dark-tertiary, #3D3D3D);
+    border: 1px solid var(--border, #404040);
+    color: var(--text-muted, #A0A0A0);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.su-subtab:hover {
+    background: var(--dark-secondary, #2D2D2D);
+    color: var(--text-light, #F5F5F5);
+}
+
+.su-subtab.active {
+    background: var(--su-primary, #8B5CF6);
+    color: #fff;
+    border-color: var(--su-primary, #8B5CF6);
+    font-weight: 700;
+}
+
+.su-subpanel {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.su-subpanel.active {
+    display: flex;
+}
+
+/* ============================================
+   Subtle hover animation on Registros Guardados rows
+   ============================================ */
+#tablaRegistros tbody tr.su-registro-row {
+    transition: background-color 180ms ease,
+                transform 180ms ease,
+                box-shadow 180ms ease;
+    will-change: transform, background-color;
+}
+
+#tablaRegistros tbody tr.su-registro-row:hover {
+    background-color: rgba(139, 92, 246, 0.08);
+    transform: translateX(2px);
+    box-shadow: inset 3px 0 0 var(--su-primary, #8B5CF6);
+}
+
+#tablaRegistros tbody tr.su-registro-row:hover td {
+    color: var(--text-light, #e5e7eb);
+}
+
+#tablaRegistros tbody tr.su-registro-row:active {
+    transform: translateX(1px) scale(0.998);
+}
+
+/* ============================================
+   DB · Sección header + botón Agregar Tanda
+   ============================================ */
+.db-section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.su-btn-add-tanda {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.40);
+    background: rgba(139, 92, 246, 0.10);
+    color: #a78bfa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+    white-space: nowrap;
+}
+.su-btn-add-tanda:hover {
+    background: rgba(139, 92, 246, 0.20);
+    border-color: rgba(139, 92, 246, 0.65);
+}
+
+/* Aviso de inconsistencia como strip */
+.db-aviso-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    margin-bottom: 10px;
+    background: rgba(192, 0, 0, 0.10);
+    border-left: 2px solid #C00000;
+    border-radius: 0 6px 6px 0;
+    color: #FF6B6B;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+/* ============================================================
+   DB · TABLA DE DISTRIBUCIÓN DE BOLSAS — Rediseño completo
+   ============================================================ */
+
+#dbTable {
+    width: 100%;
+}
+
+#dbTableBody {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* ── Fila principal (cada tanda) ─────────────────────────── */
+.db-row {
+    display: flex;
+    align-items: stretch;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-left: 3px solid rgba(139,92,246,0.30);
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 54px;
+    transition: border-color 150ms, box-shadow 150ms;
+    gap: 0;
+}
+
+.db-row:hover {
+    border-color: rgba(255,255,255,0.16);
+    border-left-color: rgba(139,92,246,0.60);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+
+/* ── Label universal de columna ──────────────────────────── */
+.db-cell-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--text-muted, #777);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    line-height: 1;
+    display: block;
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+/* ── Columna Tanda ───────────────────────────────────────── */
+.db-row-tanda {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 12px 8px 14px;
+    border-right: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    min-width: 82px;
+    background: rgba(139,92,246,0.04);
+}
+
+.db-row .db-tanda {
+    width: 62px;
+    padding: 5px 7px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid rgba(139,92,246,0.30);
+    background: var(--dark, #1D1D1D);
+    color: #c4b5fd;
+    text-align: center;
+    letter-spacing: 0.4px;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+.db-row .db-tanda:focus {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.18);
+}
+
+/* db-bolsas oculto */
+.db-row .db-bolsas { display: none; }
+
+/* ── Bloque "Pesos Reales" (sustrato + grano) ────────────── */
+.db-row-pesos {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.015);
+    min-width: 168px;
+}
+
+.db-row-pesos-header {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: var(--text-muted, #666);
+    padding: 5px 12px 3px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+}
+
+.db-pesos-unit {
+    font-weight: 400;
+    opacity: 0.55;
+    font-size: 7.5px;
+    letter-spacing: 0.3px;
+}
+
+.db-row-pesos-body {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 6px 8px 7px;
+}
+
+/* Columna de peso individual */
+.db-peso-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 68px;
+    padding: 0 4px;
+}
+
+.db-peso-col + .db-peso-col {
+    border-left: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Input sustrato — acento azul */
+.db-peso-col--sust input {
+    width: 58px;
+    padding: 4px 5px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 5px;
+    border: 1px solid rgba(77,166,255,0.25);
+    background: var(--dark, #1D1D1D);
+    color: var(--text-light, #ddd);
+    text-align: center;
+    transition: border-color 150ms, color 150ms, box-shadow 150ms;
+}
+.db-peso-col--sust input:focus {
+    outline: none;
+    border-color: #4da6ff;
+    box-shadow: 0 0 0 2px rgba(77,166,255,0.14);
+}
+.db-peso-col--sust input:not([value="0"]):not([value=""]) {
+    border-color: #4da6ff;
+    color: #7dc5ff;
+    background: rgba(77,166,255,0.06);
+}
+
+/* Input grano — acento ámbar */
+.db-peso-col--gran input {
+    width: 58px;
+    padding: 4px 5px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 5px;
+    border: 1px solid rgba(255,192,0,0.22);
+    background: var(--dark, #1D1D1D);
+    color: var(--text-light, #ddd);
+    text-align: center;
+    transition: border-color 150ms, color 150ms, box-shadow 150ms;
+}
+.db-peso-col--gran input:focus {
+    outline: none;
+    border-color: #FFC000;
+    box-shadow: 0 0 0 2px rgba(255,192,0,0.14);
+}
+.db-peso-col--gran input:not([value="0"]):not([value=""]) {
+    border-color: #FFC000;
+    color: #ffd966;
+    background: rgba(255,192,0,0.05);
+}
+
+/* Mantener compatibilidad con selectores de clase directa */
+.db-row .db-peso-real        { /* heredado de .db-peso-col--sust input */ }
+.db-row .db-peso-grano-real  { /* heredado de .db-peso-col--gran input */ }
+
+/* ── Fuentes GR: área central flexible ───────────────────── */
+.db-fuentes-cell {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 8px;
+}
+
+/* ── Source row (una fuente GR) ──────────────────────────── */
+.db-source-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 7px;
+    overflow: hidden;
+    transition: border-color 120ms;
+}
+.db-source-row:hover {
+    border-color: rgba(139,92,246,0.25);
+}
+
+/* Columna genérica dentro de source-row */
+.db-src-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 5px 9px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+}
+.db-src-col:last-of-type { border-right: none; }
+
+.db-src-col-protocolo { min-width: 200px; flex: 3; max-width: 320px; }
+.db-src-col-tanda     { min-width: 220px; flex: 3; max-width: 350px; }
+.db-src-col-frascos   { width: 64px; align-items: center; }
+.db-src-col-disp      { width: 60px; align-items: center; }
+
+/* Selects de source-row */
+.db-source-row .db-lote-select,
+.db-source-row .db-grano-select {
+    width: 100%;
+    padding: 3px 5px;
+    font-size: 0.79rem;
+    border-radius: 4px;
+    border: 1px solid rgba(139,92,246,0.30);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-light, #eee);
+    cursor: pointer;
+    transition: border-color 150ms;
+    min-width: 0;
+}
+.db-source-row .db-lote-select:focus,
+.db-source-row .db-grano-select:focus {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.14);
+}
+
+/* Input frascos usados */
+.db-source-row .db-source-usados {
+    width: 46px;
+    padding: 4px 5px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 5px;
+    border: 1px solid rgba(255,192,0,0.30);
+    background: rgba(255,192,0,0.05);
+    color: #FFC000;
+    text-align: center;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+.db-source-row .db-source-usados:focus {
+    outline: none;
+    border-color: #FFC000;
+    box-shadow: 0 0 0 2px rgba(255,192,0,0.15);
+}
+
+/* Chip disponibles */
+.db-source-row .db-grano-disp {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: rgba(112,173,71,0.10);
+    border: 1px solid rgba(112,173,71,0.25);
+    color: #70AD47;
+    white-space: nowrap;
+    min-width: 26px;
+    text-align: center;
+    display: block;
+    letter-spacing: 0.2px;
+}
+.db-source-row .db-grano-disp[data-state="low"]   { background: rgba(255,192,0,0.10); border-color: rgba(255,192,0,0.35); color: #FFC000; }
+.db-source-row .db-grano-disp[data-state="empty"] { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.40); color: #FF6B6B; }
+
+/* Botón ✕ eliminar source */
+.db-source-row .db-source-remove {
+    flex-shrink: 0;
+    align-self: stretch;
+    padding: 0 9px;
+    border: none;
+    border-left: 1px solid rgba(255,255,255,0.05);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255,107,107,0.40);
+    font-size: 10px;
+    cursor: pointer;
+    transition: color 150ms, background 150ms;
+}
+.db-source-row .db-source-remove:hover {
+    color: #FF6B6B;
+    background: rgba(255,107,107,0.10);
+}
+
+/* ── Botón + agregar fuente (dentro de fila) ─────────────── */
+.db-row > .db-btn-add-fuente {
+    flex-shrink: 0;
+    align-self: stretch;
+    padding: 0 14px;
+    border: none;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(139,92,246,0.55);
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 150ms, background 150ms;
+}
+.db-row > .db-btn-add-fuente:hover {
+    color: #a78bfa;
+    background: rgba(139,92,246,0.08);
+}
+
+/* ── Botón ✕ eliminar fila ───────────────────────────────── */
+.db-row-remove {
+    flex-shrink: 0;
+    align-self: stretch;
+    padding: 0 12px;
+    border: none;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255,107,107,0.35);
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 150ms, background 150ms;
+}
+.db-row-remove:hover {
+    color: #FF6B6B;
+    background: rgba(255,107,107,0.09);
+}
+
+/* ── Fila total ──────────────────────────────────────────── */
+.db-total-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 9px;
+    margin-top: 3px;
+    font-size: 0.88rem;
+    color: var(--text-light, #eee);
+}
+.db-total-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--text-muted, #777);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.db-total-unit {
+    font-size: 0.78rem;
+    color: var(--text-muted, #777);
+}
+
+/* ── Resumen por genética ────────────────────────────────── */
+#dbResumenGenetica {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 9px;
+}
+.db-gen-header {
+    width: 100%;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--text-muted, #777);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-bottom: 2px;
+}
+.db-gen-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 11px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms;
+}
+.db-gen-chip:hover {
+    border-color: rgba(139,92,246,0.40);
+    background: rgba(139,92,246,0.05);
+}
+.db-gen-name { font-size: 12px; font-weight: 600; color: var(--text-light, #eee); }
+.db-gen-meta { font-size: 10.5px; color: var(--text-muted, #888); }
+
+/* ── Botón "+ fuente GR" como línea (dentro de fuentes-cell) */
+.db-btn-add-fuente {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    font-size: 0.77rem;
+    background: transparent;
+    border: 1px dashed rgba(139,92,246,0.30);
+    border-radius: 5px;
+    color: rgba(139,92,246,0.65);
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms, background 150ms;
+    margin-top: 3px;
+    align-self: flex-start;
+}
+.db-btn-add-fuente:hover {
+    color: #a78bfa;
+    border-color: rgba(139,92,246,0.55);
+    background: rgba(139,92,246,0.06);
+}
+
+/* ── Selects globales (overrides cascada lote → tanda) ────── */
+#dbTable .db-lote-select {
+    width: 100%;
+    padding: 5px 7px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-light, #F5F5F5);
+    border: 1px solid rgba(139,92,246,0.35);
+    border-radius: 5px;
+    font-size: 0.81rem;
+    cursor: pointer;
+    transition: border-color 180ms;
+    margin-bottom: 3px;
+}
+#dbTable .db-lote-select:hover,
+#dbTable .db-lote-select:focus {
+    border-color: #a78bfa;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.14);
+}
+
+#dbTable .db-grano-select {
+    width: 100%;
+    padding: 5px 7px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-light, #F5F5F5);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 5px;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: border-color 180ms;
+}
+#dbTable .db-grano-select:hover,
+#dbTable .db-grano-select:focus {
+    border-color: #a78bfa;
+    outline: none;
+}
+
+/* Chip disponibles global */
+#dbTable .db-grano-disp {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(112,173,71,0.10);
+    border: 1px solid rgba(112,173,71,0.30);
+    color: #70AD47;
+    letter-spacing: 0.2px;
+}
+#dbTable .db-grano-disp:empty { display: none; }
+#dbTable .db-grano-disp[data-state="low"]   { background: rgba(255,192,0,0.10); border-color: rgba(255,192,0,0.35); color: #FFC000; }
+#dbTable .db-grano-disp[data-state="empty"] {
+    background: rgba(255,107,107,0.12);
+    border-color: rgba(255,107,107,0.40);
+    color: #FF6B6B;
+    animation: suDbDispPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes suDbDispPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.0); }
+    50%      { box-shadow: 0 0 0 4px rgba(255,107,107,0.16); }
+}
+
+/* ── Frascos totales ─────────────────────────────────────── */
+#dbTable #dbTotalUsados { color: #FFC000; font-size: 0.95rem; }
+
+.db-fuentes-chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+.db-fuente-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(139,92,246,0.12);
+    border: 1px solid rgba(139,92,246,0.30);
+    border-radius: 12px;
+    font-size: 0.78rem;
+    color: #a78bfa;
+    white-space: nowrap;
+}
+.db-fuente-chip .db-chip-usados { color: #FFC000; font-weight: 600; }
+.db-fuente-empty { color: var(--text-muted, #888); font-size: 0.78rem; font-style: italic; }
+
+.db-total-usados {
+    display: inline-block;
+    min-width: 28px;
+    padding: 2px 8px;
+    background: rgba(255,192,0,0.09);
+    border: 1px solid rgba(255,192,0,0.22);
+    border-radius: 10px;
+    color: #FFC000;
+    font-weight: 600;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* Badges de pesos reales en cards de registro */
+.su-kchip-peso-sust { color: #7dc5ff !important; border-color: rgba(77,166,255,0.45) !important; }
+.su-kchip-peso-gran { color: #ffd966 !important; border-color: rgba(255,192,0,0.45) !important; }
+
+/* Override de especificidad para source-row selects */
+#dbTable .db-source-row .db-lote-select,
+#dbTable .db-source-row .db-grano-select {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    font-size: 0.78rem !important;
+    padding: 3px 5px !important;
+}
+
+/* ============================================
+   REGISTRO SU · KPI bar + Cards
+   ============================================ */
+
+/* KPI bar */
+.su-kpi-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.su-kpi {
+    background: var(--dark, #1e1e2e);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.su-kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+.su-kpi-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-light, #e5e7eb);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+.su-kpi-sub {
+    font-size: 10px;
+    color: var(--text-muted, #888);
+}
+
+
+/* Cards list */
+.su-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Card individual */
+.su-reg-card {
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--card-bg, rgba(255,255,255,0.03));
+}
+
+/* Card header */
+.su-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.07));
+    transition: background 150ms ease;
+}
+.su-card-head:hover {
+    background: rgba(139, 92, 246, 0.07);
+}
+.su-card-head-edit {
+    background: rgba(139, 92, 246, 0.06);
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.su-card-id {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-light, #e5e7eb);
+}
+.su-card-date {
+    font-size: 11px;
+    color: var(--text-muted, #888);
+}
+.su-card-spacer {
+    flex: 1;
+}
+.su-card-count {
+    font-size: 11px;
+    color: var(--text-muted, #999);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Header de columnas de sub-filas — barra contrastante */
+.su-sub-header {
+    display: grid;
+    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 65px;
+    gap: 0;
+    padding: 6px 14px;
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #1D1D1D;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    line-height: 1.25;
+    background: rgba(139, 92, 246, 0.75);
+    border-radius: 8px;
+}
+.su-sub-header span { text-align: center; white-space: normal; word-break: break-word; }
+.su-sub-header span:first-child { text-align: left; }
+.su-sub-header span:nth-child(2) { text-align: left; }
+.su-sub-header span:nth-child(3) { text-align: left; }
+
+/* Sub-filas: grid alineado con header */
+.su-card-sub {
+    display: grid;
+    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 65px;
+    align-items: center;
+    gap: 0;
+    padding: 6px 14px;
+    border-top: 1px dashed rgba(139, 92, 246, 0.18);
+    background: rgba(139, 92, 246, 0.025);
+    font-size: 12px;
+    color: var(--text-muted, #999);
+    font-variant-numeric: tabular-nums;
+}
+.su-card-sub:hover {
+    background: rgba(139, 92, 246, 0.07);
+    color: var(--text-light, #e5e7eb);
+}
+.su-card-sub-edit {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 7px 14px;
+    background: rgba(255,192,0,0.04);
+}
+.su-sub-tid {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-light, #e5e7eb);
+}
+.su-sub-gen {
+    font-size: 10.5px;
+    font-style: italic;
+    color: var(--text-muted, #888);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+.su-sub-col {
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-light, #e5e7eb);
+    white-space: nowrap;
+}
+.su-sub-real { color: var(--primary, #4da6ff) !important; }
+.su-sub-ok   { color: #70AD47 !important; }
+.su-sub-warn { color: #FFC000 !important; }
+.su-sub-edit {
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--primary, #4da6ff);
+    vertical-align: super;
+}
+.su-card-sub-gen { /* legacy compat */
+    font-size: 10.5px;
+    font-style: italic;
+    color: var(--text-muted, #888);
+}
+.su-sub-arrow {
+    color: var(--text-muted, #888);
+    font-size: 10px;
+}
+
+/* Chips de registro */
+.su-kchip {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+.su-kchip-ok {
+    background: rgba(112, 173, 71, 0.13);
+    border-color: rgba(112, 173, 71, 0.40);
+    color: #70AD47;
+}
+.su-kchip-warn {
+    background: rgba(255, 192, 0, 0.13);
+    border-color: rgba(255, 192, 0, 0.40);
+    color: #FFC000;
+}
+.su-kchip-dim {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.10);
+    color: var(--text-muted, #888);
+}
+.su-kchip-fr {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.35);
+    color: #a78bfa;
+}
+.su-kchip-pending {
+    background: rgba(255, 192, 0, 0.10);
+    border-color: rgba(255, 192, 0, 0.30);
+    color: #FFC000;
+}
+
+/* Chips legados (usados en otros panels) */
+.su-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+    border: 1px solid transparent;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+.su-chip-ok   { background: rgba(112,173,71,.12); border-color: rgba(112,173,71,.40); color: #70AD47; }
+.su-chip-warn { background: rgba(255,192,0,.12);  border-color: rgba(255,192,0,.40);  color: #FFC000; }
+.su-chip-bad  { background: rgba(255,107,107,.15); border-color: rgba(255,107,107,.45); color: #FF6B6B; }
+.su-chip-grano{ background: rgba(255,192,0,.12);  border-color: rgba(255,192,0,.40);  color: #FFC000; }

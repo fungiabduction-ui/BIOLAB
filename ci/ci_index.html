@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOLAB ENGINE v3 — 🧫 Cultivo In Vitro (CI)</title>
+  <link rel="stylesheet" href="ci_styles.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════════════════ -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo">
+      <span style="font-size:16px;font-weight:700;color:#00CC33;letter-spacing:2px">
+        BIOLAB <span style="color:#A0A0A0;font-weight:400">ENGINE</span>
+        <span style="font-size:11px;color:#666">v3</span>
+        &nbsp;—&nbsp;
+        <span style="font-size:14px">🧫 Cultivo In Vitro (CI)</span>
+      </span>
+    </div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hs">Fórmulas: <b id="ci-hdr-formulas">0</b></div>
+    <div class="hs">Tandas: <b id="ci-hdr-tandas">0</b></div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════
+     SUBTABS CI
+     ══════════════════════════════════════════════════ -->
+<div class="ci-subnav">
+  <button class="ci-subtab active" data-citab="dashboard" onclick="ciSubTab('dashboard')">📊 Dashboard</button>
+  <button class="ci-subtab" data-citab="form" onclick="ciSubTab('form')">🧪 Formulación</button>
+  <button class="ci-subtab" data-citab="cultivos" onclick="ciSubTab('cultivos')">🧫 Cultivos</button>
+  <button class="ci-subtab" data-citab="cfg" onclick="ciSubTab('cfg')">⚛️ Ingredientes</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DROPDOWN FLOTANTE GLOBAL (ingredientes)
+     ══════════════════════════════════════════════════ -->
+<div id="floatingDropdown" class="floating-dropdown">
+  <div class="floating-dropdown-header">
+    <span class="floating-dropdown-title">Seleccionar</span>
+    <button class="floating-dropdown-close" onclick="closeFloatingDropdown()">✕</button>
+  </div>
+  <div class="floating-dropdown-search">
+    <input type="text" id="fddSearch" placeholder="Buscar ingrediente..." oninput="fddFilter(this.value)">
+  </div>
+  <div class="floating-dropdown-list" id="fddList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: DASHBOARD — Vista compacta de fórmulas + detalle
+     ══════════════════════════════════════════════════ -->
+<div id="ci-sub-dashboard" class="ci-subpanel" style="display:none">
+
+  <!-- ── Vista grid (default) ── -->
+  <div id="ci-dash-grid-wrap">
+    <div class="card">
+      <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#00CC33">📊 Dashboard CI — Fórmulas activas</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="ci-dash-compare-btn"
+                  onclick="window.ciComparador?.activarModoComparacion()">
+            📊 Comparar fórmulas
+          </button>
+          <button class="btn btn-s" style="height:24px;font-size:11px;padding:0 10px;border-color:var(--er);color:var(--er)" onclick="exportData()">💾 Backup Completo</button>
+        </div>
+      </div>
+      <p style="color:var(--tx3);font-size:13px;margin:4px 0 16px">
+        Vista rápida. Hacé click en una fórmula para abrirla en detalle.
+      </p>
+      <div id="ci-dashboard-grid" class="ci-dash-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Vista detalle (oculta por defecto, llenada por ciDashRenderDetalle) ── -->
+  <div id="ci-dash-detalle-wrap" style="display:none"></div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: FORMULACIÓN
+     ══════════════════════════════════════════════════ -->
+<div id="ci-sub-form" class="ci-subpanel">
+
+  <!-- ── Nueva Fórmula CI ── -->
+  <div class="card" id="ci-new-frm-card" style="padding:16px">
+
+    <!-- Header compacto -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#00CC33;letter-spacing:2px;text-transform:uppercase">🧫 Nueva Fórmula CI</span>
+      <input type="text" id="ci-new-nombre" placeholder="Nombre de la fórmula…"
+        style="flex:1;min-width:0;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx);padding:7px 10px;border-radius:6px;font-size:13px;font-family:'Inter',sans-serif">
+      <input type="datetime-local" id="ci-new-fecha"
+        style="width:170px;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx3);padding:7px 8px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace">
+      <input type="text" id="ci-new-id" readonly
+        style="width:82px;background:var(--bg);border:1px solid rgba(0,204,51,0.3);color:var(--ac);padding:7px 8px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace;cursor:default;text-align:center;font-weight:700">
+    </div>
+
+    <!-- Layout 2 columnas: izquierda = composición, derecha = análisis -->
+    <div style="display:grid;grid-template-columns:1fr minmax(280px,38%);gap:16px;align-items:start">
+
+      <!-- IZQUIERDA: lista de ingredientes + tabla análisis + acciones -->
+      <div style="display:flex;flex-direction:column;gap:0">
+
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">
+          COMPOSICIÓN — arrastrá para reordenar
+        </div>
+        <div id="ci-new-rows" class="drag-list" style="min-height:38px"></div>
+
+        <!-- Tabla de análisis C/N (solo visible con datos) -->
+        <div id="ci-new-analisis" style="display:none;margin-top:8px">
+          <div class="tw" style="max-height:200px;overflow-y:auto;border-radius:6px;border:1px solid var(--border)">
+            <table style="font-size:11px">
+              <thead>
+                <tr>
+                  <th style="padding:5px 8px">Ingrediente</th>
+                  <th style="padding:5px 6px">Aspecto</th>
+                  <th style="padding:5px 6px;text-align:right">Cant.</th>
+                  <th style="padding:5px 6px;text-align:right">C</th>
+                  <th style="padding:5px 6px;text-align:right">N</th>
+                </tr>
+              </thead>
+              <tbody id="ci-new-ing-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Acciones -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <button onclick="ciNewFrmAddRow()" style="
+              display:inline-flex;align-items:center;gap:4px;
+              background:none;border:1px dashed var(--border);color:var(--tx3);
+              border-radius:6px;padding:5px 11px;font-size:11px;
+              font-family:'JetBrains Mono',monospace;cursor:pointer;
+              transition:border-color .15s,color .15s;white-space:nowrap"
+            onmouseover="this.style.borderColor='var(--ac)';this.style.color='var(--ac)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--tx3)'">
+            + ingrediente
+          </button>
+          <div style="flex:1"></div>
+          <button onclick="ciSaveNewFrm()" style="
+              display:inline-flex;align-items:center;gap:5px;
+              background:rgba(0,204,51,0.08);border:1px solid rgba(0,204,51,0.3);
+              color:#00CC33;border-radius:6px;padding:5px 14px;
+              font-size:11px;font-family:'JetBrains Mono',monospace;
+              font-weight:700;letter-spacing:.3px;cursor:pointer;
+              transition:background .15s,border-color .15s"
+            onmouseover="this.style.background='rgba(0,204,51,0.16)';this.style.borderColor='rgba(0,204,51,0.55)'"
+            onmouseout="this.style.background='rgba(0,204,51,0.08)';this.style.borderColor='rgba(0,204,51,0.3)'">
+            💾 guardar
+          </button>
+        </div>
+      </div>
+
+      <!-- DERECHA: panel de análisis — donut + KPIs + detalle -->
+      <div style="
+        position:sticky;top:8px;
+        background:var(--bg-secondary);
+        border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;
+      ">
+        <!-- Donut — ocupa todo el ancho del panel -->
+        <div style="position:relative;width:100%;padding-top:75%;"> <!-- aspect ratio 4:3 -->
+          <canvas id="ci-new-pie" style="position:absolute;inset:0;width:100%!important;height:100%!important"></canvas>
+          <div id="ci-new-pie-empty" style="
+            position:absolute;inset:0;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            color:var(--tx3);pointer-events:none;gap:6px">
+            <div style="font-size:42px;opacity:0.12">◉</div>
+            <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;color:var(--tx3);text-transform:uppercase">sin datos</div>
+          </div>
+        </div>
+
+        <!-- KPIs — fila horizontal de 4 -->
+        <div id="ci-new-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">
+          <div class="ci-kpi-mini" style="border-radius:0;border:none;border-right:1px solid var(--border)">
+            <div class="ci-kpi-mini-lbl">C</div>
+            <div class="ci-kpi-mini-val" style="color:var(--ac2)" id="ci-kpi-c">—</div>
+          </div>
+          <div class="ci-kpi-mini" style="border-radius:0;border:none;border-right:1px solid var(--border)">
+            <div class="ci-kpi-mini-lbl">N</div>
+            <div class="ci-kpi-mini-val" id="ci-kpi-n">—</div>
+          </div>
+          <div class="ci-kpi-mini" style="border-radius:0;border:none;border-right:1px solid var(--border)">
+            <div class="ci-kpi-mini-lbl">C/N</div>
+            <div class="ci-kpi-mini-val" style="color:var(--wn)" id="ci-kpi-cn">—</div>
+          </div>
+          <div class="ci-kpi-mini" style="border-radius:0;border:none">
+            <div class="ci-kpi-mini-lbl">Masa</div>
+            <div class="ci-kpi-mini-val" style="color:var(--ac3)" id="ci-kpi-masa">—</div>
+          </div>
+        </div>
+
+        <!-- Detalle C/N ratio -->
+        <div id="ci-new-cn-box" class="rbox" style="display:none;font-size:11px;padding:8px 12px;margin:0;border-radius:0;border:none;border-top:1px solid var(--border)"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Resumen de Fórmulas CI (tiles) ── -->
+  <div class="card">
+    <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+      <span style="color:#00CC33">📋 Fórmulas CI</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="ciExportExcel()">📥 Copiar para Excel</button>
+        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="exportData()">⬇ Backup JSON</button>
+        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('ci-import-file').click()">⬆ Importar JSON</button>
+        <input type="file" id="ci-import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+    <p style="color:var(--tx3);font-size:12px;margin:2px 0 14px">
+      Hacé click en el tile para ver detalle en Dashboard · <span style="color:var(--ac)">📋 Usar como base</span> la carga como plantilla en el formulario.
+    </p>
+    <div id="ci-formulas-list-wrap" style="position:relative">
+      <div id="ci-formulas-list"></div>
+    </div>
+  </div>
+
+</div><!-- /ci-sub-form -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: INGREDIENTES — Vista de solo lectura (CILAB es el editor)
+     ══════════════════════════════════════════════════ -->
+<div id="ci-sub-cfg" class="ci-subpanel" style="display:none">
+
+  <!-- Banner de ownership -->
+  <div class="card" style="border-color:rgba(0,204,51,0.3);background:rgba(0,204,51,0.04)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00CC33;letter-spacing:2px;font-weight:700;margin-bottom:4px">
+          ⚗ CILAB — SINGLE SOURCE OF TRUTH
+        </div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.5">
+          Los ingredientes se <strong style="color:var(--tx)">crean, editan y eliminan exclusivamente en CILAB</strong>.<br>
+          CI los lee desde <code style="color:var(--ac);font-size:11px">bl2_ings</code> y reacciona al evento <code style="color:var(--ac);font-size:11px">cilab-ings-changed</code>.
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-p" id="ci-btn-crear-ing" onclick="ciIrACilabCrear()"
+          style="background:#00CC33;color:#1D1D1D;font-weight:700;padding:8px 16px;font-size:13px">
+          ＋ Crear ingrediente en CILAB
+        </button>
+        <button class="btn btn-s" onclick="ciIrACilab()"
+          style="border-color:#00CC33;color:#00CC33;padding:8px 16px;font-size:13px">
+          → Ir a CILAB
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y contador -->
+  <div class="card" style="padding:12px 16px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <input type="text" id="ci-ings-search" placeholder="🔍 Buscar ingrediente..."
+        oninput="renderCfg()"
+        style="flex:1;min-width:180px;padding:7px 10px;border-radius:6px;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx);font-size:13px">
+      <select id="ci-ings-filter-asp" onchange="renderCfg()"
+        style="padding:7px 10px;border-radius:6px;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx);font-size:13px">
+        <option value="">Todos los aspectos</option>
+        <option value="Solvente">Solvente</option>
+        <option value="Soporte">Soporte</option>
+        <option value="Carbono">Carbono</option>
+        <option value="Nitrógeno">Nitrógeno</option>
+        <option value="Mineral">Mineral</option>
+        <option value="Cofactores">Cofactores</option>
+      </select>
+      <select id="ci-ings-filter-bio" onchange="renderCfg()"
+        style="padding:7px 10px;border-radius:6px;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx);font-size:13px">
+        <option value="">Todos los estados bio</option>
+        <option value="validado">Validado</option>
+        <option value="en_ensayo">En ensayo</option>
+        <option value="peligro">Peligro</option>
+        <option value="sin_datos">Sin datos</option>
+      </select>
+      <span id="ci-ings-count" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);white-space:nowrap">0 ingredientes</span>
+    </div>
+  </div>
+
+  <!-- Grid de cards read-only -->
+  <div id="ci-ings-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:4px 0"></div>
+
+  <!-- Zona de datos -->
+  <div class="card" style="margin-top:12px">
+    <div class="ct" style="color:var(--er)">💾 Datos CI</div>
+    <div class="btn-row">
+      <button class="btn btn-s" onclick="exportData()">⬇ Exportar Backup JSON</button>
+      <button class="btn btn-s" onclick="document.getElementById('ci-import-file2').click()">⬆ Importar JSON</button>
+      <input type="file" id="ci-import-file2" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-s" onclick="ciMigrarSnapshotsIngredientes()" style="border-color:var(--wn);color:var(--wn)">⚡ Migrar snapshots</button>
+      <button class="btn btn-d" onclick="resetSystem()">✕ Reset módulo CI</button>
+    </div>
+  </div>
+
+</div><!-- /ci-sub-cfg -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: CULTIVOS CI (Inóculos validados)
+     ══════════════════════════════════════════════════ -->
+<div id="ci-sub-cultivos" class="ci-subpanel" style="display:none">
+
+  <div class="card">
+    <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="color:#00CC33">🧫 Cultivos CI — Inóculos Validados</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="ci-cultivos-filter-estado" onchange="ciFiltrarCultivos()"
+                style="padding:6px;border-radius:6px;background:var(--bg-tertiary);color:var(--text-light);border:1px solid var(--border);font-size:12px">
+          <option value="">Estado: todos</option>
+          <option value="DISPONIBLE" selected>Disponible</option>
+          <option value="AGOTADO">Agotado</option>
+          <option value="DESCARTADO">Descartado</option>
+          <option value="CADUCADO">Caducado</option>
+        </select>
+        <select id="ci-cultivos-filter-tipo" onchange="ciFiltrarCultivos()"
+                style="padding:6px;border-radius:6px;background:var(--bg-tertiary);color:var(--text-light);border:1px solid var(--border);font-size:12px">
+          <option value="">Tipo: todos</option>
+          <option value="PLACA">Placa</option>
+          <option value="FRASCO">Frasco</option>
+        </select>
+        <input type="text" id="ci-cultivos-filter-q" placeholder="Buscar código/genética..." oninput="ciFiltrarCultivos()"
+               style="padding:6px 10px;border-radius:6px;background:var(--bg-tertiary);color:var(--text-light);border:1px solid var(--border);font-size:12px;width:220px">
+      </div>
+    </div>
+    <p style="color:var(--tx3);font-size:13px;margin:6px 0 14px 0">
+      Lista de cultivos generados desde tandas de SEG. Cada uno actúa como inóculo trazable consumible por GR.
+    </p>
+    <div id="ci-cultivos-stats" style="margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)"></div>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>🧬 Genética</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Disp / Inicial</th>
+            <th>Validación</th>
+            <th>Fórmula</th>
+            <th>🧪 Consumo GR</th>
+            <th style="width:120px">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="ci-cultivos-tbody"></tbody>
+      </table>
+    </div>
+    <div id="ci-cultivos-empty" style="display:none;padding:20px;text-align:center;color:var(--tx3);font-size:13px">
+      Sin cultivos disponibles. Asigná una genética a una tanda en Campo de Trabajo y guardá — los cultivos aparecen automáticamente.
+    </div>
+  </div>
+
+</div><!-- /ci-sub-cultivos -->
+
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: Modo Experimento — Crear / editar experimento
+     Patrón idéntico al modal de promoción CI.
+     Se hoisteará a document.body en ciInit() via _expHoistModal().
+     ══════════════════════════════════════════════════ -->
+<!-- Modal de experimento generado dinámicamente por _expEnsureModal() en ci_app.js -->
+
+<!-- ══════════════════════════════════════════════════
+     NOTIFICACIÓN TOAST
+     ══════════════════════════════════════════════════ -->
+<div class="notif" id="ci-notif"></div>
+
+<!-- ══════════════════════════════════════════════════
+     APP SCRIPT
+     ══════════════════════════════════════════════════ -->
+<script src="../shared/ci_gr_links.js"></script>
+<script src="ci_app.js"></script>
+<script src="ci_comparador.js"></script>
+
+</body>
+</html>

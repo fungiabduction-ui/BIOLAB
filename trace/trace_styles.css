@@ -1,0 +1,698 @@
+/* ============================================================
+   BIOLAB ENGINE v3 — trace_styles.css
+   Módulo TRACE — Trazabilidad
+   Estilo consola / terminal (igual a GE, adaptado).
+   Variables heredadas de main.css:
+     --bg, --bg-secondary, --bg-tertiary, --bg-deep
+     --tx, --tx2, --tx3, --border, --border-light
+     --ac (verde oliva), --ac2 (violeta), --ac3 (naranja),
+     --ac4 (celeste), --wn (verde), --er (rojo)
+   ============================================================ */
+
+/* ── Contenedor principal ────────────────────────────────── */
+.trace-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 120px);
+}
+
+/* ── Sub-navegación ──────────────────────────────────────── */
+.trace-subnav {
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.trace-subtab {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  padding: 7px 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.trace-subtab:hover {
+  color: var(--tx);
+  border-color: var(--border-light);
+}
+.trace-subtab.active {
+  background: var(--bg-deep);
+  color: var(--ac4);
+  border-color: var(--ac4);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(68, 170, 255, 0.15);
+}
+
+/* ── Paneles ─────────────────────────────────────────────── */
+.trace-panel        { display: none; flex: 1; }
+.trace-panel.active { display: block; }
+
+.trace-content {
+  padding: 16px 24px 40px;
+}
+
+/* ── Anchor bar ──────────────────────────────────────────── */
+.trace-anchor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(68, 170, 255, 0.05);
+  border: 1px solid rgba(68, 170, 255, 0.18);
+  border-radius: 5px;
+  margin-bottom: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+}
+.tab-lbl { color: var(--tx3); }
+.tab-val { color: var(--ac4); font-weight: 600; flex: 1; }
+
+.trace-btn-sm {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.trace-btn-sm:hover { color: var(--tx); border-color: var(--border-light); }
+
+/* ══════════════════════════════════════════════════════════
+   ÁRBOL ASCII — PRE + SPAN
+   Mismo patrón que GE: cada línea es un <span class="tl">.
+   ══════════════════════════════════════════════════════════ */
+
+.trace-ascii-tree {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  background: var(--bg-deep);
+  color: var(--tx2);
+  padding: 20px 24px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  /* Importante: para que cada <span.tl> ocupe su propia línea */
+  white-space: pre;
+}
+
+/* Línea base del árbol */
+.tl {
+  display: block;
+  white-space: pre;
+  border-radius: 2px;
+  transition: background 0.08s;
+}
+
+/* Prefix ASCII (├── / └── / │) — dim, no selectable */
+.tl-pfx {
+  color: var(--tx3);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Líneas clickeables */
+.tl-click {
+  cursor: pointer;
+}
+.tl-click:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+/* Nodo activo / anchor */
+.tl-anchor {
+  background: rgba(68, 170, 255, 0.10) !important;
+  border-radius: 2px;
+}
+.tl-anchor .tl-lbl-ge { text-shadow: 0 0 8px rgba(112,173,71,0.4); }
+.tl-anchor .tl-lbl-ci { text-shadow: 0 0 8px rgba(124,111,255,0.4); }
+.tl-anchor .tl-lbl-gr { text-shadow: 0 0 8px rgba(0,204,51,0.4); }
+.tl-anchor .tl-lbl-su { text-shadow: 0 0 8px rgba(255,107,53,0.4); }
+.tl-anchor .tl-lbl-fr { text-shadow: 0 0 8px rgba(232,118,43,0.4); }
+
+/* Líneas de detalle (propiedades de un nodo) */
+.tl-detail {
+  cursor: default;
+}
+.tl-detail-txt {
+  color: var(--tx3);
+  font-size: 11.5px;
+}
+
+/* Separadores (solo el │ vertical) */
+.tl-sep {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Línea en blanco */
+.tl-blank {
+  cursor: default;
+  pointer-events: none;
+  line-height: 0.8;
+}
+
+/* Estado vacío */
+.tl-empty .tl-lbl-empty {
+  color: var(--tx3);
+  font-style: italic;
+}
+
+/* ── Labels por nivel (colores del sistema) ──────────────── */
+.tl-lbl-ge { color: var(--ac);  font-weight: 600; }  /* verde oliva */
+.tl-lbl-ci { color: var(--ac2); font-weight: 500; }  /* violeta */
+.tl-lbl-gr { color: var(--wn);  font-weight: 500; }  /* verde lima */
+.tl-lbl-su { color: var(--ac3); font-weight: 500; }  /* naranja */
+.tl-lbl-fr { color: #E8762B;    font-weight: 500; }  /* ámbar */
+
+/* Texto secundario (dim) */
+.tl-sub    { color: var(--tx2); font-weight: 400; }
+.tl-id     { color: var(--tx3); font-size: 11px; }
+.tl-slash  { color: var(--tx3); }
+
+/* ── Chips de estado ─────────────────────────────────────── */
+.tl-chip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.tl-chip-colonizando { background: rgba(237,125,49,0.18);  color: #ED7D31; }
+.tl-chip-colonizado  { background: rgba(0,204,51,0.14);    color: var(--wn); }
+.tl-chip-pinning     { background: rgba(68,170,255,0.14);  color: var(--ac4); }
+.tl-chip-cosechado   { background: rgba(112,173,71,0.14);  color: var(--ac); }
+.tl-chip-disponible  { background: rgba(0,204,51,0.14);    color: var(--wn); }
+.tl-chip-agotado     { background: rgba(192,0,0,0.15);     color: var(--er); }
+.tl-chip-archivado   { background: rgba(102,102,102,0.14); color: var(--tx3); }
+
+/* ── Tags inline (conta, GE directo, huérfana) ───────────── */
+.tl-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  background: rgba(112,173,71,0.14);
+  color: var(--ac);
+}
+.tl-tag-conta {
+  background: rgba(192,0,0,0.18);
+  color: var(--er);
+}
+.tl-tag-h {
+  background: rgba(237,125,49,0.18);
+  color: #ED7D31;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TIMELINE (segunda pre.trace-ascii-tree)
+   ══════════════════════════════════════════════════════════ */
+
+.trace-timeline {
+  margin-top: 8px;
+}
+
+/* Header del timeline */
+.tl-timeline-hdr {
+  display: block;
+  color: var(--ac4);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+  cursor: default;
+  pointer-events: none;
+  white-space: pre;
+}
+.tl-timeline-hdr b { font-weight: 700; color: var(--tx); }
+
+/* Filas del timeline */
+.tl-timeline-row {
+  display: block;
+  white-space: pre;
+  cursor: default;
+  pointer-events: none;
+}
+.tl-tl-stage {
+  display: inline-block;
+  width: 15ch;
+  color: var(--tx2);
+}
+.tl-tl-date {
+  display: inline-block;
+  width: 13ch;
+  color: var(--tx);
+  font-weight: 500;
+}
+.tl-tl-day {
+  display: inline-block;
+  color: var(--ac4);
+  font-size: 11px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SELECTOR DE LOTE SU (estado sin anchor)
+   ══════════════════════════════════════════════════════════ */
+
+.trace-no-anchor { padding: 4px 0; }
+
+.trace-hint-text {
+  color: var(--tx2);
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 14px;
+  max-width: 680px;
+}
+
+.trace-empty-state {
+  color: var(--tx3);
+  text-align: center;
+  padding: 48px 20px;
+  font-size: 12px;
+}
+
+.trace-su-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.trace-su-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  transition: border-color 0.12s, background 0.12s;
+}
+.trace-su-item:hover {
+  border-color: var(--ac4);
+  background: rgba(68, 170, 255, 0.04);
+}
+.trace-su-id   { color: var(--ac3); font-weight: 600; flex-shrink: 0; }
+.trace-su-name { color: var(--tx2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-su-tipo { color: var(--tx3); font-size: 11px; }
+.trace-su-date { color: var(--tx3); font-size: 11px; flex-shrink: 0; }
+.trace-su-fr   { color: #E8762B; font-size: 10px; font-weight: 600;
+                  background: rgba(232,118,43,0.14); padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+
+.trace-hint {
+  color: var(--tx3);
+  font-size: 11px;
+  font-style: italic;
+  padding: 4px 2px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   INTEGRACIÓN CON FR — árbol #frIdTree clickeable
+   ══════════════════════════════════════════════════════════ */
+
+/* Líneas del árbol de FR que TRACE convierte en links */
+.fr-tree-clickable {
+  cursor: pointer !important;
+  text-decoration: underline dotted rgba(68, 170, 255, 0.4);
+  text-underline-offset: 2px;
+  transition: color 0.12s;
+}
+.fr-tree-clickable:hover {
+  color: var(--ac4) !important;
+}
+.fr-tree-clickable::after {
+  content: ' ↗';
+  font-size: 9px;
+  opacity: 0.45;
+  vertical-align: super;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FR TRACE ★ — Módulo de trazabilidad por bolsa FR
+   Panel 3 del módulo TRACE.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Contenedor sin padding extra ─────────────────────────── */
+.trace-frtrace-wrap { padding: 0; }
+
+/* ── Layout dos columnas ─────────────────────────────────── */
+.frt-layout {
+  display: flex;
+  height: calc(100vh - 148px);
+  min-height: 500px;
+  overflow: hidden;
+}
+
+/* ── Sidebar (lista de bolsas) ───────────────────────────── */
+.frt-sidebar {
+  width: 300px;
+  min-width: 240px;
+  max-width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+/* ── Toolbar (búsqueda + filtro) ─────────────────────────── */
+.frt-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.frt-search {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.frt-search:focus { border-color: var(--ac4); }
+.frt-search::placeholder { color: var(--tx3); }
+
+.frt-select {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+.frt-select:focus { border-color: var(--border-light); }
+
+/* ── Lista de bolsas ─────────────────────────────────────── */
+.frt-lista {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.frt-lista::-webkit-scrollbar { width: 4px; }
+.frt-lista::-webkit-scrollbar-track { background: transparent; }
+.frt-lista::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+.frt-item {
+  padding: 9px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(64,64,64,0.5);
+  transition: background 0.1s;
+}
+.frt-item:hover { background: rgba(255,255,255,0.035); }
+.frt-item-act  { background: rgba(68,170,255,0.08) !important; border-left: 2px solid var(--ac4); }
+
+.frt-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.frt-item-id {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ac4);
+  font-family: 'JetBrains Mono', monospace;
+}
+.frt-item-gen {
+  font-size: 11px;
+  color: var(--ac);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frt-item-meta {
+  font-size: 10.5px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Badges de estado ────────────────────────────────────── */
+.frt-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.frt-badge-ok   { background: rgba(112,173,71,0.18);  color: var(--ac); }
+.frt-badge-col  { background: rgba(0,204,51,0.14);    color: var(--wn); }
+.frt-badge-pin  { background: rgba(68,170,255,0.15);  color: var(--ac4); }
+.frt-badge-act  { background: rgba(237,125,49,0.16);  color: #ED7D31; }
+.frt-badge-err  { background: rgba(192,0,0,0.18);     color: var(--er); }
+.frt-badge-arc  { background: rgba(102,102,102,0.14); color: var(--tx3); }
+.frt-badge-pend { background: rgba(124,111,255,0.16); color: var(--ac2); }
+
+/* ── Panel de detalle ────────────────────────────────────── */
+.frt-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.frt-detail::-webkit-scrollbar { width: 5px; }
+.frt-detail::-webkit-scrollbar-track { background: transparent; }
+.frt-detail::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+.frt-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  height: 100%;
+  color: var(--tx3);
+  font-size: 12.5px;
+  line-height: 1.8;
+  padding: 40px;
+}
+.frt-placeholder-err { color: var(--er); }
+
+/* ── Toggle ASCII / Grafo ────────────────────────────────── */
+.frt-view-toggle {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px 0;
+  flex-shrink: 0;
+}
+.frt-vbtn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.frt-vbtn:hover { color: var(--tx); border-color: var(--border-light); }
+.frt-vbtn.active {
+  background: var(--bg-deep);
+  color: var(--ac4);
+  border-color: var(--ac4);
+  font-weight: 700;
+}
+
+/* ── Árbol ASCII ─────────────────────────────────────────── */
+.frt-ascii-tree {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.75;
+  background: var(--bg-deep);
+  color: var(--tx2);
+  margin: 10px 16px 16px;
+  padding: 16px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  flex: 1;
+}
+.frt-ascii-tree::-webkit-scrollbar { width: 4px; height: 4px; }
+.frt-ascii-tree::-webkit-scrollbar-thumb { background: var(--border-light); }
+
+.frt-ascii-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.frt-hid {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ac4);
+}
+
+/* Filas del árbol */
+.frt-row, .frt-sec, .frt-blank {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+.frt-blank { line-height: 1.2; }
+
+.frt-pfx {
+  color: var(--tx3);
+  white-space: pre;
+  user-select: none;
+  flex-shrink: 0;
+  font-size: 11.5px;
+}
+.frt-lbl {
+  color: var(--tx2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-size: 11.5px;
+}
+.frt-val {
+  color: var(--tx);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.frt-nd   { color: var(--tx3); font-weight: 400; }
+.frt-note { color: var(--ac4); font-style: normal; font-size: 10.5px; margin-left: 8px; }
+.frt-dim  { color: var(--tx3); font-weight: 400; }
+
+/* Sección (cabecera de bloque) */
+.frt-sec  { margin-top: 2px; }
+.frt-stitle {
+  font-weight: 700;
+  color: var(--tx);
+  white-space: nowrap;
+}
+
+/* ── Grafo SVG ───────────────────────────────────────────── */
+.frt-graph-wrap {
+  margin: 10px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.frt-graph-table {
+  overflow-x: auto;
+}
+
+/* ── Tabla de cosechas ───────────────────────────────────── */
+.frt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--tx2);
+}
+.frt-table th {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  color: var(--tx3);
+  font-weight: 600;
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+}
+.frt-table td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  color: var(--tx);
+}
+.frt-table tfoot td { background: var(--bg-tertiary); font-weight: 700; color: var(--ac); }
+.frt-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+/* ── Estado vacío ────────────────────────────────────────── */
+.frt-empty {
+  color: var(--tx3);
+  font-size: 11.5px;
+  font-style: italic;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+/* ── Panel ficha FR anclada ──────────────────────────────────────────────── */
+.trace-ficha-panel {
+    margin-top: 16px;
+    background: var(--bg-card, #1a1a22);
+    border: 1px solid var(--brd, rgba(255,255,255,0.07));
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.trace-ficha-title {
+    color: var(--ac, #44AAFF);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+.trace-ficha-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.trace-ficha-lbl { color: var(--tx3, #666); }
+.trace-ficha-val { color: var(--tx2, #a0a0b0); }
+.trace-ficha-section {
+    color: var(--ac2, #00CC33);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin: 12px 0 4px;
+}
+.trace-ficha-flush {
+    color: var(--tx2, #a0a0b0);
+    padding: 2px 0;
+    font-size: 11px;
+}
+.trace-ficha-obs {
+    color: var(--tx3, #666);
+    padding: 2px 0;
+    font-size: 11px;
+    border-left: 2px solid var(--brd, rgba(255,255,255,0.08));
+    padding-left: 8px;
+    margin: 2px 0;
+}

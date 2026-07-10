@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOLAB ENGINE v3 — 🧬 CILAB · Lab analítico</title>
+  <link rel="stylesheet" href="cilab_styles.css">
+  <!-- Chart.js (solo se usa en Genética × Medio) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     HEADER LOCAL
+     ══════════════════════════════════════════════════ -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo">
+      <span style="font-size:16px;font-weight:700;color:#7C6FFF;letter-spacing:2px">
+        BIOLAB <span style="color:#A0A0A0;font-weight:400">ENGINE</span>
+        <span style="font-size:11px;color:#666">v3</span>
+        &nbsp;—&nbsp;
+        <span style="font-size:14px;color:#F5F5F5">🧬 CILAB · Lab analítico</span>
+      </span>
+    </div>
+  </div>
+  <div class="clab-hdr-stats">
+    <div class="hs">Ingredientes: <b id="clab-hdr-ings">0</b></div>
+    <div class="hs">Validados: <b class="wn" id="clab-hdr-validados">0</b></div>
+    <div class="hs">Ensayos: <b class="or" id="clab-hdr-obs">0</b></div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════
+     SUBNAV CILAB
+     ══════════════════════════════════════════════════ -->
+<div class="clab-subnav">
+  <button class="clab-subtab active" data-clabtab="analizador" onclick="clabSubTab('analizador')">🧬 Analizador metabólico</button>
+  <button class="clab-subtab" data-clabtab="optimizador" onclick="clabSubTab('optimizador')">⚡ Optimizador</button>
+  <button class="clab-subtab" data-clabtab="biblioteca" onclick="clabSubTab('biblioteca')">🧪 Biblioteca biológica</button>
+  <button class="clab-subtab" data-clabtab="strain" onclick="clabSubTab('strain')">🧫 Genética × Medio</button>
+  <button class="clab-subtab" data-clabtab="ensayos" onclick="clabSubTab('ensayos')">📋 Registro de ensayos</button>
+  <button class="clab-subtab" data-clabtab="conocimiento" onclick="clabSubTab('conocimiento')">🧠 Conocimiento</button>
+  <button class="clab-subtab" data-clabtab="inteligencia" onclick="clabSubTab('inteligencia')">🔬 Inteligencia</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: ANALIZADOR METABÓLICO
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-analizador" class="clab-subpanel">
+
+  <div class="clab-card">
+    <div class="clab-ct">🧬 Analizador metabólico</div>
+    <p class="clab-help" style="margin:-6px 0 14px">
+      Seleccioná una fórmula CI para ver el análisis. En "Modo comparación" cada frasco muestra sus cepas desde CI con sus placas auto-completadas.
+    </p>
+
+    <!-- Controles superiores -->
+    <div class="clab-analizer-controls">
+      <div>
+        <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block">Fórmula</label>
+        <select id="clab-anal-formula" class="clab-select" onchange="clabOnFormulaChange()">
+          <option value="">— Seleccionar fórmula CI —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block">Calibración por Cepa</label>
+        <select id="clab-anal-cepa" class="clab-select" onchange="clabOnCepaChange()">
+          <option value="">— Cepa de Referencia (Sin calibrar) —</option>
+        </select>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="clab-mode-tabs">
+            <button class="clab-mode-tab active" data-mode="formula" onclick="clabSetMode('formula')">Fórmula</button>
+            <button class="clab-mode-tab" data-mode="libre" onclick="clabSetMode('libre')">Modo libre</button>
+          </div>
+          <button class="clab-btn clab-btn-opt" onclick="clabOpenOptimizer()" title="Optimizar rutas metabólicas de la fórmula actual">⚡ Optimizar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card de Calibración Activa -->
+    <div id="clab-anal-calib-card" style="display:none; margin-bottom: 16px;"></div>
+
+    <!-- Diagnóstico empírico — rellena renderDiagnostico() en cilab_inteligencia.js -->
+    <div id="clab-diagnostico-wrap" style="margin-bottom:12px"></div>
+
+    <!-- Layout principal: Grafo (2/3) + Panel lateral (1/3) -->
+    <div class="clab-anal-layout">
+      <!-- Columna izquierda: grafo -->
+      <div>
+        <!-- Banner modo frasco — visible solo cuando se inspecciona un frasco de experimento -->
+        <div id="clab-frasco-banner" style="display:none;margin-bottom:8px"></div>
+
+        <div class="clab-graph-wrap">
+          <div id="clab-graph-container"></div>
+        </div>
+
+        <!-- KPIs debajo del grafo -->
+        <div style="margin-top:12px">
+          <div class="clab-kpi-grid" id="clab-anal-kpis"></div>
+        </div>
+        <!-- Formula Intelligence Engine panel -->
+        <div id="clab-fi-panel" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Columna derecha: ingredientes / sliders / alertas -->
+      <div>
+        <!-- Sliders en modo libre o tabla en modo fórmula -->
+        <div class="clab-card" style="padding:14px">
+          <div class="clab-divider" style="margin-top:0">Ingredientes</div>
+          <div id="clab-anal-ings"></div>
+        </div>
+
+        <!-- Alertas -->
+        <div class="clab-card" style="padding:14px;margin-top:12px">
+          <div class="clab-divider" style="margin-top:0">Alertas y diagnóstico</div>
+          <div id="clab-anal-alerts" class="clab-alert-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison mode — full-width, debajo del layout principal -->
+    <div class="clab-card" id="clab-anal-comp-card" style="padding:14px;margin-top:12px;display:none">
+      <div class="clab-divider" style="margin-top:0">Modo comparación · experimentos</div>
+      <div id="clab-anal-comp"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         PANEL DE COMPOSICION QUIMICA (Etapa 3)
+         Renderizado por renderChemPanel() en tiempo real.
+         ══════════════════════════════════════════════════ -->
+    <div id="clab-chem-panel-wrap">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3)">Perfil bioquimico de la formula</span>
+        <span style="flex:1;height:1px;background:var(--br)"></span>
+        <button class="clab-btn clab-btn-sm" style="font-size:9px;padding:2px 8px" onclick="(function(){var p=document.getElementById('clab-chem-panel');p.style.display=p.style.display==='none'?'':'none'})()">colapsar</button>
+      </div>
+      <div id="clab-chem-panel"></div>
+    </div>
+  </div>
+
+</div><!-- /panel analizador -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: OPTIMIZADOR
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-optimizador" class="clab-subpanel" style="display:none">
+  <!-- Contenido generado dinámicamente por _buildOptimizerTab() -->
+</div><!-- /panel optimizador -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: BIBLIOTECA BIOLÓGICA
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-biblioteca" class="clab-subpanel" style="display:none">
+
+  <div class="clab-card">
+    <div class="clab-ct">🧪 Biblioteca biológica de ingredientes</div>
+    <p class="clab-help" style="margin:-6px 0 12px">
+      Cada ingrediente del sistema con su metadata biológica: estado de validación,
+      rangos seguros y óptimos, qué rutas activa y mecanismo bioquímico.
+      Hacé click para editar rangos y ver el historial de ensayos.
+    </p>
+
+    <div class="clab-row" style="margin-bottom:12px">
+      <select id="clab-lib-filter-estado" class="clab-select" onchange="clabRenderBiblio()" style="max-width:170px">
+        <option value="">Estado: todos</option>
+        <option value="validado">Validado</option>
+        <option value="en_ensayo">En ensayo</option>
+        <option value="peligro">Peligro</option>
+        <option value="sin_datos">Sin datos</option>
+      </select>
+      <input type="text" id="clab-lib-filter-q" class="clab-input"
+        placeholder="Buscar ingrediente..."
+        oninput="clabRenderBiblio()" style="max-width:240px">
+      <select id="clab-lib-sort" class="clab-select" onchange="clabRenderBiblio()" style="max-width:170px">
+        <option value="nombre_az">Nombre A → Z</option>
+        <option value="nombre_za">Nombre Z → A</option>
+        <option value="aspecto">Aspecto metabólico</option>
+        <option value="estado">Estado</option>
+        <option value="ensayos">Ensayos ↓</option>
+      </select>
+      <span class="clab-help" id="clab-lib-count" style="margin-left:auto"></span>
+      <button class="clab-btn clab-btn-sm clab-btn-p" onclick="cilabCrearIngrediente()" style="background:#00CC33;color:#1D1D1D;font-weight:700">＋ Crear ingrediente</button>
+      <button class="clab-btn clab-btn-sm" onclick="clabExportIngredientes()" title="Descarga todos los ingredientes con su metadata biológica como JSON">⬇ Exportar JSON</button>
+      <input type="file" id="clab-import-file-input" accept=".json,application/json"
+             style="display:none" onchange="clabOnImportFileChange(this)">
+      <button class="clab-btn clab-btn-sm" onclick="clabTriggerImport()" title="Importa ingredientes desde un JSON exportado previamente">⬆ Importar JSON</button>
+    </div>
+
+    <div id="clab-lib-grid" class="clab-lib-grid"></div>
+  </div>
+
+</div><!-- /panel biblioteca -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: GENÉTICA × MEDIO
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-strain" class="clab-subpanel" style="display:none">
+
+  <div class="clab-card">
+    <div class="clab-ct blu">🧫 Genética × Medio</div>
+    <p class="clab-help" style="margin:-6px 0 14px">
+      No todas las genéticas responden igual al mismo medio. Seleccioná un ingrediente
+      y una cepa para ver concentraciones ensayadas vs fenotipos observados.
+      El sistema sugiere rangos óptimos cuando hay suficientes datos.
+    </p>
+
+    <div class="clab-strain-controls">
+      <div>
+        <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block">Ingrediente</label>
+        <select id="clab-strain-ing" class="clab-select" onchange="clabRenderStrain()"></select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block">Genética</label>
+        <select id="clab-strain-gen" class="clab-select" onchange="clabRenderStrain()">
+          <option value="__ALL__">Todas las cepas (comparativa)</option>
+        </select>
+      </div>
+      <div>
+        <button class="clab-btn clab-btn-s" onclick="clabRenderStrain()">↻ Refrescar</button>
+      </div>
+    </div>
+
+    <div id="clab-strain-empty" class="clab-empty" style="display:none">
+      Sin observaciones para este filtro. Cargá ensayos en la pestaña <b>Registro de ensayos</b>.
+    </div>
+
+    <div id="clab-strain-content">
+      <div class="clab-strain-chart-wrap">
+        <canvas id="clab-strain-chart"></canvas>
+      </div>
+
+      <div id="clab-strain-suggestion"></div>
+
+      <div id="clab-strain-vs-grid" class="clab-strain-vs-grid"></div>
+    </div>
+  </div>
+
+</div><!-- /panel strain -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: ENSAYOS
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-ensayos" class="clab-subpanel" style="display:none">
+
+  <!-- Formulario de carga -->
+  <div class="clab-card">
+    <div class="clab-ct or">📋 Registrar observación de ensayo</div>
+    <p class="clab-help" style="margin:-6px 0 12px">
+      Cargá el resultado de cada observación de laboratorio. La genética es importante:
+      el sistema acumula datos por cepa para construir rangos óptimos específicos.
+    </p>
+
+    <div class="clab-grid-3">
+      <div class="clab-fg">
+        <label>Fecha</label>
+        <input type="date" id="clab-obs-fecha" class="clab-input">
+      </div>
+      <div class="clab-fg">
+        <label>Ingrediente</label>
+        <select id="clab-obs-ing" class="clab-select"></select>
+      </div>
+      <div class="clab-fg">
+        <label>Cantidad</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="clab-obs-qty" class="clab-input" placeholder="0" min="0" step="0.01">
+          <span id="clab-obs-unidad" class="clab-mono clab-muted" style="font-size:11px;min-width:30px"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="clab-grid-3">
+      <div class="clab-fg">
+        <label>Genética</label>
+        <select id="clab-obs-gen" class="clab-select">
+          <option value="">— Sin vincular —</option>
+        </select>
+      </div>
+      <div class="clab-fg">
+        <label>Fenotipo observado</label>
+        <select id="clab-obs-pheno" class="clab-select">
+          <option value="rizo_extremo">Rizomórfico extremo</option>
+          <option value="rizo">Rizomórfico</option>
+          <option value="normal" selected>Normal</option>
+          <option value="tomentoso">Tomentoso</option>
+          <option value="contam">Contaminado</option>
+        </select>
+      </div>
+      <div class="clab-fg">
+        <label>Resultado</label>
+        <select id="clab-obs-res" class="clab-select">
+          <option value="positivo">Positivo</option>
+          <option value="neutral" selected>Neutral</option>
+          <option value="negativo">Negativo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="clab-grid-2">
+      <div class="clab-fg">
+        <label>Fórmula CI (opcional)</label>
+        <select id="clab-obs-formula" class="clab-select" onchange="clabOnObsFormulaChange()">
+          <option value="">— Sin vincular —</option>
+        </select>
+      </div>
+      <div class="clab-fg">
+        <label>Experimento vinculado (opcional)</label>
+        <select id="clab-obs-exp" class="clab-select">
+          <option value="">— Sin vincular —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="clab-fg">
+      <label>Notas</label>
+      <textarea id="clab-obs-notas" class="clab-textarea" rows="2" placeholder="Observaciones de campo, contexto del ensayo..."></textarea>
+    </div>
+
+    <div class="clab-row">
+      <button class="clab-btn clab-btn-p" onclick="clabSaveObs()">💾 Guardar observación</button>
+      <button class="clab-btn clab-btn-s" onclick="clabClearObsForm()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="clab-card">
+    <div class="clab-ct">Historial de ensayos</div>
+
+    <div class="clab-row" style="margin-bottom:12px">
+      <select id="clab-obs-filter-ing" class="clab-select" onchange="clabRenderObsLog()" style="max-width:200px">
+        <option value="">Ingrediente: todos</option>
+      </select>
+      <select id="clab-obs-filter-gen" class="clab-select" onchange="clabRenderObsLog()" style="max-width:200px">
+        <option value="">Genética: todas</option>
+      </select>
+      <select id="clab-obs-filter-pheno" class="clab-select" onchange="clabRenderObsLog()" style="max-width:170px">
+        <option value="">Fenotipo: todos</option>
+        <option value="rizo_extremo">Rizo extremo</option>
+        <option value="rizo">Rizomórfico</option>
+        <option value="normal">Normal</option>
+        <option value="tomentoso">Tomentoso</option>
+        <option value="contam">Contaminado</option>
+      </select>
+      <span class="clab-help" id="clab-obs-count" style="margin-left:auto"></span>
+    </div>
+
+    <div id="clab-obs-log"></div>
+  </div>
+
+</div><!-- /panel ensayos -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: CONOCIMIENTO — Motor de ensayos de crecimiento
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-conocimiento" class="clab-subpanel" style="display:none">
+  <!-- renderConocimiento() lo rellena dinámicamente -->
+  <div id="cre-root"></div>
+  <!-- Modal: nuevo ensayo / agregar observación -->
+  <div id="cre-modal" class="clab-modal" style="display:none">
+    <div class="clab-modal-backdrop" onclick="creCloseModal()"></div>
+    <div class="cre-modal-dlg" role="dialog" aria-modal="true">
+      <div class="clab-modal-header">
+        <span id="cre-modal-title" style="font-weight:600;color:var(--ac4)">Nuevo ensayo</span>
+        <button type="button" class="clab-modal-close" onclick="creCloseModal()" title="Cerrar">✕</button>
+      </div>
+      <div class="cre-modal-body" id="cre-modal-body"></div>
+      <div class="cre-form-actions" id="cre-modal-footer"></div>
+    </div>
+  </div>
+</div><!-- /panel conocimiento -->
+
+<!-- ══════════════════════════════════════════════════
+     PANEL: INTELIGENCIA EMPÍRICA
+     ══════════════════════════════════════════════════ -->
+<div id="clab-sub-inteligencia" class="clab-subpanel" style="display:none">
+  <!-- renderInteligencia() lo rellena dinámicamente -->
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANEL DE DETALLE (slide-in derecha — universal)
+     Se popula dinámicamente al hacer click en nodos del grafo
+     o tarjetas de la biblioteca.
+     ══════════════════════════════════════════════════ -->
+<div class="clab-detail-backdrop" id="clab-detail-backdrop" onclick="clabCloseDetail()"></div>
+<aside class="clab-detail-panel" id="clab-detail-panel" role="dialog" aria-hidden="true">
+  <div class="clab-detail-header">
+    <div class="clab-detail-title" id="clab-detail-title-wrap">
+      <span class="clab-detail-title-icon" id="clab-detail-icon" style="color:var(--ac2)">·</span>
+      <span id="clab-detail-title">Detalle</span>
+    </div>
+    <button type="button" class="clab-detail-close" onclick="clabCloseDetail()" title="Cerrar (Esc)">✕</button>
+  </div>
+  <div class="clab-detail-body" id="clab-detail-body"></div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: Crear nueva fórmula desde el analizador
+     ══════════════════════════════════════════════════ -->
+<div id="clab-newform-modal" class="clab-modal" style="display:none">
+  <div class="clab-modal-backdrop" onclick="clabCloseNewFormModal()"></div>
+  <div class="clab-modal-dialog" role="dialog" aria-modal="true">
+    <div class="clab-modal-header">
+      <span style="color:var(--ac2);font-weight:600">📝 Crear nueva fórmula CI</span>
+      <button type="button" class="clab-modal-close" onclick="clabCloseNewFormModal()" title="Cerrar">✕</button>
+    </div>
+    <div class="clab-modal-body">
+      <div class="clab-modal-meta" id="clab-newform-meta"></div>
+
+      <div class="clab-fg">
+        <label>Nombre de la nueva fórmula</label>
+        <input type="text" id="clab-newform-name" class="clab-input"
+               placeholder="ej: MEA modificada v2"
+               onkeydown="if(event.key==='Enter')clabCreateNewFormula()">
+      </div>
+
+      <div class="clab-help">
+        Se persiste en <code class="clab-mono">bl2_forms</code> con un nuevo ID
+        <code class="clab-mono">CI-NNNN</code>, preservando los snapshots
+        inmutables de cada ingrediente. La fórmula original no se toca.
+      </div>
+    </div>
+    <div class="clab-modal-footer">
+      <button type="button" class="clab-btn clab-btn-s" onclick="clabCloseNewFormModal()">Cancelar</button>
+      <button type="button" class="clab-btn clab-btn-p" onclick="clabCreateNewFormula()">✓ Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     NOTIFICACIÓN
+     ══════════════════════════════════════════════════ -->
+<div class="clab-notif" id="clab-notif"></div>
+
+<!-- ══════════════════════════════════════════════════
+     APP SCRIPT
+     Orden de carga obligatorio:
+       1. cilab_interactions.js  — datos de interacciones (CRITICAL_INTERACTIONS)
+       2. cilab_app.js           — motor principal (lee CRITICAL_INTERACTIONS)
+       3. cilab_conocimiento.js  — módulo de ensayos
+     ══════════════════════════════════════════════════ -->
+<script src="cilab_interactions.js"></script>
+<script src="cilab_app.js"></script>
+<script src="cilab_conocimiento.js"></script>
+<script src="cilab_inteligencia.js"></script>
+<script src="cilab_formula_intelligence.js"></script>
+
+</body>
+</html>

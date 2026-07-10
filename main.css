@@ -1,0 +1,344 @@
+/* ============================================================
+   BIOLAB ENGINE v3 — main.css
+   Estilos del shell principal (header, nav, contenedor).
+   NO incluye lógica visual de módulos individuales.
+   ============================================================ */
+
+/* ── Variables globales compartidas por todos los módulos ── */
+:root {
+  /* Colores primarios */
+  --primary:        #00CC33;
+  --primary-light:  #00AA22;
+  --accent:         #00AA22;
+  --highlight:      #70AD47;
+  --warning:        #ED7D31;
+  --danger:         #C00000;
+
+  /* Aliases semánticos usados en módulos */
+  --ac:   #70AD47;   /* verde oliva */
+  --ac2:  #7C6FFF;   /* violeta */
+  --ac3:  #FF6B35;   /* naranja */
+  --ac4:  #44AAFF;   /* celeste */
+  --wn:   #00CC33;   /* verde alerta ok */
+  --er:   #C00000;   /* rojo error */
+
+  /* Tipografía */
+  --tx:   #F5F5F5;
+  --tx2:  #A0A0A0;
+  --tx3:  #666666;
+
+  /* Superficies */
+  --bg:            #1D1D1D;
+  --bg-secondary:  #2D2D2D;
+  --bg-tertiary:   #3D3D3D;
+  --bg-deep:       #0a0a0a;
+
+  /* Bordes */
+  --border:        #404040;
+  --border-light:  #505050;
+
+  /* Transiciones */
+  --t-fast:  0.15s ease;
+  --t-base:  0.25s ease;
+  --t-slow:  0.4s ease;
+}
+
+/* ── Reset mínimo ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { height: 100%; }
+
+body {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  background: var(--bg);
+  color: var(--tx);
+  font-size: 13px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ────────────────────────────────────────────────────────────
+   HEADER
+   ──────────────────────────────────────────────────────────── */
+#app-header {
+  background: var(--bg-deep);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  border-bottom: 1px solid rgba(0, 200, 50, 0.18);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+/* Logo */
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.logo-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.85); }
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--ac);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.logo-text .logo-sub {
+  color: var(--tx2);
+  font-weight: 400;
+}
+
+.logo-text .logo-ver {
+  font-size: 10px;
+  color: var(--tx3);
+  font-weight: 300;
+  margin-left: 4px;
+}
+
+/* Reloj del sistema */
+.sys-clock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 200, 50, 0.06);
+  border: 1px solid rgba(0, 200, 50, 0.15);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--tx2);
+}
+
+.sys-clock b { color: var(--ac); font-weight: 600; }
+
+.clock-sep {
+  color: var(--tx3);
+  font-size: 10px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   NAVEGACIÓN MODULAR
+   ──────────────────────────────────────────────────────────── */
+#main-nav {
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  /* Hook para futura reordenación con drag & drop */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#main-nav::-webkit-scrollbar { display: none; }
+
+/* Botón de módulo */
+.tab {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--tx2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 6px;
+  transition: color var(--t-fast),
+              border-color var(--t-fast),
+              background var(--t-fast),
+              transform var(--t-fast),
+              box-shadow var(--t-fast);
+
+  /* Hooks drag & drop — se activan con JS cuando se implemente */
+  /* draggable="true" se añade vía JS: initDragDrop() */
+}
+
+.tab:hover {
+  color: var(--tx);
+  border-color: var(--border-light);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tab.active {
+  background: var(--bg-deep);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(0, 204, 51, 0.18);
+  text-shadow: 0 0 6px rgba(0, 204, 51, 0.25);
+  transform: translateY(0);
+}
+
+/* Estado mientras se arrastra (hook para DnD futuro) */
+.tab.dragging   { opacity: 0.4; cursor: grabbing; }
+.tab.drag-over  { border-color: var(--primary); background: rgba(0, 204, 51, 0.08); }
+
+/* Indicador de carga en tab */
+.tab.loading::after {
+  content: ' ⟳';
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ────────────────────────────────────────────────────────────
+   CONTENEDOR PRINCIPAL DE MÓDULOS
+   ──────────────────────────────────────────────────────────── */
+#app-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+
+  /* Animación al montar un módulo nuevo */
+  animation: moduleIn 0.28s ease-out;
+}
+
+@keyframes moduleIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   PANTALLA DE BIENVENIDA (splash inicial)
+   ──────────────────────────────────────────────────────────── */
+#splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--tx3);
+}
+
+#splash .splash-logo {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+#splash h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ac);
+  letter-spacing: 3px;
+}
+
+#splash p {
+  font-size: 12px;
+  max-width: 420px;
+  line-height: 1.8;
+}
+
+#splash .splash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 500px;
+}
+
+#splash .splash-module {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+  font-size: 12px;
+  color: var(--tx2);
+}
+
+#splash .splash-module:hover {
+  border-color: var(--ac);
+  background: rgba(112, 173, 71, 0.06);
+  color: var(--tx);
+}
+
+/* ────────────────────────────────────────────────────────────
+   INDICADOR DE ERROR AL CARGAR MÓDULO
+   ──────────────────────────────────────────────────────────── */
+#module-error {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--er);
+  text-align: center;
+  padding: 40px;
+}
+
+#module-error.visible { display: flex; }
+
+#module-error .err-code {
+  font-size: 48px;
+  font-weight: 700;
+  opacity: 0.3;
+}
+
+#module-error p { color: var(--tx2); font-size: 12px; }
+
+/* ────────────────────────────────────────────────────────────
+   SCROLLBAR GLOBAL
+   ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tx3); }
+
+/* ────────────────────────────────────────────────────────────
+   UTILIDADES GLOBALES
+   (clases que los módulos pueden reutilizar sin redefinir)
+   ──────────────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOLAB ENGINE v3</title>
+
+  <!-- Fuente principal: monoespaciada científica -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Shell principal — NO incluye estilos de módulos -->
+  <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════
+       HEADER GLOBAL
+       ══════════════════════════════════════════════════════════ -->
+  <header id="app-header" role="banner">
+
+    <!-- Identidad del sistema -->
+    <div class="logo-wrap">
+      <div class="logo-pulse" aria-hidden="true"></div>
+      <div class="logo">
+        <span class="logo-text">
+          BIOLAB
+          <span class="logo-sub">ENGINE</span>
+          <span class="logo-ver">v3</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Reloj del sistema — actualizado por main.js cada segundo -->
+    <div class="sys-clock" title="Fecha y hora del sistema" aria-live="polite">
+      <b id="sys-date">--/--/----</b>
+      <span class="clock-sep">|</span>
+      <b id="sys-time">--:--:--</b>
+    </div>
+  </header>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       NAVEGACIÓN MODULAR
+       Cada botón dispara loadModule(id) definido en main.js.
+       El atributo data-module es la clave de BIOLAB.modules.
+       ══════════════════════════════════════════════════════════ -->
+  <nav id="main-nav" role="navigation" aria-label="Módulos del sistema">
+
+    <button
+      class="tab active"
+      data-module="GE"
+      onclick="loadModule('GE')"
+      title="Módulo de Genética — gestión de cepas">
+      🧬 GE &mdash; Genética
+    </button>
+
+    <button
+      class="tab"
+      data-module="CI"
+      onclick="loadModule('CI')"
+      title="Módulo de Cultivo In-vitro">
+      🧫 CI &mdash; Cultivo
+    </button>
+
+    <button
+      class="tab"
+      data-module="CILAB"
+      onclick="loadModule('CILAB')"
+      title="Módulo CILAB — Lab analítico: rutas metabólicas, biblioteca biológica, ensayos">
+      🔬 CILAB &mdash; Lab
+    </button>
+
+    <button
+      class="tab"
+      data-module="GR"
+      onclick="loadModule('GR')"
+      title="Módulo de Grano">
+      🌾 GR &mdash; Grano
+    </button>
+
+    <button
+      class="tab"
+      data-module="SU"
+      onclick="loadModule('SU')"
+      title="Módulo de Sustrato">
+      🧱 SU &mdash; Sustrato
+    </button>
+
+    <button
+      class="tab"
+      data-module="FR"
+      onclick="loadModule('FR')"
+      title="Módulo de Fructificación">
+      🍄 FR &mdash; Fructificación
+    </button>
+
+    <button
+      class="tab"
+      data-module="TRACE"
+      onclick="loadModule('TRACE')"
+      title="Módulo de Trazabilidad — cadena completa GE → CI → GR → SU → FR">
+      🔗 TR &mdash; Trazabilidad
+    </button>
+
+    <button
+      class="tab"
+      data-module="CFG"
+      onclick="loadModule('CFG')"
+      title="Gestor de Ingredientes">
+      ⚙️ CFG - Configuración
+    </button>
+
+  </nav>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       CONTENEDOR PRINCIPAL DE MÓDULOS
+       Único punto de renderizado. main.js inyecta aquí el
+       body del módulo seleccionado.
+       ══════════════════════════════════════════════════════════ -->
+  <main id="app-container" role="main" aria-live="polite" aria-label="Contenido del módulo activo">
+
+    <!-- ── Pantalla de bienvenida (se reemplaza al cargar un módulo) ── -->
+    <div id="splash">
+
+      <div class="splash-logo" aria-hidden="true">🔬</div>
+
+      <h2>BIOLAB ENGINE</h2>
+
+      <p>Sistema modular de gestión de laboratorio micológico.<br>
+         Seleccioná un módulo de la barra de navegación para comenzar.</p>
+
+      <!-- Accesos rápidos a módulos -->
+      <div class="splash-grid" role="list">
+
+        <div class="splash-module" role="listitem" onclick="loadModule('GE')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('GE')">
+          🧬 <br><b>GE</b><br>
+          <span style="color:var(--tx3);font-size:11px">Genética</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('CI')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('CI')">
+          🧫 <br><b>CI</b><br>
+          <span style="color:var(--tx3);font-size:11px">Cultivo</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('CILAB')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('CILAB')">
+          🔬 <br><b>CILAB</b><br>
+          <span style="color:var(--tx3);font-size:11px">Lab analítico</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('GR')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('GR')">
+          🌾 <br><b>GR</b><br>
+          <span style="color:var(--tx3);font-size:11px">Grano</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('SU')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('SU')">
+          🧱 <br><b>SU</b><br>
+          <span style="color:var(--tx3);font-size:11px">Sustrato</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('FR')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('FR')">
+          🍄 <br><b>FR</b><br>
+          <span style="color:var(--tx3);font-size:11px">Fructificación</span>
+        </div>
+
+        <div class="splash-module" role="listitem" onclick="loadModule('CFG')" tabindex="0"
+             onkeydown="if(event.key==='Enter')loadModule('CFG')">
+          ⚙️ <br><b>CFG</b><br>
+          <span style="color:var(--tx3);font-size:11px">Configuración</span>
+        </div>
+
+      </div>
+    </div>
+    <!-- /splash -->
+
+  </main>
+  <!-- /app-container -->
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       MOTOR PRINCIPAL
+       Debe cargarse DESPUÉS del body para que los elementos
+       del DOM ya existan cuando se ejecuta DOMContentLoaded.
+       ══════════════════════════════════════════════════════════ -->
+  <!-- Store reactivo compartido — debe cargar ANTES de main.js y cualquier módulo -->
+  <script src="shared/ing_store.js"></script>
+  <script src="main.js"></script>
+
+  <script>
+  /* Migration v1: sustratos_lotes → gr_lotes (ejecuta una sola vez) */
+  (function() {
+    try {
+      if (!localStorage.getItem('gr_lotes') && localStorage.getItem('sustratos_lotes')) {
+        localStorage.setItem('gr_lotes', localStorage.getItem('sustratos_lotes'));
+        console.log('[BIOLAB] Migración: sustratos_lotes → gr_lotes completada');
+      }
+    } catch(e) {
+      console.error('[BIOLAB] Error en migración gr_lotes:', e);
+    }
+  })();
+  </script>
+
+  <!-- Registro del módulo TRACE en el motor SPA -->
+  <script>
+    (function () {
+      if (window.BIOLAB && window.BIOLAB.modules) {
+        window.BIOLAB.modules.TRACE = 'trace/trace_index.html';
+      }
+    })();
+  </script>
+
+  <!-- Registro del módulo CILAB (Lab analítico) -->
+  <script>
+    (function () {
+      if (window.BIOLAB && window.BIOLAB.modules) {
+        window.BIOLAB.modules.CILAB = 'cilab/cilab_index.html';
+      }
+    })();
+  </script>
+
+  <!-- CILAB AI Auditor — panel flotante no destructivo (puerto 8001) -->
+  <script src="cilab_auditor.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fructificación - Módulo FR</title>
+    <link rel="stylesheet" href="fr_styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- Sub-navegación FR -->
+        <div class="fr-subnav">
+            <button type="button" class="fr-subtab active" data-frtab="dash" onclick="FR.goOverview()">📈 Dashboard</button>
+            <button type="button" class="fr-subtab" data-frtab="activos" onclick="FR.subTab('activos')">🟢 Activo</button>
+            <button type="button" class="fr-subtab" data-frtab="cosecha" onclick="FR.subTab('cosecha')">🟡 Cosecha</button>
+            <button type="button" class="fr-subtab" data-frtab="archivo" onclick="FR.subTab('archivo')">🔴 Archivo</button>
+            <button type="button" class="fr-subtab" data-frtab="experimentos" onclick="FR.goExperimentos()">🔬 Experimentos</button>
+            <button type="button" class="fr-subtab" data-frtab="intel" onclick="FR.subTab('intel')">📊 Inteligencia</button>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DASHBOARD (panel principal) -->
+        <!-- ============================================ -->
+        <div id="fr-sub-dash" class="fr-subpanel active">
+
+            <!-- Toolbar de acciones globales — siempre visible en Dashboard -->
+            <section class="section-card fr-dash-toolbar">
+                <div class="section-content" style="padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                    <button type="button" class="btn btn-secondary" onclick="FR.sync()" title="Importar bolsas nuevas desde SU">🔄 Sync desde SU</button>
+                    <button type="button" class="btn btn-secondary" onclick="FR.abrirModalHuerfana()" title="Cargar bolsa sin trazabilidad SU→GR">➕ Bolsa huérfana</button>
+                    <button type="button" class="btn btn-secondary" onclick="FR.abrirModalExperimento(null)" title="Registrar experimento a pequeña escala">🔬 Nuevo experimento</button>
+                    <button type="button" class="btn btn-secondary" onclick="FR.exportarJSON()" title="Exportar todas las bolsas FR a JSON">⬇ Exportar backup</button>
+                    <label class="btn btn-secondary" title="Importar bolsas FR desde backup JSON" style="cursor:pointer;margin:0">
+                        ⬆ Importar backup
+                        <input type="file" accept=".json" style="display:none" onchange="FR.importarJSON(this)">
+                    </label>
+                    <button type="button" class="btn btn-danger" onclick="FR.eliminarTodo()" title="Eliminar TODOS los registros FR">🗑 Eliminar todo</button>
+                </div>
+            </section>
+
+            <!-- Vista general viva — JS (renderOverview) inyecta el contenido en cada render.
+                 Muestra KPIs + tabla agrupada. Se vacía cuando el usuario selecciona una bolsa. -->
+            <section id="frDashEmpty" class="section-card"></section>
+
+            <!-- Dashboard (visible solo si hay seleccionada) -->
+            <div id="frDash" style="display:none">
+
+                <!-- Encabezado: ID + estado, sin modo edición (todo editable inline) -->
+                <section class="section-card fr-dash-header">
+                    <div class="section-header">
+                        <div class="fr-dash-title">
+                            <h2 id="frDashTitle">FR-00000</h2>
+                            <span id="frDashState" class="fr-chip fr-chip-neutral">—</span>
+                        </div>
+                        <div class="fr-dash-actions">
+                            <span class="fr-live-hint" title="Cada cambio se guarda al instante">⚡ edición en vivo</span>
+                            <button id="frSyncBtn" type="button" class="fr-btn-sync" style="display:none"
+                                    onclick="FR.sincronizarTrazabilidadBolsa()"
+                                    title="Re-sincronizar la cadena GE→CI→GR→SU desde los datos actuales">
+                                ↻ Sincronizar trazabilidad
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 🧬 Identidad — Árbol ASCII + Grafo Visual -->
+                <section class="section-card">
+                    <div class="section-header">
+                        <h2>🧬 Identidad</h2>
+                        <div class="frt-view-toggle">
+                            <button class="frt-vbtn active" id="frIdentBtnAscii"
+                                    onclick="FR.setIdentView('ascii')">🌲 Árbol ASCII</button>
+                            <button class="frt-vbtn" id="frIdentBtnGraph"
+                                    onclick="FR.setIdentView('graph')">🕸 Grafo Visual</button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div id="frIdTree"></div>
+                    </div>
+                </section>
+
+                <!-- ⏱️ Tiempos de desarrollo -->
+                <section class="section-card">
+                    <div class="section-header">
+                        <h2>⏱️ Tiempos de desarrollo</h2>
+                        <span class="fr-dash-subtle">días de cultivo: <strong id="frDayNow">0</strong></span>
+                    </div>
+                    <div class="section-content">
+                        <div class="fr-timeline">
+                            <div class="fr-phase">
+                                <span class="fr-phase-label">Inicio (SU)</span>
+                                <input type="date" id="frFechaInicio" class="fr-dash-input fr-dash-locked" disabled title="Fecha de inoculación (heredada de SU, no editable)">
+                                <span class="fr-phase-days" id="frDaysInicio">día 0</span>
+                            </div>
+                            <div class="fr-phase">
+                                <span class="fr-phase-label">Colonización</span>
+                                <input type="date" id="frFechaColon" class="fr-dash-input" onchange="FR.updateField('fechaColonizacion', this.value)" title="Fecha en que la bolsa completó colonización">
+                                <span class="fr-phase-days" id="frDaysColon">pendiente</span>
+                            </div>
+                            <div class="fr-phase">
+                                <span class="fr-phase-label">Pines</span>
+                                <input type="date" id="frFechaPines" class="fr-dash-input" onchange="FR.updateField('fechaPines', this.value)" title="Fecha de aparición de primordios">
+                                <span class="fr-phase-days" id="frDaysPines">pendiente</span>
+                            </div>
+                            <div class="fr-phase">
+                                <span class="fr-phase-label">Cosecha</span>
+                                <input type="date" id="frFechaCosecha" class="fr-dash-input" onchange="FR.updateField('fechaCosecha', this.value)" title="Primera fecha de cosecha">
+                                <span class="fr-phase-days" id="frDaysCosecha">pendiente</span>
+                            </div>
+                        </div>
+
+                        <div class="fr-actions-row">
+                            <button type="button" id="frBtnContam" class="fr-btn-contam" onclick="FR.marcarContaminada()" title="Marca la bolsa como contaminada y la archiva (acción irreversible)">
+                                🔴 Contaminación
+                            </button>
+                            <button type="button" id="frBtnCerrar" class="fr-btn-cerrar" onclick="FR.cerrarCiclo()" title="Cierra el ciclo de la bolsa y la archiva (acción reversible: se puede reabrir)">
+                                ⏹ Cerrar ciclo
+                            </button>
+                            <span id="frContamInfo" class="fr-contam-info"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 📊 Metricas -->
+                <section class="section-card">
+                    <div class="section-header"><h2>📊 Metricas</h2></div>
+                    <div class="section-content">
+                        <!-- Banner visible solo en bolsas huérfanas -->
+                        <div id="frHuerfanaBanner" style="display:none;margin:0 0 12px;padding:9px 14px;background:rgba(123,94,167,.15);border:1px solid rgba(123,94,167,.4);border-radius:6px;font-size:0.82rem;color:#c4a8ff;">
+                            <strong>H Bolsa huérfana</strong> — valores de sustrato y grano sin trazabilidad SU→GR. Editá directamente acá para que el cálculo de BE sea correcto.
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sustrato seco (desde SU) *</label>
+                                <input type="number" id="frPesoSustratoSeco" disabled title="No editable — viene de SU (lote.fibra / bolsas)" class="fr-dash-input fr-dash-locked">
+                            </div>
+                            <div class="form-group">
+                                <label>Peso húmedo hidratado/bolsa (g)</label>
+                                <input type="number" id="frPesoHidratado" class="fr-dash-input" step="0.1" onchange="FR.updateField('pesoHumedoHidratado', this.value)" title="Peso del sustrato ya hidratado antes de fructificación">
+                            </div>
+                            <div class="form-group">
+                                <label>Grano/bolsa (desde GR) *</label>
+                                <input type="number" id="frGranoBolsa" disabled title="No editable — viene de GR" class="fr-dash-input fr-dash-locked">
+                            </div>
+                        </div>
+
+                        <!-- Segunda fila: peso total teórico + peso pre-cosecha (manual) -->
+                        <div class="form-row" style="margin-top:10px">
+                            <div class="form-group">
+                                <label>Peso total teórico bolsa (g) <span class="fr-opt">auto</span></label>
+                                <input type="number" id="frPesoTotalTeorico" disabled
+                                       title="Suma de sustrato hidratado + grano/bolsa — calculado automáticamente"
+                                       class="fr-dash-input fr-dash-locked fr-dash-teorico">
+                            </div>
+                            <div class="form-group">
+                                <label>Peso antes de la cosecha (g)</label>
+                                <input type="number" id="frPesoPrecosecha" class="fr-dash-input" step="0.1"
+                                       placeholder="Pesá la bolsa antes de cosechar"
+                                       onchange="FR.updateField('pesoPrecosecha', this.value)"
+                                       title="Peso real de la bolsa antes de cosechar — ingresá manualmente. Se usa para calcular pérdida de humedad.">
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid" style="margin-top:10px">
+                            <div class="metric-card">
+                                <span class="metric-label">Biomasa húmeda total</span>
+                                <span class="metric-value" id="frMBioHum">—</span>
+                                <span class="metric-unit">g (Σ oleadas)</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Biomasa seca total</span>
+                                <span class="metric-value" id="frMBioSec">—</span>
+                                <span class="metric-unit">g (Σ oleadas)</span>
+                            </div>
+                            <div class="metric-card highlight">
+                                <span class="metric-label">BE total</span>
+                                <span class="metric-value" id="frMBE">—</span>
+                                <span class="metric-unit">Σ húmedo / sustrato seco</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Tiempo de trabajo total</span>
+                                <span class="metric-value" id="frMTiempoTrabajo">—</span>
+                                <span class="metric-unit">inicio FR → última cosecha</span>
+                            </div>
+                            <div class="metric-card fr-metric-perdida">
+                                <span class="metric-label">Pérdida de humedad</span>
+                                <span class="metric-value" id="frMPerdidaML">—</span>
+                                <span class="metric-unit">g / mL (peso teórico − pre-cosecha)</span>
+                            </div>
+                            <div class="metric-card fr-metric-perdida-pct">
+                                <span class="metric-label">Pérdida de humedad relativa</span>
+                                <span class="metric-value" id="frMPerdidaPct">—</span>
+                                <span class="metric-unit">% del peso total teórico</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 🌊 Oleadas (flushes) -->
+                <section class="section-card">
+                    <div class="section-header">
+                        <h2>🌊 Oleadas</h2>
+                        <span class="fr-dash-subtle">Flush actual: <strong id="frFlushCurrent">1</strong></span>
+                    </div>
+                    <div class="section-content">
+                        <p class="fr-hint" style="margin:0 0 10px;">Registrá la cosecha con <strong>fecha + peso húmedo</strong>. Días después, completá <strong>fin de deshidratación</strong> y <strong>peso seco</strong> directamente en la tabla (cada celda es editable). Usá el 🗑 para borrar si te equivocaste.</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="frFlushFecha">Fecha y hora de cosecha *</label>
+                                <input type="datetime-local" id="frFlushFecha">
+                            </div>
+                            <div class="form-group">
+                                <label for="frFlushHumedo">Peso húmedo (g) *</label>
+                                <input type="number" id="frFlushHumedo" step="0.1" placeholder="ej: 120">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                            <button type="button" class="btn btn-fr" onclick="FR.cerrarOleada()">🌊 Registrar oleada</button>
+                        </div>
+
+                        <div class="table-wrap" style="margin-top:14px">
+                            <table class="data-table" id="frFlushTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Fecha y hora</th>
+                                        <th>Húmedo</th>
+                                        <th>Fin deshidratación</th>
+                                        <th>Seco</th>
+                                        <th title="Biomasa seca % = peso seco / peso húmedo">% Biomasa</th>
+                                        <th title="BE oleada = peso húmedo / sustrato seco">BE oleada</th>
+                                        <th title="BE acumulado = Σ pesos húmedos / sustrato seco">BE acum.</th>
+                                        <th title="Score automático FR·CAL (0-100)">Cal. Auto</th>
+                                        <th title="Score personal de fenotipo (1-10)">Cal. Personal</th>
+                                        <th class="fr-col-acciones">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="frFlushBody">
+                                    <tr><td colspan="11" class="fr-empty">Sin oleadas aún.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Panel FR·CAL — evaluación de calidad por flush (inyectado por JS) -->
+                        <div id="frCalPanel" style="display:none;margin-top:12px;"></div>
+                        <div id="frAnomalyAlert" style="margin-top:12px;"></div>
+                    </div>
+                </section>
+
+                <!-- 📝 Observaciones -->
+                <section class="section-card">
+                    <div class="section-header"><h2>📝 Observaciones</h2></div>
+                    <div class="section-content">
+                        <div class="fr-obs-controls">
+                            <select id="frObsEstado" class="fr-obs-estado" title="Nivel de la nota (semáforo)">
+                                <option value="none">⚪ Normal</option>
+                                <option value="green">🟢 Positivo</option>
+                                <option value="yellow">🟡 Atención</option>
+                                <option value="red">🔴 Peligro</option>
+                            </select>
+                            <input type="text" id="frObsInput" class="fr-obs-input" placeholder="Escribí una nota (ej: primordios visibles en cara inferior)">
+                            <button type="button" class="btn btn-fr" onclick="FR.addObs()">📝 Agregar</button>
+                        </div>
+                        <div class="fr-log" id="frObsLog">
+                            <div class="fr-log-empty">Sin observaciones.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Modal: diff de trazabilidad para confirmar sincronización -->
+                <div id="frSyncModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+                     z-index:9000;align-items:center;justify-content:center">
+                    <div class="fr-sync-modal-box">
+                        <div class="fr-sync-modal-header">
+                            <span>↻ Sincronizar trazabilidad</span>
+                            <button onclick="FR.cerrarSyncModal()" class="fr-sync-close">✕</button>
+                        </div>
+                        <div id="frSyncDiffContent" class="fr-sync-diff-content">
+                        </div>
+                        <div class="fr-sync-modal-footer">
+                            <button id="frSyncApplyBtn" class="fr-sync-apply" onclick="FR.aplicarSync()">
+                                ✓ Aplicar corrección
+                            </button>
+                            <button onclick="FR.cerrarSyncModal()" class="fr-sync-cancel">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /#frDash -->
+
+        </div><!-- /#fr-sub-dash -->
+
+        <!-- ============================================ -->
+        <!-- ACTIVOS -->
+        <!-- ============================================ -->
+        <div id="fr-sub-activos" class="fr-subpanel">
+
+            <!-- KPIs de la sección Activos -->
+            <section class="metrics-panel">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Genéticas activas</span>
+                        <span class="metric-value" id="frKpiActGeneticas">—</span>
+                        <span class="metric-unit">en producción</span>
+                    </div>
+                    <div class="metric-card fr-color-ok">
+                        <span class="metric-label">Bolsas activas</span>
+                        <span class="metric-value" id="frKpiActActivas">0</span>
+                        <span class="metric-unit">en cultivo</span>
+                    </div>
+                    <div class="metric-card highlight">
+                        <span class="metric-label">Peso teórico prom.</span>
+                        <span class="metric-value" id="frKpiActPesoTeorico">—</span>
+                        <span class="metric-unit">por bolsa activa</span>
+                    </div>
+                    <div class="metric-card fr-color-warn">
+                        <span class="metric-label">Pinning</span>
+                        <span class="metric-value" id="frKpiActPinning">—</span>
+                        <span class="metric-unit">con primordios</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-card active">
+                <div class="section-header">
+                    <h2>🟢 Bolsas en cultivo</h2>
+                </div>
+                <div class="section-content">
+                    <div class="table-wrap">
+                        <table class="data-table" id="frActivosTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px;text-align:center" title="Seleccionar"></th>
+                                    <th>ID</th>
+                                    <th>GE</th>
+                                    <th>SU</th>
+                                    <th>GR</th>
+                                    <th title="Días desde inicio">Días</th>
+                                    <th>Estado</th>
+                                    <th title="Cantidad de flushes">F#</th>
+                                    <th title="Rendimiento fresco acumulado">Rend.</th>
+                                    <th title="Eficiencia Biológica">BE</th>
+                                    <th title="% bolsas contaminadas en este lote SU">Cont. %</th>
+                                    <th title="Días promedio de colonización en este lote SU">Días Col.</th>
+                                    <th title="Ratio de éxito: colonizadas / (colonizadas + contaminadas) en este lote SU">Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="frActivosBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /#fr-sub-activos -->
+
+        <!-- ============================================ -->
+        <!-- COSECHA (bolsas con ≥1 flush, no archivadas) -->
+        <!-- ============================================ -->
+        <div id="fr-sub-cosecha" class="fr-subpanel">
+
+            <!-- KPIs de cosecha -->
+            <section class="metrics-panel">
+                <div class="metrics-grid">
+                    <div class="metric-card fr-color-ok">
+                        <span class="metric-label">Tiempo promedio</span>
+                        <span class="metric-value" id="frKpiCosechaTime">—</span>
+                        <span class="metric-unit">días hasta cosecha</span>
+                    </div>
+                    <div class="metric-card highlight">
+                        <span class="metric-label">BE promedio</span>
+                        <span class="metric-value" id="frKpiCosechaBE">—</span>
+                        <span class="metric-unit">bolsas en cosecha</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Biomasa seca total</span>
+                        <span class="metric-value" id="frKpiBioSeca">—</span>
+                        <span class="metric-unit">g en el sistema</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Húmeda promedio</span>
+                        <span class="metric-value" id="frKpiCosechaHumeda">—</span>
+                        <span class="metric-unit">g por bolsa</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Seca promedio</span>
+                        <span class="metric-value" id="frKpiCosechaSeca">—</span>
+                        <span class="metric-unit">g por bolsa</span>
+                    </div>
+                    <div class="metric-card fr-color-ok">
+                        <span class="metric-label">Tiempo productivo</span>
+                        <span class="metric-value" id="frKpiDiasProduccion">—</span>
+                        <span class="metric-unit">d promedio por bolsa</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-card active">
+                <div class="section-header">
+                    <h2>🟡 Bolsas en cosecha</h2>
+                    <span class="fr-dash-subtle">Bolsas con al menos 1 oleada registrada y ciclo abierto.</span>
+                </div>
+                <div class="section-content">
+                    <div class="table-wrap">
+                        <table class="data-table" id="frCosechaTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px;text-align:center" title="Seleccionar"></th>
+                                    <th>ID</th>
+                                    <th>GE</th>
+                                    <th>SU</th>
+                                    <th>GR</th>
+                                    <th title="Días desde inicio">Días</th>
+                                    <th>Estado</th>
+                                    <th title="Cantidad de flushes">F#</th>
+                                    <th title="Rendimiento fresco acumulado">Rend.</th>
+                                    <th title="Eficiencia Biológica">BE</th>
+                                    <th title="% bolsas contaminadas en este lote SU">Cont. %</th>
+                                    <th title="Días promedio de colonización en este lote SU">Días Col.</th>
+                                    <th title="Ratio de éxito: colonizadas / (colonizadas + contaminadas) en este lote SU">Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="frCosechaBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div><!-- /#fr-sub-cosecha -->
+
+        <!-- ============================================ -->
+        <!-- ARCHIVO (contaminadas + ciclo cerrado) -->
+        <!-- ============================================ -->
+        <div id="fr-sub-archivo" class="fr-subpanel">
+            <section class="section-card active">
+                <div class="section-header">
+                    <h2>🔴 Archivo de bolsas</h2>
+                    <span class="fr-dash-subtle">Bolsas contaminadas o con ciclo cerrado manualmente.</span>
+                </div>
+                <div class="section-content">
+                    <div class="table-wrap">
+                        <table class="data-table" id="frArchivoTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px;text-align:center" title="Seleccionar"></th>
+                                    <th>ID</th>
+                                    <th>GE</th>
+                                    <th>SU</th>
+                                    <th>GR</th>
+                                    <th>Días</th>
+                                    <th>Estado</th>
+                                    <th>F#</th>
+                                    <th>Rend.</th>
+                                    <th>BE</th>
+                                    <th title="% bolsas contaminadas en este lote SU">Cont. %</th>
+                                    <th title="Días promedio de colonización en este lote SU">Días Col.</th>
+                                    <th title="Ratio de éxito: colonizadas / (colonizadas + contaminadas) en este lote SU">Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="frArchivoBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div><!-- /#fr-sub-archivo -->
+
+        <!-- ============================================ -->
+        <!-- TAB: EXPERIMENTOS                            -->
+        <!-- ============================================ -->
+        <div id="fr-sub-experimentos" class="fr-subpanel">
+            <section class="section-card">
+                <div class="section-content" style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <span id="frExCount" style="font-size:0.85rem;color:var(--text-muted,#888)">— experimentos</span>
+                    <button type="button" class="btn btn-fr" onclick="FR.abrirModalExperimento(null)">🔬 Nuevo experimento</button>
+                </div>
+            </section>
+
+            <!-- ── GUÍA ─────────────────────────────────── -->
+            <section class="section-card">
+                <div class="section-content" style="padding:10px 16px">
+                    <details class="fr-ex-how-guide">
+                        <summary>🧪 ¿Cómo funciona Experimentos?</summary>
+                        <div class="fr-ex-how-body">
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">1</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Un experimento ≠ una bolsa FR.</strong>
+                                    Los experimentos son ensayos a pequeña escala — frascos chicos, contenedores pequeños, pruebas rápidas.
+                                    No generan una bolsa FR automáticamente; son registros independientes con su propia nomenclatura:
+                                    <code>🔬 EX295</code> (día + mes). Si ya existe EX295 en el mismo día, el sistema agrega sufijo: EX295b, EX295c…
+                                    El ID se auto-genera al abrir el modal y es editable antes de guardar.
+                                </div>
+                            </div>
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">2</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Insumos — consumo real de stock.</strong>
+                                    Cada insumo que cargás descuenta del stock en vivo del sistema:<br>
+                                    <span style="color:var(--fr-green,#98c379)">🧫 CI</span> — descuenta placas del cultivo elegido. El stock disponible se muestra en tiempo real en el selector.<br>
+                                    <span style="color:var(--fr-amber,#e5c07b)">🌾 GR</span> — descuenta frascos de la tanda elegida. En el módulo GR esa tanda muestra el chip <code>🔬 EX295</code> y sus disponibles bajan.<br>
+                                    <span style="color:var(--fr-purple,#7f7fd5)">🧱 SU</span> — solo referencia de trazabilidad, no descuenta stock.<br>
+                                    Si editás las cantidades después de guardar, el stock se recalcula automáticamente en el próximo render.
+                                </div>
+                            </div>
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">3</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Base material — trazabilidad sin side effects.</strong>
+                                    Podés vincular el experimento a una bolsa existente como punto de partida:<br>
+                                    <strong>📦 Base Archivo</strong> — una bolsa cerrada, contaminada o con ciclo cerrado que reutilizás como sustrato.<br>
+                                    <strong>🍄 Base Cosechada</strong> — una bolsa activa con flushes que querés re-inocular o usar para otro ensayo.<br>
+                                    La bolsa vinculada <em>no cambia de estado</em> — solo queda registrado el vínculo. Podés tener ambas bases al mismo tiempo.
+                                </div>
+                            </div>
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">4</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Estados del experimento.</strong>
+                                    <span style="background:#1a1a2e;border:1px solid #3a3a5a;color:#888;font-size:0.75rem;padding:1px 6px;border-radius:3px">🔄 En curso</span> — recién creado o en observación.
+                                    <span style="background:#1a2a1a;border:1px solid #2d4a2d;color:#98c379;font-size:0.75rem;padding:1px 6px;border-radius:3px">✅ Exitoso</span> — resultado favorable, candidato a escalar.
+                                    <span style="background:#2a1a1a;border:1px solid #5a2a2a;color:#e06c75;font-size:0.75rem;padding:1px 6px;border-radius:3px">❌ Descartado</span> — resultado negativo o sin continuidad.<br>
+                                    Los estados se cambian desde el panel de detalle del experimento. Eliminarlo libera el stock consumido.
+                                </div>
+                            </div>
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">5</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Fecha fin y duración.</strong>
+                                    La columna <em>Fin / Días</em> en la tabla tiene un input de fecha/hora editable directamente — clickeá la celda sin seleccionar la fila.
+                                    Cuando completás Fecha fin, el sistema calcula automáticamente cuántos días duró el experimento.
+                                    Mientras no tiene Fecha fin, muestra los días transcurridos en curso (≈N días).
+                                </div>
+                            </div>
+
+                            <div class="fr-ex-how-step">
+                                <div class="fr-ex-how-num">6</div>
+                                <div class="fr-ex-how-text">
+                                    <strong>Escalar un experimento exitoso.</strong>
+                                    El sistema <em>no crea el lote SU automáticamente</em> — el escalado es manual y deliberado.
+                                    Cuando un experimento da resultado positivo: marcalo como ✅ Exitoso, luego andá al módulo SU y creá el lote nuevo.
+                                    En las notas del lote SU podés referenciar el ID del experimento (<code>EX295</code>) para mantener la trazabilidad histórica de por qué escalaste ese ensayo.
+                                </div>
+                            </div>
+
+                        </div>
+                    </details>
+                </div>
+            </section>
+            <!-- ── FIN GUÍA ──────────────────────────────── -->
+
+            <section class="section-card">
+                <div class="section-content" style="padding:0">
+                    <div id="frExLista"></div>
+                </div>
+            </section>
+            <div id="frExDetalle"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- TAB: INTELIGENCIA FR·CAL                     -->
+        <!-- ============================================ -->
+        <div id="fr-sub-intel" class="fr-subpanel">
+            <div id="frCalIntelContent" style="padding:16px;"></div>
+        </div>
+
+    </div><!-- /.app-container -->
+
+    <!-- ============================================ -->
+    <!-- MODAL: BOLSA HUÉRFANA                        -->
+    <!-- ============================================ -->
+    <div id="frModalHuerfana" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center">
+        <div style="background:var(--dark-2,#1e1e2e);border-radius:12px;padding:28px 24px;width:500px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+            <h3 style="margin:0 0 18px;font-size:1.1rem;">➕ Cargar bolsa huérfana</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted,#888);margin:0 0 16px;">Bolsa del lab sin trazabilidad completa SU→GR. Funciona igual que cualquier bolsa: dashboard, flushes, BE, observaciones.</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="frHId">ID bolsa *</label>
+                    <input type="text" id="frHId" class="fr-dash-input" placeholder="ej: FR234">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1 1 100%">
+                    <label for="frHGeneticaSelect">Genética (desde GE)</label>
+                    <select id="frHGeneticaSelect" class="fr-dash-input" onchange="FR.huerfanaOnGeneticaSelect()">
+                        <option value="">— Seleccionar —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex:1 1 100%">
+                    <label for="frHGeneticaFull">Genética (texto libre)</label>
+                    <input type="text" id="frHGeneticaFull" class="fr-dash-input" placeholder="Especie / Cepa / Fenotipo">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="frHSuLoteId">Lote SU <span class="fr-opt">(opcional)</span></label>
+                    <input type="text" id="frHSuLoteId" class="fr-dash-input" placeholder="ej: SU-001">
+                </div>
+                <div class="form-group">
+                    <label for="frHGrLoteId">Lote GR <span class="fr-opt">(opcional)</span></label>
+                    <input type="text" id="frHGrLoteId" class="fr-dash-input" placeholder="ej: GR-003">
+                </div>
+                <div class="form-group">
+                    <label for="frHGrTandaId">Tanda GR <span class="fr-opt">(opcional)</span></label>
+                    <input type="text" id="frHGrTandaId" class="fr-dash-input" placeholder="ej: T1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="frHFechaInicio">Fecha inicio</label>
+                    <input type="date" id="frHFechaInicio" class="fr-dash-input">
+                </div>
+                <div class="form-group">
+                    <label for="frHFechaColon">Fecha colonización <span class="fr-opt">(opcional)</span></label>
+                    <input type="date" id="frHFechaColon" class="fr-dash-input">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="frHPesoSustratoSeco">Sustrato seco/bolsa (g) *</label>
+                    <input type="number" id="frHPesoSustratoSeco" class="fr-dash-input" step="0.1" placeholder="ej: 500">
+                </div>
+                <div class="form-group">
+                    <label for="frHPesoHidratado">Peso hidratado/bolsa (g) <span class="fr-opt">(opc.)</span></label>
+                    <input type="number" id="frHPesoHidratado" class="fr-dash-input" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="frHGranoPorBolsa">Grano/bolsa (g) <span class="fr-opt">(opc.)</span></label>
+                    <input type="number" id="frHGranoPorBolsa" class="fr-dash-input" step="0.1">
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:20px">
+                <button type="button" class="btn btn-fr" onclick="FR.guardarHuerfana()">✅ Guardar bolsa</button>
+                <button type="button" class="btn btn-secondary" onclick="FR.cerrarModalHuerfana()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: EXPERIMENTO (crear / editar)          -->
+    <!-- ============================================ -->
+    <div id="frModalExperimento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center">
+        <div style="background:var(--dark-2,#1e1e2e);border-radius:12px;padding:24px;width:740px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);box-sizing:border-box">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+                <h3 id="frExModalTitle" style="margin:0;font-size:1.05rem;">🔬 Nuevo experimento</h3>
+                <button type="button" onclick="FR.cerrarModalExperimento()" style="background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;padding:0">✕</button>
+            </div>
+            <input type="hidden" id="frExUuid" value="">
+
+            <!-- ─── COLUMNAS: Identidad | Insumos ─── -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
+
+                <!-- Izquierda: identidad -->
+                <div style="min-width:0;display:flex;flex-direction:column;gap:10px">
+                    <div style="color:#555;font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Identidad</div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0">
+                        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                            <label for="frExId" class="fr-ex-field-label">ID *</label>
+                            <input type="text" id="frExId" class="fr-dash-input" style="width:100%;box-sizing:border-box" placeholder="EX285">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                            <label for="frExFecha" class="fr-ex-field-label">Fecha inicio</label>
+                            <input type="datetime-local" id="frExFecha" class="fr-dash-input" style="width:100%;box-sizing:border-box">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                        <label for="frExFechaFin" class="fr-ex-field-label">Fecha fin <span class="fr-opt">(opcional)</span></label>
+                        <input type="datetime-local" id="frExFechaFin" class="fr-dash-input" style="width:100%;box-sizing:border-box">
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                        <label for="frExGeneticaSelect" class="fr-ex-field-label">Genética (desde GE)</label>
+                        <select id="frExGeneticaSelect" class="fr-dash-input" style="width:100%;box-sizing:border-box" onchange="FR.exOnGeneticaSelect()">
+                            <option value="">— Seleccionar —</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                        <label for="frExGeneticaFull" class="fr-ex-field-label">Texto libre</label>
+                        <input type="text" id="frExGeneticaFull" class="fr-dash-input" style="width:100%;box-sizing:border-box" placeholder="Especie / Cepa / Fenotipo" data-autofill="auto" oninput="this.dataset.autofill=''">
+                    </div>
+                </div>
+
+                <!-- Derecha: insumos -->
+                <div style="min-width:0;background:#0a0a14;border:1px solid #2a2a3e;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px">
+                    <div style="color:#555;font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600">⚗️ Insumos <span style="font-size:0.65rem;color:#3a3a5a;text-transform:none;font-weight:400">(opcional)</span></div>
+
+                    <!-- CI -->
+                    <div style="border:1px solid #1a2a1a;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:7px">
+                        <div style="color:#98c379;font-size:0.78rem;font-weight:600">🧫 Cultivo CI</div>
+                        <select id="frExCiSelect" class="fr-dash-input" style="width:100%;box-sizing:border-box" onchange="FR.exOnCiSelect()">
+                            <option value="">— Ninguno —</option>
+                        </select>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" id="frExCiCantidad" class="fr-dash-input" style="width:72px;box-sizing:border-box;flex-shrink:0" min="0" step="1" placeholder="cant." oninput="FR.exActualizarDispCI()">
+                            <span id="frExCiDisp" style="font-size:0.78rem;color:#888;white-space:nowrap">— disp.</span>
+                        </div>
+                    </div>
+
+                    <!-- GR -->
+                    <div style="border:1px solid #2a1a0a;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:7px">
+                        <div style="color:#e5c07b;font-size:0.78rem;font-weight:600">🌾 Grano GR</div>
+                        <select id="frExGrLoteSelect" class="fr-dash-input" style="width:100%;box-sizing:border-box" onchange="FR.exOnGrLoteSelect()">
+                            <option value="">— Lote —</option>
+                        </select>
+                        <select id="frExGrTandaSelect" class="fr-dash-input" style="width:100%;box-sizing:border-box" onchange="FR.exActualizarDispGR()">
+                            <option value="">— Tanda —</option>
+                        </select>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="number" id="frExGrCantidad" class="fr-dash-input" style="width:72px;box-sizing:border-box;flex-shrink:0" min="0.1" step="0.1" placeholder="cant." oninput="FR.exActualizarDispGR()">
+                            <span id="frExGrDisp" style="font-size:0.78rem;color:#888;white-space:nowrap">— disp.</span>
+                        </div>
+                    </div>
+
+                    <!-- SU -->
+                    <div style="border:1px solid #1a1a2e;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:7px">
+                        <div style="color:#7f7fd5;font-size:0.78rem;font-weight:600">🧱 Sustrato SU <span style="color:#555;font-weight:400;font-size:0.7rem">solo referencia</span></div>
+                        <select id="frExSuSelect" class="fr-dash-input" style="width:100%;box-sizing:border-box">
+                            <option value="">— Ninguno —</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── BASE MATERIAL ─── -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;min-width:0">
+                <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                    <label for="frExBase" class="fr-ex-field-label">📦 Base Archivo <span class="fr-opt">(opcional)</span></label>
+                    <select id="frExBase" class="fr-dash-input" style="width:100%;box-sizing:border-box">
+                        <option value="">— Sin base archivada —</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                    <label for="frExBaseC" class="fr-ex-field-label">🍄 Base Cosechada <span class="fr-opt">(opcional)</span></label>
+                    <select id="frExBaseC" class="fr-dash-input" style="width:100%;box-sizing:border-box">
+                        <option value="">— Sin base cosechada —</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ─── NOTAS ─── -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;min-width:0">
+                <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                    <label for="frExHipotesis" class="fr-ex-field-label">Hipótesis / Objetivo</label>
+                    <textarea id="frExHipotesis" class="fr-dash-input" rows="3" style="width:100%;box-sizing:border-box;resize:vertical" placeholder="¿Qué querés probar?"></textarea>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                    <label for="frExResultado" class="fr-ex-field-label">Resultado <span class="fr-opt">(completar después)</span></label>
+                    <textarea id="frExResultado" class="fr-dash-input" rows="3" style="width:100%;box-sizing:border-box;resize:vertical" placeholder="¿Qué observaste?"></textarea>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px">
+                <button type="button" class="btn btn-fr" onclick="FR.guardarExperimento()">✅ Guardar experimento</button>
+                <button type="button" class="btn btn-secondary" onclick="FR.cerrarModalExperimento()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .fr-chip-huerfana { background:#7b5ea7; color:#fff; font-size:0.68rem; padding:1px 5px; border-radius:4px; margin-left:4px; vertical-align:middle; }
+        .btn-danger { background:#c00; color:#fff; border:none; }
+        .btn-danger:hover { background:#e00; }
+    </style>
+
+    <script src="fr_app.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<link rel="stylesheet" href="../main.css">
+<link rel="stylesheet" href="cfg_styles.css">
+
+<div class="cfg-root">
+
+  <div class="panel active" id="tab-cfg">
+    <div class="module-header cfg">
+      <h1>⚙️ CFG - Configuración</h1>
+      <p>Parámetros globales, sync y administración del sistema</p>
+    </div>
+
+    <div class="card">
+      <div class="ct ac">&#9729; GitHub Sync</div>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:8px">Guardá y sincronizá tus datos en GitHub. El token se guarda solo en este dispositivo (localStorage).</p>
+
+      <div class="fr3 mb12">
+        <div class="fg"><label>GitHub Token (PAT)</label><input type="password" id="gh-token" placeholder="ghp_..."></div>
+        <div class="fg"><label>Usuario / Repo</label><input type="text" id="gh-repo" placeholder="fungiabduction-ui/BIOLAB-DATA"></div>
+        <div class="fg"><label>Archivo de datos</label><input type="text" id="gh-file" value="biolab-data.json"></div>
+      </div>
+      <p style="font-size:11px;color:var(--tx3);margin-bottom:8px">⚠ Usá el repo de <b>DATOS</b> (privado) — no el del código de la app.</p>
+      <div class="btn-row mb12">
+        <button class="btn btn-p" onclick="ghSaveCfg()">&#128273; Guardar configuración</button>
+        <button class="btn btn-s" onclick="ghTest()">&#128268; Probar conexión</button>
+      </div>
+      <div id="gh-status-box" class="rbox mb12" style="display:none"></div>
+      <div class="sdiv">Backup local</div>
+      <p style="font-size:12px;color:var(--tx3);margin-bottom:8px">Exportá todos tus datos como JSON o importalos desde un backup previo.</p>
+      <div class="btn-row mb12">
+        <button class="btn btn-s" onclick="localExport()">⬇ Exportar JSON local</button>
+        <button class="btn btn-s" onclick="document.getElementById('local-import-file').click()">⬆ Importar JSON local</button>
+        <input type="file" id="local-import-file" accept=".json" style="display:none" onchange="localImport(this)">
+      </div>
+      <div class="sdiv">GitHub Sync</div>
+      <div class="btn-row mb8">
+        <button class="btn btn-wn" onclick="ghPush()">&#11014; Guardar en GitHub</button>
+        <button class="btn btn-s" onclick="ghPull()">&#11015; Cargar desde GitHub</button>
+      </div>
+      <div id="gh-last" style="font-size:12px;color:var(--tx3);margin-bottom:12px"></div>
+      <div class="sdiv">Backup de seguridad (inmutable por fecha)</div>
+      <p style="font-size:12px;color:var(--tx3);margin-bottom:8px">Se guarda en <code>backups/</code> con fecha — nunca se sobreescribe. Usalo antes de cambios importantes.</p>
+      <div class="btn-row mb8">
+        <button class="btn btn-s" onclick="ghBackup()">&#128274; Guardar backup ahora</button>
+        <button class="btn btn-s" onclick="ghListBackups()">&#128203; Ver backups</button>
+      </div>
+      <div id="gh-bk-list" style="display:none;margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <div class="ct er">💾 Datos</div>
+      <div class="btn-row mb12">
+        <button class="btn btn-s" onclick="exportData()">↓ Exportar JSON</button>
+        <button class="btn btn-s" onclick="document.getElementById('imp-file').click()">↑ Importar JSON</button>
+        <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
+        <button class="btn btn-d" onclick="resetSystem()">✕ Reset datos</button>
+        <button class="btn btn-d" onclick="hardReset()" title="Borra datos + caché del navegador + Service Workers. Recarga la página.">🧹 Hard Reset + Caché</button>
+      </div>
+
+      <div class="sdiv">Backup Global del Sistema</div>
+      <div class="cfg-backup">
+        <button class="btn btn-s" onclick="exportAll()">💾 Exportar sistema completo</button>
+        <button class="btn btn-s" onclick="document.getElementById('importFileGlobal').click()">📂 Importar sistema completo</button>
+        <input type="file" id="importFileGlobal" style="display:none" onchange="importAll(this.files[0])">
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES usados por CFG -->
+
+  <div class="modal-overlay" id="m-frm-detail">
+    <div class="modal pur-modal" style="max-width:600px">
+      <div class="mtit pur">Detalle de Fórmula</div>
+      <div id="m-frm-detail-content"></div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-s" onclick="closeM('m-frm-detail')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="notif" id="notif"></div>
+
+</div>
+
+<script src="cfg_app.js"></script>
