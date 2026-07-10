@@ -480,7 +480,6 @@ GR.init = function initGR() {
         actualizarSelectoresGenetica();
 
         setTimeout(function() {
-            GR.calcularDG();
             actualizarTotalesCT();
             grActualizarTotalesGenetica();
             updateUnidadFisica();
@@ -2449,28 +2448,6 @@ window.grEliminarRegistro = grEliminarRegistro;
             document.getElementById('panel-' + this.dataset.tab).classList.add('active');
         });
     });
-
-    // ==========================================
-    // DG - DISTRIBUCIÓN DE GRANO
-    // ==========================================
-
-    GR.calcularDG = window.calcularDG = function() {
-        const capacidad = document.getElementById('dgCapacidad');
-        const llenado = document.getElementById('dgLlenado');
-        const dgHeadspace = document.getElementById('dgHeadspace');
-        const dgOxigeno = document.getElementById('dgOxigeno');
-        
-        if (!capacidad || !llenado || !dgHeadspace || !dgOxigeno) return;
-        
-        const capacidadVal = parseFloat(capacidad.value) || 0;
-        const llenadoVal = parseFloat(llenado.value) || 0;
-        const headspace = capacidadVal - llenadoVal;
-        // oxígeno % frasco = headspace / capacidadTotal * 100
-        const oxigeno = capacidadVal > 0 ? (headspace / capacidadVal) * 100 : 0;
-        
-        dgHeadspace.textContent = headspace.toFixed(0);
-        dgOxigeno.textContent = oxigeno.toFixed(1);
-    };
 
     // ==========================================
     // GENÉTICA - Cargar desde GE via window.ge.getSelectableGenetics()
