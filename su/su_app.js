@@ -119,7 +119,6 @@ window.SU.init = function suInit() {
             _loteIdInitEl.value = suGenerarId(_loteFechaInitEl.value);
         }
     } catch (e) { console.warn('SU.init generarId:', e); }
-    try { renderizarBiblioteca(); }        catch (e) { console.warn('SU.init renderBib:', e); }
     try { renderizarRegistroLotes(); }     catch (e) { console.warn('SU.init renderReg:', e); }
     try { suReRenderNotas(); }             catch (e) { console.warn('SU.init notas:', e); }
     try { cargarLoteDesdeBiblioteca(); }   catch (e) { console.warn('SU.init biblioteca:', e); }
@@ -508,65 +507,6 @@ function cargarBibliotecaDesdeStorage() {
 
 function guardarBiblioteca() {
     localStorage.setItem(SU_BIBLIOTECA_KEY, JSON.stringify(biblioteca));
-}
-
-function renderizarBiblioteca() {
-    const tbody = document.getElementById('bibliotecaTable');
-    if (!tbody) return;
-    
-    if (!biblioteca.materiales.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin materiales registrados</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = biblioteca.materiales.map(m => `
-        <tr>
-            <td>${m.id}</td>
-            <td>${m.nombre}</td>
-            <td>${m.tipo}</td>
-            <td>${m.estado}</td>
-            <td>${m.notas || '-'}</td>
-            <td><button class="btn-remove" onclick="eliminarMaterial('${m.id}')">✕</button></td>
-        </tr>
-    `).join('');
-}
-
-function agregarMaterial() {
-    const nombre = document.getElementById('matNombre').value.trim();
-    const tipo = document.getElementById('matTipo').value;
-    const estado = document.getElementById('matEstado').value;
-    const notas = document.getElementById('matNotas').value.trim();
-    
-    if (!nombre) {
-        alert('Ingrese el nombre del material');
-        return;
-    }
-    
-    const nuevo = {
-        id: 'MAT-' + String(biblioteca.materiales.length + 1).padStart(2, '0'),
-        nombre,
-        tipo,
-        estado,
-        notas
-    };
-    
-    biblioteca.materiales.push(nuevo);
-    guardarBiblioteca();
-    renderizarBiblioteca();
-    
-    // Limpiar formulario
-    document.getElementById('matNombre').value = '';
-    document.getElementById('matNotas').value = '';
-    
-    alert('Material agregado');
-}
-
-function eliminarMaterial(id) {
-    if (!confirm('¿Eliminar este material?')) return;
-    
-    biblioteca.materiales = biblioteca.materiales.filter(m => m.id !== id);
-    guardarBiblioteca();
-    renderizarBiblioteca();
 }
 
 // ==========================================
@@ -1445,9 +1385,8 @@ function importarJSON(event) {
                         }
                     });
                     guardarBiblioteca();
-                    renderizarBiblioteca();
                 }
-                
+
                 // Importar registros
                 let nuevosReg = 0;
                 if (Array.isArray(data.registros)) {
@@ -1633,7 +1572,6 @@ function importarMaterialesDesdeJSON() {
                         }
                     });
                     guardarBiblioteca();
-                    renderizarBiblioteca();
                     alert('Materiales importados: ' + data.length);
                 }
             } catch(err) {
@@ -3289,9 +3227,6 @@ Object.assign(window, {
     importarExcel,
     importarMaterialesDesdeJSON,
     importarRegistrosDesdeJSON,
-    // Biblioteca de materiales
-    agregarMaterial,
-    eliminarMaterial,
     // Registros de lotes
     cargarRegistro,
     eliminarRegistro,
