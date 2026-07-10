@@ -1994,7 +1994,7 @@ window.grEliminarRegistro = grEliminarRegistro;
 
             // [Fase 4] Resolver source CI vs GE desde el value del select
             const inoc = (typeof _grResolverInoculo === 'function') ? _grResolverInoculo(rawSelValue) : null;
-            let inoculoSource = null;
+            let inoculoSource = 'LEGACY';
             let cultivoCiId = null;
             let fenId = null;
             let geneticaNombre = null;
@@ -2034,7 +2034,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                 frascos: frascos,
                 fen_id: fenId,
                 genetica: geneticaNombre,
-                inoculoSource: inoculoSource,   // [Fase 4] 'CI' | 'GE' | null
+                inoculoSource: inoculoSource,   // [Fase 4] 'CI' | 'GE' | 'LEGACY'
                 cultivoCiId: cultivoCiId,        // [Fase 4] presente solo si inoculoSource === 'CI'
                 formulaNombre: formulaNombreCi,  // nombre de fórmula CI (trazabilidad display)
                 placasUsadas: placasUsadas,      // [Fase 4 patch²] universal (CI + GE)
@@ -3739,11 +3739,13 @@ window.grEliminarSeguimientoNota = function(index) {
 // MIGRACIÓN inoculoSource null → 'LEGACY'
 // ==========================================
     function _migrarInoculoSourceNull() {
+        var MIGRACION_INOCULO_KEY = 'biolab_migracion_gr_inoculo_source_v1';
         try {
+            if (localStorage.getItem(MIGRACION_INOCULO_KEY) === '1') return;
             var raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
+            if (!raw) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
             var lotes = JSON.parse(raw);
-            if (!Array.isArray(lotes)) return;
+            if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_INOCULO_KEY, '1'); return; }
             var cambiados = 0;
             lotes.forEach(function(lote) {
                 if (!Array.isArray(lote.dg)) return;
@@ -3758,6 +3760,7 @@ window.grEliminarSeguimientoNota = function(index) {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lotes));
                 console.log('[GR] Migración inoculoSource: ' + cambiados + ' registros actualizados a LEGACY');
             }
+            localStorage.setItem(MIGRACION_INOCULO_KEY, '1');
         } catch(e) {
             console.error('[GR] Error en migración inoculoSource:', e);
         }
