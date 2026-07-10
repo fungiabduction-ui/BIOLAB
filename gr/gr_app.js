@@ -4294,6 +4294,7 @@ function grInit() {
 window.grInit       = grInit;
 window.addCtRow     = (typeof addCtRow === 'function') ? addCtRow : window.addCtRow;
 window.importarJSON = (typeof importarJSON === 'function') ? importarJSON : window.importarJSON;
+window.actualizarTotalesCT = (typeof actualizarTotalesCT === 'function') ? actualizarTotalesCT : window.actualizarTotalesCT;
 
 // ==========================================
 // LIMPIEZA PROFUNDA — Elimina lotes inválidos de localStorage
