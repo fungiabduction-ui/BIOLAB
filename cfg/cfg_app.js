@@ -87,7 +87,7 @@
 
   /* ── Backup / Restore local ── */
   function localExport() {
-    const data = bkCollectAll();
+    const data = bkCollectAll({ skipGh: true });
     data._exported = new Date().toISOString();
     data._keys = Object.keys(data).filter(k => !k.startsWith('_'));
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -472,6 +472,7 @@
     const backup = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
+      if (key === K.gh) continue; // nunca incluir el token de GitHub en un backup
       backup[key] = localStorage.getItem(key);
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -494,6 +495,17 @@
     reader.onload = function (e) {
       try {
         const data = JSON.parse(e.target.result);
+        // Validación mínima antes de un wipe destructivo: un archivo cualquiera
+        // (JSON válido pero ajeno a BioLab) no debe poder vaciar todo el sistema.
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          sN('Archivo inválido: se esperaba un backup de BioLab (objeto JSON).', true);
+          return;
+        }
+        const pareceBackupBiolab = Object.keys(data).some(k => BK_PREFIXES.some(p => k.startsWith(p)));
+        if (!pareceBackupBiolab) {
+          sN('Archivo inválido: no contiene ninguna key reconocible de BioLab. No se modificó nada.', true);
+          return;
+        }
         if (confirm('Esto sobreescribirá TODO el sistema. ¿Continuar?')) {
           localStorage.clear();
           for (const key in data) {
