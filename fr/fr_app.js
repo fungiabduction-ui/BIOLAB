@@ -580,9 +580,15 @@
                     var exBolsa = (uuidKey && existMapUuid[uuidKey]) || existMapLote[loteKey] || null;
 
                     if (exBolsa && suUuid && exBolsa.suLoteId !== lote.id) {
-                        exBolsa.suLoteId = lote.id;
-                        exBolsa._suUuid  = suUuid;
-                        res.colonizacionSync++;
+                        // SOLO en bolsas pendientes — mismo gate que los 4 campos de abajo.
+                        // Code review de la sesión 2026-07-10 encontró este bloque sin el gate
+                        // que sí se agregó ahí (commit 3b1509a): mismo riesgo de reescribir
+                        // trazabilidad de una bolsa ya sellada si SU reasigna/dedupe su id/_uuid.
+                        if (esPendiente(exBolsa)) {
+                            exBolsa.suLoteId = lote.id;
+                            exBolsa._suUuid  = suUuid;
+                            res.colonizacionSync++;
+                        }
                     }
 
                     if (exBolsa) {
