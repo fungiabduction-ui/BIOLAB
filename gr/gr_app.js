@@ -3178,11 +3178,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         row.querySelector('.dg-conc').value = conc.toFixed(3);
     };
 
-    // Legacy functions (deprecated but kept for compatibility)
-    GR.agregarAgente = window.agregarAgente = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.agregarAditivo = window.agregarAditivo = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.agregarGrano = window.agregarGrano = function() { alert('Use la sección Config para agregar ingredientes'); };
-    GR.eliminarIngrediente = window.eliminarIngrediente = function() { alert('Use la sección Config para eliminar ingredientes'); };
     function renderizarBiblioteca() { renderizarBibliotecaEnConfig(); }
 
     // ==========================================
