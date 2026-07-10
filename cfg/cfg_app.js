@@ -134,11 +134,52 @@
     reader.readAsText(file);
   }
 
-  function resetSystem() {
-    if (!confirm('¿RESET COMPLETO? Se borrarán TODOS los datos de TODOS los módulos.')) return;
-    bkAllKeys().forEach(key => localStorage.removeItem(key));
-    localStorage.removeItem('bl2_seeded');
-    sN('Sistema reseteado');
+  /* ============================================================
+     LIMPIAR CACHÉ — purga caché del navegador + SW SIN tocar datos.
+     Pensado para forzar que el navegador (ej. Safari/iPhone, que no
+     tiene un "hard refresh" fácil) baje los archivos nuevos sin
+     tener que exportar/reimportar el sistema.
+     ============================================================ */
+  async function clearCacheOnly() {
+    if (!confirm(
+      '🧹 Limpiar caché\n\n' +
+      'Esto borra la caché del navegador y los Service Workers\n' +
+      'para forzar que baje la versión más nueva de la app.\n\n' +
+      'Tus datos (bl2_*, etc.) NO se tocan.\n\n' +
+      'La página se recargará automáticamente.\n\n' +
+      '¿Continuar?'
+    )) return;
+
+    sN('🧹 Limpiando caché... no cerrés la ventana');
+
+    // Nuevo token de cache-busting — main.js lo toma al iniciar
+    const newToken = Date.now().toString(36);
+    try { localStorage.setItem('biolab.cv', newToken); } catch (_) {}
+
+    // Purgar Cache API
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log(`[BIOLAB] clearCacheOnly: ${keys.length} cache(s) purgados`);
+      }
+    } catch (err) {
+      console.warn('[BIOLAB] clearCacheOnly: no se pudo purgar Cache API:', err);
+    }
+
+    // Des-registrar Service Workers
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+        console.log(`[BIOLAB] clearCacheOnly: ${regs.length} SW des-registrado(s)`);
+      }
+    } catch (err) {
+      console.warn('[BIOLAB] clearCacheOnly: no se pudo des-registrar SW:', err);
+    }
+
+    console.log(`[BIOLAB] clearCacheOnly completo — token nuevo: ${newToken}`);
+    setTimeout(() => location.reload(true), 600);
   }
 
   /* ============================================================
@@ -150,7 +191,7 @@
    * Reseteo completo de datos Y caché del navegador.
    *
    * Secuencia:
-   *   1. Borra todos los datos de localStorage (igual que resetSystem).
+   *   1. Borra todos los datos de localStorage (todas las keys de bkAllKeys()).
    *   2. Genera un nuevo token de cache-busting y lo guarda en LS
    *      (biolab.cv) — main.js lo leerá en el próximo arranque.
    *   3. Purga todas las entradas de Cache API (caches.keys / cache.delete).
@@ -486,6 +527,7 @@
      Solo lo que la UI (onclick/oninput) o main.js necesitan.
      ============================================================ */
   window.cfgInit        = cfgInit;
+  window.clearCacheOnly = clearCacheOnly;
   window.closeM         = closeM;
   window.exportAll      = exportAll;
   window.exportData     = exportData;
@@ -501,7 +543,6 @@
   window.importData     = importData;
   window.localExport    = localExport;
   window.localImport    = localImport;
-  window.resetSystem    = resetSystem;
 
   window.onModuleUnload = function () {
   };

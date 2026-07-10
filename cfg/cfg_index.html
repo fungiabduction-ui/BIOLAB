@@ -52,7 +52,7 @@
         <button class="btn btn-s" onclick="exportData()">↓ Exportar JSON</button>
         <button class="btn btn-s" onclick="document.getElementById('imp-file').click()">↑ Importar JSON</button>
         <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
-        <button class="btn btn-d" onclick="resetSystem()">✕ Reset datos</button>
+        <button class="btn btn-s" onclick="clearCacheOnly()" title="Purga la caché del navegador y los Service Workers sin tocar tus datos. Recarga la página.">🧹 Caché</button>
         <button class="btn btn-d" onclick="hardReset()" title="Borra datos + caché del navegador + Service Workers. Recarga la página.">🧹 Hard Reset + Caché</button>
       </div>
 
