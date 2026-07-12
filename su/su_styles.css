@@ -32,6 +32,18 @@
     box-sizing: border-box;
 }
 
+/* Las reglas de fondo/color en los selects de este archivo solo pintan la
+   caja cerrada del <select> — el navegador renderiza el popup desplegado
+   con el estilo propio de cada <option>, que sin esta regla usa el fondo
+   blanco nativo del SO (texto claro sobre blanco = ilegible). Mismo
+   patrón ya usado en ci/ci_styles.css. Corregido 2026-07-10 (reportado
+   en los selects de Protocolo GR/Tanda GR de "📦 DB - Distribución de
+   Bolsas", pero el mismo bug afectaba a todos los <select> del módulo). */
+select option {
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: var(--dark);

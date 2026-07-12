@@ -25,6 +25,16 @@
     box-sizing: border-box;
 }
 
+/* Los selects con fondo oscuro custom de este archivo solo pintan la caja
+   cerrada — el popup desplegado usa el estilo propio de cada <option>,
+   que sin esta regla cae al fondo blanco nativo del SO (texto claro
+   sobre blanco = ilegible). Mismo bug encontrado y corregido en SU
+   (2026-07-10), mismo fix acá. */
+select option {
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: var(--dark);
