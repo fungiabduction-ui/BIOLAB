@@ -70,6 +70,47 @@ let _suLoteCargado = false;
 
 // (sort dinámico eliminado — cards ordenan por fecha desc)
 
+// Estadísticas de Eficiencia Biológica (BE) de una bolsa FR — solo lectura, no
+// calcula nada que FR no haya calculado y persistido ya (flush.beOleada/pesoHumedo).
+// Devuelve null si no hay bolsa o no tiene pesoSustratoSeco válido para dividir.
+// Una bolsa sin cosechas devuelve beTotal:0 (cuenta como 0% en agregados de lote).
+function _suBolsaBE(frB) {
+    if (!frB) return null;
+    var pss = parseFloat(frB.pesoSustratoSeco) || 0;
+    if (pss <= 0) return null;
+    var flushes = Array.isArray(frB.flushes) ? frB.flushes : [];
+    var pesoHumedoTotal = flushes.reduce(function(a, f) { return a + (parseFloat(f.pesoHumedo) || 0); }, 0);
+    var beTotal = flushes.reduce(function(a, f) { return a + (parseFloat(f.beOleada) || 0); }, 0);
+    return { pesoHumedoTotal: pesoHumedoTotal, pesoSustratoSeco: pss, beTotal: beTotal, cosechas: flushes.length };
+}
+
+// BE agregado de un lote SU completo, para ordenar el Registro. Recorre todas las
+// bolsas FR vinculadas (_suGetFRMap) y combina sus estadísticas (_suBolsaBE).
+// Devuelve null si ninguna bolsa del lote tiene dato utilizable — esos lotes van
+// al final de la lista cuando se ordena por BE, en cualquiera de los dos modos.
+function _suLoteBEStats(lote) {
+    var frMap = _suGetFRMap(lote);
+    var sumHumedo = 0, sumSeco = 0, mejorBE = null, tieneDato = false;
+    Object.keys(frMap).forEach(function(k) {
+        var stats = _suBolsaBE(frMap[k]);
+        if (!stats) return;
+        tieneDato = true;
+        sumHumedo += stats.pesoHumedoTotal;
+        sumSeco += stats.pesoSustratoSeco;
+        if (mejorBE === null || stats.beTotal > mejorBE) mejorBE = stats.beTotal;
+    });
+    if (!tieneDato || sumSeco <= 0) return null;
+    return { beProm: (sumHumedo / sumSeco) * 100, beMejor: mejorBE };
+}
+
+// Modo de orden del Registro de Lotes — 'fecha' (default) | 'beProm' | 'beMejor'.
+// No persiste entre recargas a propósito (ver spec).
+let _suRegSortMode = 'fecha';
+function suSetRegSortMode(mode) {
+    _suRegSortMode = mode;
+    renderizarRegistroLotes();
+}
+
 // Lee fr_bolsas y devuelve { suBolsaIndex → bolsa FR } para este lote SU.
 // Match canónico: suLoteId === lote.id + suBolsaIndex === índice de sub-fila en lote.db
 function _suGetFRMap(lote) {
@@ -996,11 +1037,24 @@ function renderizarRegistroLotes() {
 
     noLotesMsg.style.display = 'none';
 
-    // Ordenar por fecha desc
-    const lotesOrdenados = [...lotesData].sort(function(a, b) {
-        var va = a.fecha || '', vb = b.fecha || '';
-        return vb < va ? -1 : vb > va ? 1 : 0;
-    });
+    // Orden por fecha desc (default) o por BE agregado del lote (mejor primero).
+    // Lotes sin dato de BE utilizable van siempre al final en los modos beProm/beMejor.
+    var lotesOrdenados;
+    if (_suRegSortMode === 'beProm' || _suRegSortMode === 'beMejor') {
+        var beField = _suRegSortMode === 'beProm' ? 'beProm' : 'beMejor';
+        lotesOrdenados = [...lotesData].sort(function(a, b) {
+            var sa = _suLoteBEStats(a), sb = _suLoteBEStats(b);
+            if (!sa && !sb) return 0;
+            if (!sa) return 1;
+            if (!sb) return -1;
+            return sb[beField] - sa[beField];
+        });
+    } else {
+        lotesOrdenados = [...lotesData].sort(function(a, b) {
+            var va = a.fecha || '', vb = b.fecha || '';
+            return vb < va ? -1 : vb > va ? 1 : 0;
+        });
+    }
 
     // Mapa GR para genética en sub-filas
     var grMap = {};
@@ -1097,19 +1151,21 @@ function renderizarRegistroLotes() {
                 : `<span class="su-kchip su-kchip-dim">—</span>`;
 
             // Estado de Eficiencia Biológica (BE) de la bolsa vinculada — solo lectura de
-            // fr_bolsas, no se calcula ni persiste nada nuevo acá. beOleada ya viene
-            // calculado y guardado por FR por cada cosecha (fr_app.js:beOleada/beAcumulado).
+            // fr_bolsas, no se calcula ni persiste nada nuevo acá. _suBolsaBE reusa
+            // beOleada/pesoHumedo ya calculados y guardados por FR por cada cosecha.
             var beRowHtml = '';
             if (frB) {
-                var flushes = Array.isArray(frB.flushes) ? frB.flushes : [];
-                if (flushes.length > 0) {
-                    var beTotal = flushes.reduce(function(a, f) { return a + (parseFloat(f.beOleada) || 0); }, 0);
-                    var beCls = beTotal >= 150 ? 'su-be-dot--good' : (beTotal >= 100 ? 'su-be-dot--warn' : 'su-be-dot--bad');
-                    beRowHtml = `
+                var flushesFr = Array.isArray(frB.flushes) ? frB.flushes : [];
+                if (flushesFr.length > 0) {
+                    var beStats = _suBolsaBE(frB);
+                    if (beStats) {
+                        var beCls = beStats.beTotal >= 150 ? 'su-be-dot--good' : (beStats.beTotal >= 100 ? 'su-be-dot--warn' : 'su-be-dot--bad');
+                        beRowHtml = `
                 <div class="su-be-row">
                     <span class="su-be-dot ${beCls}"></span>
-                    <span class="su-be-label">BE ${beTotal.toFixed(0)}%</span>
+                    <span class="su-be-label">BE ${beStats.beTotal.toFixed(0)}%</span>
                 </div>`;
+                    }
                 } else if (frB.fechaInicio) {
                     var diasSinFR = (Date.now() - new Date(frB.fechaInicio).getTime()) / 86400000;
                     if (diasSinFR >= 60) {
@@ -3280,6 +3336,7 @@ Object.assign(window, {
     toggleEdicionRegistros,
     suEliminarSubfila,
     suAgregarSubfila,
+    suSetRegSortMode,
     // Config materiales
     cfgToggleEdicionMateriales,
     cfgAgregarMaterial,

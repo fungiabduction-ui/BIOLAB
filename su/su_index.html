@@ -315,8 +315,13 @@
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="section-content" id="registro">
-                    <div style="margin-bottom:12px">
+                    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
                         <button type="button" id="btnEditRegistros" class="btn btn-secondary" onclick="toggleEdicionRegistros()">✏️ Edit</button>
+                        <select id="suRegSort" class="su-reg-sort-select" onchange="suSetRegSortMode(this.value)" title="Ordenar Registro de Lotes">
+                            <option value="fecha">📅 Fecha (recientes primero)</option>
+                            <option value="beProm">🏆 BE promedio del lote (mejor primero)</option>
+                            <option value="beMejor">🥇 Mejor bolsa del lote (mejor primero)</option>
+                        </select>
                     </div>
                     <div id="suRegKpiBar" class="su-kpi-bar" style="display:none"></div>
                     <div id="registroLotesBody" class="su-cards-list"></div>

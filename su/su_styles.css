@@ -731,6 +731,20 @@ body {
     background: #454545;
 }
 
+.su-reg-sort-select {
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.su-reg-sort-select:focus {
+    outline: none;
+    border-color: var(--su-fibra);
+}
+
 .btn-su {
     background: var(--su-fibra);
     color: white;
