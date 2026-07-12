@@ -1096,6 +1096,32 @@ function renderizarRegistroLotes() {
                     : `<span class="su-kchip su-kchip-pending">⏳ PENDIENTE</span>`)
                 : `<span class="su-kchip su-kchip-dim">—</span>`;
 
+            // Estado de Eficiencia Biológica (BE) de la bolsa vinculada — solo lectura de
+            // fr_bolsas, no se calcula ni persiste nada nuevo acá. beOleada ya viene
+            // calculado y guardado por FR por cada cosecha (fr_app.js:beOleada/beAcumulado).
+            var beRowHtml = '';
+            if (frB) {
+                var flushes = Array.isArray(frB.flushes) ? frB.flushes : [];
+                if (flushes.length > 0) {
+                    var beTotal = flushes.reduce(function(a, f) { return a + (parseFloat(f.beOleada) || 0); }, 0);
+                    var beCls = beTotal >= 150 ? 'su-be-dot--good' : (beTotal >= 100 ? 'su-be-dot--warn' : 'su-be-dot--bad');
+                    beRowHtml = `
+                <div class="su-be-row">
+                    <span class="su-be-dot ${beCls}"></span>
+                    <span class="su-be-label">BE ${beTotal.toFixed(0)}%</span>
+                </div>`;
+                } else if (frB.fechaInicio) {
+                    var diasSinFR = (Date.now() - new Date(frB.fechaInicio).getTime()) / 86400000;
+                    if (diasSinFR >= 60) {
+                        beRowHtml = `
+                <div class="su-be-row su-be-danger">
+                    <span class="su-be-danger-dots"><span></span><span></span><span></span></span>
+                    <span class="su-be-label">Sin registro FR desde hace ${Math.floor(diasSinFR)} días — ¿bolsa abandonada?</span>
+                </div>`;
+                    }
+                }
+            }
+
             if (modoEdicionRegistros) {
                 return `
                     <div class="su-card-sub su-card-sub-edit">
@@ -1155,7 +1181,7 @@ function renderizarRegistroLotes() {
                     <span class="su-sub-col${hidBolsaReal ? ' su-sub-real' : ''}">${hidBolsaTxt}${hidBolsaReal ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
                     <span class="su-sub-col${granoRealFlag ? ' su-sub-real' : ''}">${granoTxt}${granoRealFlag ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
                     <span class="su-sub-col">${ratioTxt}</span>
-                </div>`;
+                </div>${beRowHtml}`;
         }).join('');
 
         const addSubBtn = modoEdicionRegistros ? `

@@ -1961,6 +1961,54 @@ body {
     font-size: 10px;
 }
 
+/* Estado de Eficiencia Biológica (BE) por bolsa — línea debajo de cada sub-fila.
+   Reusa el keyframe "pulse" definido en main.css (siempre cargado por el shell). */
+.su-be-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 14px 6px 33px;
+    border-top: none;
+    background: rgba(139, 92, 246, 0.025);
+    font-size: 11px;
+}
+.su-be-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+}
+.su-be-dot--good { background: #70AD47; box-shadow: 0 0 6px #70AD47; }
+.su-be-dot--warn { background: #FFC000; box-shadow: 0 0 6px #FFC000; }
+.su-be-dot--bad  { background: #FF6B6B; box-shadow: 0 0 6px #FF6B6B; }
+.su-be-label {
+    color: var(--text-muted, #999);
+    font-weight: 600;
+}
+.su-be-danger .su-be-label {
+    color: #FF6B6B;
+}
+.su-be-danger-dots {
+    display: inline-flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.su-be-danger-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FF6B6B;
+    box-shadow: 0 0 4px #FF6B6B;
+    animation: suBeDangerBlink 1.2s ease-in-out infinite;
+}
+.su-be-danger-dots span:nth-child(2) { animation-delay: 0.15s; }
+.su-be-danger-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes suBeDangerBlink {
+    0%, 100% { opacity: 1;   transform: scale(1);    }
+    50%       { opacity: 0.25; transform: scale(0.8); }
+}
+
 /* Chips de registro */
 .su-kchip {
     display: inline-block;
