@@ -186,3 +186,67 @@ Solo bajo pedido explícito del usuario en la conversación, nunca automático n
 - El modo de reimport no soporta anotaciones de alcance `general/*` (ver arriba).
 - Sin mecanismo de deshacer/editar una anotación ya escrita — mismo principio append-only que `notebook.md`: una corrección es una entrada nueva, no una edición de la vieja.
 - El skill nunca ejecuta el import él mismo, bajo ninguna circunstancia — es una acción manual del usuario, en su navegador, siempre.
+
+---
+
+## Extensión — Diagnóstico experto + backlog de mejoras a la app (2026-07-14, misma sesión)
+
+**Goal:** el usuario quiere que el skill dé conclusiones al estilo de un micólogo/biotecnólogo real (un veredicto, no solo una correlación con nivel de confianza) y que las sugerencias de mejora a la app dejen de ser hallazgos sueltos que se pierden en el historial del notebook — que se acumulen, se refuercen con evidencia nueva, y se puedan marcar resueltas.
+
+### 1. Diagnóstico experto
+
+Nueva subsección del template de entrada del notebook (Modo análisis), ubicada entre `**Hallazgos:**` y `**Hipótesis a probar / próximos experimentos:**`:
+
+```markdown
+**Diagnóstico experto:**
+...
+```
+
+Solo se incluye cuando hay algo real que sintetizar sobre lo que está en el alcance de esa corrida — mismo criterio que las demás secciones ("nada nuevo que reportar" en vez de forzar contenido). No es una sección más de hallazgos: sintetiza los `Hallazgos` de esa misma entrada + `bl2_ings[].bio.mecanismo`/`bio.contribuciones` + conocimiento general de micología/biotecnología en una conclusión con el tono de un profesional dando su lectura de caso — no una repetición de "coef X, confianza Y".
+
+**Regla de seguridad epistémica (no negociable):** el Diagnóstico experto puede ser asertivo en el tono, pero nunca puede afirmar como hecho algo que el dato marca como incierto (`confidence:'indeterminate'`, `n` bajo, `bioConflict:true`). En esos casos razona *a través* de la incertidumbre, no alrededor de ella — ej. "con n=8 no se puede confirmar estadísticamente, pero el mecanismo conocido de X es consistente con esta lectura, y es lo que yo priorizaría investigar primero". Cada entrada de Diagnóstico experto distingue explícitamente, en el texto, qué parte es "esto lo prueba el dato" vs. "esta es mi lectura profesional" — nunca se mezclan sin aclarar cuál es cuál.
+
+### 2. Backlog de mejoras a la app (`docs/lab-intelligence/mejoras_app.md`)
+
+Archivo nuevo — a diferencia de `notebook.md`/`anotaciones.md` (append-only, puramente cronológicos), este es una **lista viva con estado**, porque su utilidad central es poder ver de un vistazo qué sigue pendiente y qué tan respaldado está.
+
+**Formato por item:**
+```markdown
+### MEJ-0001 · categoría: bug|dato-faltante|feature|ux · estado: abierta
+
+**Detectado:** 2026-07-14
+**Descripción:** ...
+**Evidencia:**
+- 2026-07-14: hallazgo/contexto que lo originó
+**Resuelto:** (vacío hasta que se confirme)
+```
+
+IDs secuenciales `MEJ-0001`, `MEJ-0002`... (mismo padding de 4 dígitos que `ING-`/`CRE-`/etc.).
+
+**Estados y transiciones:**
+- `abierta` — recién detectado, un solo caso de evidencia. Se crea automáticamente cuando Modo análisis (o el Diagnóstico experto) encuentra algo sugerible para la app que no coincide con ningún item existente del backlog.
+- `reforzada` — 2+ casos de evidencia acumulada. Transición automática (sin intervención del usuario) en el momento en que se agrega una segunda entrada a `Evidencia`: el skill relee `mejoras_app.md` antes de escribir una sugerencia nueva y, si el patrón coincide con un item `abierta`/`reforzada` existente (coincidencia por lectura/criterio del skill, no un matcher algorítmico — mismo enfoque que el resto de este skill), agrega una línea a `Evidencia` con la fecha y el hallazgo nuevo, en vez de crear un item duplicado.
+- `resuelta` — **solo** por confirmación explícita del usuario en conversación (mismo patrón que Modo anotación: el usuario dice algo como "eso del bioConflict ya lo arreglé" y el skill actualiza el item con `estado: resuelta` + fecha + una línea `Resuelto:` citando la confirmación). El skill puede *sugerir* que un item parece resuelto (ver abajo) pero nunca cambia el estado a `resuelta` por su cuenta.
+
+**Señal de "esto podría estar resuelto" (soft signal, no autocierre):** en Modo análisis, si un item `abierta`/`reforzada` describía un patrón que debería haber vuelto a aparecer en el alcance de la corrida actual y no apareció, el skill lo menciona en `**Sugerencias para la app:**` de esa entrada del notebook ("MEJ-0003 no reapareció en esta corrida — ¿ya se corrigió?"), pero no toca `mejoras_app.md` hasta que el usuario confirme.
+
+**Regresión de un item ya resuelto:** si un item con `estado: resuelta` vuelve a coincidir con un patrón nuevo, el skill NO lo reabre por su cuenta — lo flaguea explícitamente como posible regresión en `**Sugerencias para la app:**` del notebook ("MEJ-0002 estaba marcada resuelta el [fecha], pero este hallazgo nuevo parece el mismo patrón — ¿regresión o caso distinto?") y agrega la observación a la sección `Evidencia` del item sin cambiar su `estado`. El usuario decide si reabrirlo (lo que sí requiere su confirmación explícita, igual que cerrarlo).
+
+**Conexión con `**Sugerencias para la app:**` del notebook:** cada entrada de esa sección, en cada corrida, referencia el id del backlog correspondiente — `(nuevo → MEJ-0004)` o `(refuerza MEJ-0001, ver mejoras_app.md)` — en vez de listar la sugerencia como si fuera aislada de las corridas anteriores.
+
+### 3. Heurística — revisar código fuente ante un hallazgo inesperado
+
+Nuevo paso dentro de Modo análisis: cuando un hallazgo contradice un invariante documentado en `CLAUDE.md`/`BIOLAB_SYSTEM.md`, o algo que debería variar según la lógica esperada pero no varía nunca en todo el dataset en alcance (el caso real que ya se dio: `bioConflict` nunca era `true` para ningún ingrediente, pese a haber candidatos claros) — el skill lee la función real involucrada en el código fuente antes de concluir, en vez de reportar solo la rareza estadística sin explicarla. Si esa lectura confirma un bug real, se convierte automáticamente en un item nuevo (o refuerzo de uno existente) del backlog, categoría `bug`.
+
+Esta heurística no dispara una auditoría completa de ningún módulo — se activa puntualmente sobre la función específica implicada en el hallazgo que no cierra, igual que se hizo con `cilab_inteligencia.js` en la sesión anterior.
+
+### 4. Diagnóstico experto → backlog
+
+Cuando el Diagnóstico experto llega a una conclusión que la app hoy no puede verificar por falta de un campo/dato/UI (ej. una hipótesis biológica que requeriría trackear una variable que no existe en el schema), eso también entra al backlog — mismo flujo de dedup/refuerzo que el punto 2, categoría típica `dato-faltante` o `feature`.
+
+### Fuera de alcance (extensión Diagnóstico + backlog)
+
+- El Diagnóstico experto no reemplaza ni resume los `Hallazgos` data-driven de la misma entrada — es una capa adicional de síntesis, no un sustituto.
+- El backlog nunca se auto-cierra ni se auto-reabre — ambas transiciones requieren confirmación explícita del usuario en conversación.
+- La coincidencia entre un hallazgo nuevo y un item existente del backlog es un juicio del skill al releer el archivo, no un algoritmo de matching determinístico — consistente con la decisión original de no mantener un script de análisis para este skill.
+- La heurística de revisar código fuente no incluye ningún mecanismo para que el skill modifique ese código — solo lo lee y lo documenta como item del backlog. Aplicar el fix sigue siendo una tarea de programación aparte (con su propio plan/revisión), como ya se hizo con el fix de `bioConflict`.
