@@ -22,7 +22,7 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
 2. Read `docs/lab-intelligence/checkpoint.json`. Missing → first run, treat as **full-history mode** regardless of what was asked. Checkpoint present but the user explicitly asked for a full/complete review (`análisis completo`, `/biolab-analyst full`) → also use **full-history mode** (step 4), skip the diff in step 3.
 3. **Incremental mode:** diff the backup against the checkpoint:
    - `bl2_crec` records with `status:'cerrado'` whose `id` isn't in `checkpoint.creClosedIds`
-   - `fr_bolsas` with `cicloCerrado:true` whose `id` isn't in `checkpoint.frClosedIds`
+   - `fr_bolsas` with `cicloCerrado:true` whose `_frUuid` isn't in `checkpoint.frClosedIds` — use `_frUuid`, never the visible `id`: `id` can be renamed later (`_frRenombrarId`) or be `null` for a bolsa that never got one, while `_frUuid` is permanent
    - `bl2_inteligencia_model.computedAt` vs `checkpoint.inteligenciaModelComputedAt`, or `bl2_formula_intel.computedAt` vs `checkpoint.formulaIntelComputedAt`, differ → model was recomputed
    - `bl2_experimentos` entries not in `checkpoint.experimentoIds`
    - `fr_cal_intel.anomalousBolsas` entries not in `checkpoint.anomalousBolsaIds`
@@ -63,7 +63,7 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
   "lastRunMode": "incremental|full",
   "sourceBackupExportedAt": "backup's _exported value",
   "creClosedIds": ["CRE-..."],
-  "frClosedIds": ["FR..."],
+  "frClosedIds": ["<fr_bolsas._frUuid value, not the visible id>", "..."],
   "inteligenciaModelComputedAt": "...",
   "formulaIntelComputedAt": "...",
   "experimentoIds": ["EXP-..."],
