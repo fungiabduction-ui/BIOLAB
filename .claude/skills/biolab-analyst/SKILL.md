@@ -1,21 +1,22 @@
 ---
 name: biolab-analyst
-description: Use when the user asks to analyze their biolab-app data, review mushroom cultivation lab results, find cross-module patterns across CI/CILAB/GR/SU/FR, get protocol or experiment suggestions, update the lab intelligence notebook, or wants to record/recall a personal annotation about their lab data. Needs a biolab-backup-*.json export in the repo root.
+description: Use when the user asks to analyze their biolab-app data, review mushroom cultivation lab results, find cross-module patterns across CI/CILAB/GR/SU/FR, get protocol/experiment suggestions or an expert diagnostic read, update the lab intelligence notebook or app-improvement backlog, or wants to record/recall a personal annotation about their lab data. Needs a biolab-backup-*.json export in the repo root.
 ---
 
 # biolab-analyst
 
 ## Overview
 
-Reads a `biolab-backup-*.json` export of the biolab-app and writes dated findings to `docs/lab-intelligence/notebook.md`: cross-module correlations (formula → theoretical score → grain protocol → substrate → fruiting outcome), biochemical interpretation of the OLS model and route-attribution signals, and concrete next-experiment/protocol/app suggestions. It also keeps a separate, permanent timeline of the user's own corrections/observations (`docs/lab-intelligence/anotaciones.md`) and factors them into future findings without ever overriding the data. Read `CLAUDE.md` and `BIOLAB_SYSTEM.md` in the repo root first — they document the current schema and invariants, which change often. If either file is missing from the repo root, say so explicitly and proceed with reduced confidence about current schema/invariants rather than guessing — do not silently skip the check. Never invent a causal claim the data doesn't support; state confidence explicitly (alta/media/baja, correlational vs n-limited).
+Reads a `biolab-backup-*.json` export of the biolab-app and writes dated findings to `docs/lab-intelligence/notebook.md`: cross-module correlations (formula → theoretical score → grain protocol → substrate → fruiting outcome), biochemical interpretation of the OLS model and route-attribution signals, and concrete next-experiment/protocol/app suggestions. It also keeps a separate, permanent timeline of the user's own corrections/observations (`docs/lab-intelligence/anotaciones.md`) and factors them into future findings without ever overriding the data, and maintains a living backlog of app-improvement suggestions (`docs/lab-intelligence/mejoras_app.md`) that accumulates evidence across runs instead of restating the same suggestion from scratch. Read `CLAUDE.md` and `BIOLAB_SYSTEM.md` in the repo root first — they document the current schema and invariants, which change often. If either file is missing from the repo root, say so explicitly and proceed with reduced confidence about current schema/invariants rather than guessing — do not silently skip the check. Never invent a causal claim the data doesn't support; state confidence explicitly (alta/media/baja, correlational vs n-limited).
 
 ## Which mode?
 
 - User wants lab data analyzed/reviewed/explained, wants to know what's new since the last run, wants next-experiment or protocol suggestions, or explicitly asks for a "full"/"complete" review (`análisis completo`) → **Modo análisis**.
 - User states a correction, explanation, or standing observation about their lab data that they want remembered — in normal conversation, no fixed trigger phrase needed (e.g. "las deformaciones de esta bolsa son por frío, no por el aditivo") → **Modo anotación**.
 - User explicitly asks to bring an annotation back into the app itself (e.g. "preparame el archivo para reimportar esto") → **Modo avanzado — preparar reimport**. Never enter this mode on your own initiative.
+- User confirms an app-improvement backlog item is fixed (e.g. "ya arreglé lo del bioConflict") → **Confirmar resolución de un item del backlog**.
 - A single message can trigger more than one mode (e.g. asking for analysis while also stating a correction) — handle each part with its own mode's steps rather than picking only one.
-- User asks what's already been annotated about something (e.g. "¿qué anoté sobre esto?") → just read `anotaciones.md` and/or the relevant native notes and answer directly, no special steps beyond what Modo análisis step 7 already does.
+- User asks what's already been annotated about something (e.g. "¿qué anoté sobre esto?") → just read `anotaciones.md` and/or the relevant native notes and answer directly, no special steps beyond what Modo análisis step 8 already does.
 
 ## Modo análisis
 
@@ -32,10 +33,18 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
 4. **Full-history mode:** same analysis, but over the entire dataset instead of just the diff.
 5. For each item in scope, trace the full chain by shared ids: CI formula (`bl2_forms`/`formulaSnapshot`) → CILAB theoretical score → GR protocol (`gr_lotes`, via `grLoteId`/`grTandaId`) → SU substrate (`su_lotes`, via `suLoteId`, additives/hydration) → FR outcome (`fr_bolsas`, BE, `flush.calidad`, anomalies).
 6. Cross-reference against `bl2_ings[].bio.mecanismo` / `bio.contribuciones` and `bl2_formula_intel.routeAttribution` — explain findings in terms of the actual metabolic route/cofactor involved, not just "coef went up."
-7. Check for existing user context before writing each finding: `docs/lab-intelligence/anotaciones.md` (if it exists) AND native manual notes already sitting in the backup — `fr_bolsas[].observaciones` entries with `tipo:'manual'`, `su_lotes[].dbSeguimiento` non-automatic entries. Both are the same category of "user already told the system this," just through different channels. If one is relevant to a finding (same id in scope, or a `general/*` annotation whose pattern plausibly applies — e.g. a seasonal/temperature note and the finding involves a bolsa harvested in that season), mention it alongside the finding ("el modelo atribuye X a Y, pero hay una nota tuya de [fecha] que sugiere Z"). Match by the permanent internal id (`_frUuid`/`_uuid`) when present in the annotation tag, not just the visible id, since the visible id may have changed since the annotation was written. Never adjust the finding's stated confidence because of this — it's added context, not an override.
-8. Call out explicitly, when relevant to what's in scope: ingredients with `confidence:'indeterminate'` or `bioConflict:true`, entries from `experimentAdvice.topUncertainIngredients` the new data affects, and new anomalies with a hypothesis marked correlational unless there's a real isolating comparison.
-9. Append an entry to `docs/lab-intelligence/notebook.md` (create the file with a one-line header if it doesn't exist) using the template below. Empty sections get an explicit "nada nuevo que reportar" line, never filler.
-10. Write/update `docs/lab-intelligence/checkpoint.json` with the current state (schema below).
+7. **Revisar código fuente ante un hallazgo inesperado:** when a finding contradicts a documented invariant in `CLAUDE.md`/`BIOLAB_SYSTEM.md`, or a value that should vary but never does across the whole scope of this run, read the actual function involved in the app's source before concluding — don't just report the statistical oddity unexplained (this is exactly how the `bioConflict` bug in `cilab_inteligencia.js` was found). This is targeted at the one function implicated by the surprising finding, not a general code audit. If it reveals a real bug, carry it into step 11 as a `bug`-category backlog candidate.
+8. Check for existing user context before writing each finding: `docs/lab-intelligence/anotaciones.md` (if it exists) AND native manual notes already sitting in the backup — `fr_bolsas[].observaciones` entries with `tipo:'manual'`, `su_lotes[].dbSeguimiento` non-automatic entries. Both are the same category of "user already told the system this," just through different channels. If one is relevant to a finding (same id in scope, or a `general/*` annotation whose pattern plausibly applies — e.g. a seasonal/temperature note and the finding involves a bolsa harvested in that season), mention it alongside the finding ("el modelo atribuye X a Y, pero hay una nota tuya de [fecha] que sugiere Z"). Match by the permanent internal id (`_frUuid`/`_uuid`) when present in the annotation tag, not just the visible id, since the visible id may have changed since the annotation was written. Never adjust the finding's stated confidence because of this — it's added context, not an override.
+9. Call out explicitly, when relevant to what's in scope: ingredients with `confidence:'indeterminate'` or `bioConflict:true`, entries from `experimentAdvice.topUncertainIngredients` the new data affects, and new anomalies with a hypothesis marked correlational unless there's a real isolating comparison.
+10. **Diagnóstico experto:** when there's something real to synthesize about what's in scope (not every run needs one), write a verdict in the tone of a mycologist/biotech professional giving their read of the case — not a restatement of the `Hallazgos`. Combine the findings from steps 5-9 with general mycology/biotech domain knowledge. Non-negotiable rule: never state as fact something the data marks uncertain (`confidence:'indeterminate'`, low `n`, `bioConflict:true`) — reason *through* the uncertainty instead ("con n=8 no se puede confirmar estadísticamente, pero el mecanismo conocido de X es consistente con esta lectura, y es lo que priorizaría investigar primero"). Always distinguish in the text which part is "esto lo prueba el dato" vs. "esta es mi lectura profesional."
+11. **Backlog de mejoras:** before finalizing `Sugerencias para la app` for this entry, read `docs/lab-intelligence/mejoras_app.md` (create it with a one-line header if it doesn't exist) for every app-improvement candidate gathered in steps 7/10/general observation:
+    - Matches an existing `abierta` or `reforzada` item (by your own reading/judgment of the description, not an algorithmic matcher) → append a dated line to that item's `Evidencia`, and if it was `abierta` it becomes `reforzada`. Don't create a duplicate item.
+    - Matches an item already `resuelta` → do NOT reopen it yourself. Add the observation to its `Evidencia` and flag it in this entry's `Sugerencias para la app` as a possible regression ("MEJ-00XX estaba marcada resuelta el [fecha], pero esto parece el mismo patrón — ¿regresión o caso distinto?").
+    - No match → create a new item, next sequential `MEJ-00XX` id, `estado: abierta`.
+    - If an existing `abierta`/`reforzada` item's pattern was expected to reappear in this run's scope and didn't → mention it in `Sugerencias para la app` as a soft "¿ya se resolvió esto?" signal, but don't change its `estado` — only an explicit user confirmation does that (see "Confirmar resolución de un item del backlog").
+    - Reference the resulting id in the notebook entry's `Sugerencias para la app` line: `(nuevo → MEJ-0004)` or `(refuerza MEJ-0001, ver mejoras_app.md)`.
+12. Append an entry to `docs/lab-intelligence/notebook.md` (create the file with a one-line header if it doesn't exist) using the template below. Empty sections get an explicit "nada nuevo que reportar" line, never filler.
+13. Write/update `docs/lab-intelligence/checkpoint.json` with the current state (schema below).
 
 ## Modo anotación
 
@@ -55,6 +64,13 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
 4. Write the result to a **new** file, clearly distinct from the original (e.g. `<nombre-del-backup-original>-anotado.json`, same directory) — never overwrite the user's original backup.
 5. Never run the import yourself. Tell the user the file is ready and that importing it (when/if they choose to) is a manual step they do in their own browser via CFG.
 
+## Confirmar resolución de un item del backlog
+
+1. Find the item in `docs/lab-intelligence/mejoras_app.md` — by its `MEJ-00XX` id if the user gives one, otherwise by matching their description against the open items. Not found, or more than one plausible match → ask which one, don't guess.
+2. Update that item: set `estado: resuelta`, and fill `**Resuelto:**` with today's date and a short note of what the user said (e.g. `2026-07-14 — confirmado por el usuario: "ya lo arreglé"`).
+3. Confirm back to the user which item you marked resolved, in one line.
+4. This never touches `checkpoint.json` or `notebook.md` — it's independent of Modo análisis, same as Modo anotación.
+
 ## Notebook entry template
 
 ```markdown
@@ -65,6 +81,9 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
 **Hallazgos:**
 - [confianza alta|media|baja] ...
 
+**Diagnóstico experto:**
+- ... (omit this section entirely — don't write "nada nuevo" — when there's nothing to synthesize this run)
+
 **Hipótesis a probar / próximos experimentos:**
 - ... (tie to bl2_experimentos-style A/B design when proposing one)
 
@@ -72,7 +91,7 @@ Reads a `biolab-backup-*.json` export of the biolab-app and writes dated finding
 - ...
 
 **Sugerencias para la app:**
-- ...
+- ... (nuevo → MEJ-00XX) / (refuerza MEJ-00XX, ver mejoras_app.md)
 ```
 
 ## Anotaciones — formato (`docs/lab-intelligence/anotaciones.md`)
@@ -84,6 +103,22 @@ Append-only timeline, same spirit as the notebook — never edit or delete an ol
 - **[FR245b · _frUuid 317881f0-010d-47d0-89bf-5e0e42e9073b]** texto de la anotación puntual...
 - **[general/estacional]** texto de la anotación general...
 ```
+
+## Backlog de mejoras — formato (`docs/lab-intelligence/mejoras_app.md`)
+
+Unlike `notebook.md`/`anotaciones.md` (append-only chronological logs), this is a **living list with state** — its purpose is seeing at a glance what's still open and how well-evidenced it is.
+
+```markdown
+### MEJ-0001 · categoría: bug|dato-faltante|feature|ux · estado: abierta
+
+**Detectado:** YYYY-MM-DD
+**Descripción:** ...
+**Evidencia:**
+- YYYY-MM-DD: hallazgo/contexto que lo originó
+**Resuelto:** (vacío hasta que se confirme)
+```
+
+IDs sequential, `MEJ-0001`, `MEJ-0002`... (4-digit padding, same convention as `ING-`/`CRE-`/etc.). States: `abierta` (one piece of evidence) → `reforzada` (2+, transitions automatically the moment a second `Evidencia` line is added, no user action needed) → `resuelta` (only via "Confirmar resolución de un item del backlog," never automatic). A `resuelta` item that seems to recur is flagged as a possible regression (see Modo análisis step 11) but never silently reopened.
 
 ## Checkpoint schema
 
@@ -110,3 +145,7 @@ Append-only timeline, same spirit as the notebook — never edit or delete an ol
 - Skipping the existing native manual notes (`fr_bolsas[].observaciones`, `su_lotes[].dbSeguimiento`) and only looking at `anotaciones.md` — both are the same category of user context.
 - Using Modo avanzado for a `general/*` annotation — there's no native field for that yet, don't force it onto an unrelated bolsa/lote.
 - Guessing an id in Modo anotación instead of asking when the user's named id isn't actually in the backup.
+- Diagnóstico experto stating something as proven when the underlying data is `indeterminate`/low-`n` — reason through the uncertainty, don't paper over it.
+- Creating a new `MEJ-00XX` item instead of reinforcing an existing one — always read `mejoras_app.md` first.
+- Auto-closing or auto-reopening a backlog item without the user's explicit confirmation.
+- Running a broad code audit instead of reading just the one function implicated by the surprising finding.
