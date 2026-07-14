@@ -1262,8 +1262,8 @@ function buildModel() {
     if (!coefObj || coefObj.confidence === 'indeterminate' || coefObj.confidence === 'insuficiente') return;
     if (coefObj.coef >= -2) return;
     var ing = _bioIngMap[ingId];
-    var hasRoutes = ing && ing.contribuciones && Object.keys(ing.contribuciones).some(function(r) {
-      return (ing.contribuciones[r] || 0) > 0;
+    var hasRoutes = ing && ing.bio && ing.bio.contribuciones && Object.keys(ing.bio.contribuciones).some(function(r) {
+      return (ing.bio.contribuciones[r] || 0) > 0;
     });
     if (hasRoutes) coefObj.bioConflict = true;
   });
