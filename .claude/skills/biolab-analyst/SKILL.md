@@ -118,7 +118,7 @@ Unlike `notebook.md`/`anotaciones.md` (append-only chronological logs), this is 
 **Resuelto:** (vacío hasta que se confirme)
 ```
 
-IDs sequential, `MEJ-0001`, `MEJ-0002`... (4-digit padding, same convention as `ING-`/`CRE-`/etc.). States: `abierta` (one piece of evidence) → `reforzada` (2+, transitions automatically the moment a second `Evidencia` line is added, no user action needed) → `resuelta` (only via "Confirmar resolución de un item del backlog," never automatic). A `resuelta` item that seems to recur is flagged as a possible regression (see Modo análisis step 11) but never silently reopened.
+IDs sequential, `MEJ-0001`, `MEJ-0002`... (4-digit padding, same convention as `ING-`/`CRE-`/etc.). States: `abierta` (one piece of evidence) → `reforzada` (2+, transitions automatically the moment a second `Evidencia` line is added, no user action needed) → `resuelta` (only via "Confirmar resolución de un item del backlog," never automatic). `Evidencia` entries represent distinct occurrences of the pattern — a later run, or a second independent finding within the same run — never a process note re-confirming the same original finding (e.g. "re-checked, still true"); don't pad a brand-new item's `Evidencia` with one of those just to promote it. A `resuelta` item that seems to recur is flagged as a possible regression (see Modo análisis step 11) but never silently reopened.
 
 ## Checkpoint schema
 
