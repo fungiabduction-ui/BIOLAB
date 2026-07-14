@@ -135,3 +135,54 @@ Solo guarda ids/timestamps de referencia para el diff — no duplica datos del b
 - No hay dashboard visual (Artifact) en esta primera versión — el entregable es texto/markdown. Puede agregarse después como un modo adicional del mismo skill, no como reemplazo.
 - El skill no escribe nunca en el código de la app ni en ningún módulo — es de solo lectura sobre el export.
 - No hay automatización/cron — se invoca a demanda (`/biolab-analyst`).
+
+---
+
+## Extensión — Anotaciones del usuario + lectura de notas nativas existentes (2026-07-14, misma sesión)
+
+**Goal:** después de leer una entrada del notebook, el usuario quiere poder corregir o contextualizar un hallazgo en la conversación normal (ej. "las deformaciones de esta bolsa son por frío, no por el aditivo — no hay forma de medir temperatura en el lab") y que quede grabado permanentemente, se tenga en cuenta en corridas futuras, y — de encontrarse relevante — se pueda hasta llevar de vuelta a la app misma. Auditando el código antes de diseñar nada nuevo: **la app ya tiene un mecanismo nativo de notas manuales que el skill simplemente no estaba leyendo** — `FR.addObs()` (`fr/fr_app.js:3435`, escribe a `fr_bolsas[].observaciones` con `tipo:'manual'`) y `SU.dbSeguimientoNotas` (`su/su_app.js`, escribe a `su_lotes[].dbSeguimiento`). El caso real que motivó esto (la nota roja sobre un grano sospechoso de GR25B) ya estaba en el backup, en ese campo, sin que el skill la mirara.
+
+### Nuevo archivo: `docs/lab-intelligence/anotaciones.md`
+
+Timeline append-only — igual que `notebook.md`, nunca se edita ni borra una entrada vieja; una corrección es una entrada nueva que lo dice. Formato:
+
+```markdown
+## 2026-07-14
+- **[FR245b]** Las deformaciones se atribuyen en el modelo a un aditivo del sustrato de expansión, pero el usuario cree que la causa real es frío ambiente (no hay forma de medir/loggear temperatura en el lab actualmente).
+- **[general/estacional]** En meses como septiembre las anomalías de crecimiento prácticamente desaparecen. Hipótesis del usuario: temperatura subóptima en meses fríos — el aire acondicionado no reemplaza el calor de una estufa real.
+```
+
+Tag de alcance: un id real y existente en el backup más reciente (`FR...`, `CI-...`, `ING-...`, `GR...`, `SU...`) o `general/<tema-corto>` para patrones que no cuelgan de un id puntual (como el estacional — ninguno de los dos mecanismos nativos de la app tiene un lugar para esto, ver "Fuera de alcance" de esta extensión).
+
+### Modo anotación (nuevo, dentro del mismo skill)
+
+Disparado por el usuario comentando una corrección/observación en la conversación normal — **no** un comando fijo. El skill:
+1. Confirma en una línea qué va a guardar antes de escribir (paráfrasis corta).
+2. Determina el tag: id puntual si el usuario lo nombra y existe en el backup más reciente. Si el usuario nombra un id que no aparece en el backup (typo u otro motivo), lo dice explícitamente y pregunta en vez de adivinar o guardar igual con un id inválido. Si no hay id puntual en juego, usa `general/<tema>`.
+3. Agrega la entrada a `docs/lab-intelligence/anotaciones.md` con la fecha de hoy.
+4. No toca `checkpoint.json` ni dispara un análisis completo — operación independiente y rápida, no pasa por el flujo incremental/full-history del modo análisis.
+
+### Modo análisis (existente) — extendido
+
+Antes de reportar cada hallazgo nuevo en el modo análisis, el skill ahora también:
+- Lee `docs/lab-intelligence/anotaciones.md` si existe.
+- Para las bolsas/lotes dentro del alcance de la corrida, escanea `fr_bolsas[].observaciones` (entradas con `tipo:'manual'`) y `su_lotes[].dbSeguimiento` (entradas no automáticas) — mismo estatus que una anotación del archivo markdown, es la misma categoría de "contexto del usuario", solo que ya vivía en la app.
+- Si algo de lo anterior es relevante a un hallazgo nuevo (mismo id, o un patrón `general/*` cuya ventana temporal se solapa), lo menciona junto al hallazgo ("el modelo atribuye X a Y, pero hay una nota tuya de [fecha] que sugiere Z"). Nunca ajusta la confianza estadística del hallazgo por esto — sigue siendo contexto adicional, no una anulación (invariante ya establecido en la sección principal de este spec).
+
+### Modo avanzado opcional — preparar reimport a la app (usar con cuidado)
+
+Solo bajo pedido explícito del usuario en la conversación, nunca automático ni parte del flujo normal de análisis/anotación.
+
+1. **Advertencia obligatoria cada vez que se invoca:** `CFG → Importar todo` (`cfg_app.js:492`) hace `localStorage.clear()` y repuebla TODO desde el archivo — cualquier cambio hecho en la app viva después del backup usado como base para preparar el archivo se pierde al importar. Recomendación explícita: usar esto solo inmediatamente después de un export fresco, sin tocar la app en el medio.
+2. Si el usuario confirma que quiere seguir, y la anotación tiene alcance puntual (atada a un id real de `fr_bolsas` o `su_lotes`): agrega una entrada nueva en la forma nativa exacta que la propia UI ya produce — `fr_bolsas[].observaciones` (`{ts, tipo:'manual', estado, dias, texto}`, mismo shape que escribe `FR.addObs()`) o `su_lotes[].dbSeguimiento` (mismo shape que `SU.dbSeguimientoNotas`) — para que, una vez importado, la nota aparezca en la timeline nativa de esa bolsa/lote dentro de la propia app, no en un campo nuevo invisible para la UI existente.
+3. **No aplica a anotaciones de alcance `general/*`** — no hay un lugar nativo en el schema actual de la app para una nota que no cuelgue de una bolsa/lote puntual (ver Fuera de alcance).
+4. El resultado se escribe en un archivo NUEVO, claramente distinto del original (ej. `<nombre-del-backup-original>-anotado.json`, mismo directorio) — nunca se sobreescribe el backup original del usuario.
+5. El skill nunca ejecuta el import — solo prepara el archivo. El usuario decide cuándo, o si, abrir CFG y usarlo, en su propio navegador, a su propio criterio.
+6. Edición del JSON (~1MB+): se hace con un script ad-hoc de una sola pasada (python/node vía Bash) que parsea, agrega el objeto al array correspondiente, y vuelca de nuevo — nunca edición de texto directa sobre el JSON crudo (riesgo real de corromper un archivo de ese tamaño a mano). Mismo criterio que el resto del skill: sin script mantenido en el repo.
+
+### Fuera de alcance (extensión)
+
+- Sin "bitácora general" nativa dentro de la app para notas no atadas a un id — queda documentado como sugerencia de mejora de producto a futuro (necesitaría su propio diseño), no se construye ahora.
+- El modo de reimport no soporta anotaciones de alcance `general/*` (ver arriba).
+- Sin mecanismo de deshacer/editar una anotación ya escrita — mismo principio append-only que `notebook.md`: una corrección es una entrada nueva, no una edición de la vieja.
+- El skill nunca ejecuta el import él mismo, bajo ninguna circunstancia — es una acción manual del usuario, en su navegador, siempre.
