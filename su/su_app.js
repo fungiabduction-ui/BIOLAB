@@ -1160,10 +1160,15 @@ function renderizarRegistroLotes() {
                     var beStats = _suBolsaBE(frB);
                     if (beStats) {
                         var beCls = beStats.beTotal >= 150 ? 'su-be-dot--good' : (beStats.beTotal >= 100 ? 'su-be-dot--warn' : 'su-be-dot--bad');
+                        // Desglose por oleada — el total acumulado solo no dice si fue una
+                        // bolsa fuerte de entrada o varias oleadas flojas que sumaron parecido.
+                        var oleadasTxt = flushesFr.map(function(f, fi) {
+                            return 'F' + (f.n || (fi + 1)) + ' ' + (parseFloat(f.beOleada) || 0).toFixed(0) + '%';
+                        }).join(' · ');
                         beRowHtml = `
                 <div class="su-be-row">
                     <span class="su-be-dot ${beCls}"></span>
-                    <span class="su-be-label">BE ${beStats.beTotal.toFixed(0)}%</span>
+                    <span class="su-be-label">BE ${beStats.beTotal.toFixed(0)}% total (${oleadasTxt})</span>
                 </div>`;
                     }
                 } else if (frB.fechaInicio) {

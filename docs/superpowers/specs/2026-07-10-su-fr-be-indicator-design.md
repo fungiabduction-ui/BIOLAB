@@ -16,10 +16,13 @@ si no hay frB:
 
 si frB.flushes tiene al menos 1 elemento:
     be = sum(f.beOleada for f in frB.flushes)   // ya calculado y persistido por FR, no se reinventa la cuenta
-    mostrar: [punto pulsante] BE {be}%
+    mostrar: [punto pulsante] "BE {be}% total (F1 {f1.beOleada}% · F2 {f2.beOleada}% · ...)"
         be >= 150        -> verde
         100 <= be < 150  -> amarillo
         be < 100         -> rojo
+    (desglose por oleada agregado 2026-07-10: el total solo no distingue una bolsa
+    fuerte de entrada de varias oleadas flojas que suman parecido — F{n} usa
+    flush.n, con fallback al índice+1 para datos legacy sin ese campo)
 
 si frB.flushes está vacío o no existe:
     dias = hoy - frB.fechaInicio   (fechaInicio hereda lote.fecha al crear la bolsa, ver fr_app.js:741)
