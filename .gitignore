@@ -6,3 +6,10 @@ CHANGELOG.md
 
 # Worktrees locales de desarrollo (subagent-driven-development)
 .worktrees/
+
+# Backups de datos exportados de la app — nunca al repo publico
+biolab-backup-*.json
+biolab-ci-backup-*.json
+
+# Bitacora de inteligencia de laboratorio — datos propietarios, nunca al repo publico
+docs/lab-intelligence/
