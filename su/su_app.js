@@ -544,6 +544,23 @@ function actualizarMetricas() {
 var SU_MIG_BIBLIOTECA_DEDUP_KEY = 'biolab_migracion_su_biblioteca_dedup_v1';
 var SU_MIG_ADITIVOS_ID_KEY = 'biolab_migracion_su_aditivos_id_v1';
 
+// Mapa de correspondencia semántica MAT-* -> ING-SU-* (confirmado a mano leyendo
+// ambos nombres, no por matching de string). Usado por la migración V2 para
+// decidir que un MAT-* es seguro de borrar y para redirigir cualquier referencia
+// vieja que apunte a un id MAT-*.
+var SU_MAT_A_ING_MAP = {
+    'MAT-01': 'ING-SU-001', // Fibra de coco seca -> Fibra de coco seca
+    'MAT-02': 'ING-SU-003', // Vermiculita -> Vermiculita
+    'MAT-03': 'ING-SU-004', // Yeso (CaSO4) -> Yeso
+    'MAT-04': 'ING-SU-007', // Cal agrícola -> Cal agrícola
+    'MAT-05': 'ING-SU-005', // Café molido -> Café molido
+    'MAT-06': 'ING-SU-006', // Salvado de trigo -> Salvado de trigo
+    'MAT-07': 'ING-SU-002'  // Agua -> Agua hirviendo
+};
+
+var SU_MIG_BIBLIOTECA_DEDUP_V2_KEY = 'biolab_migracion_su_biblioteca_dedup_v2';
+var SU_MIG_ADITIVOS_ID_V2_KEY = 'biolab_migracion_su_aditivos_id_v2';
+
 function _suMigrarBibliotecaDedup(bib) {
     try {
         if (localStorage.getItem(SU_MIG_BIBLIOTECA_DEDUP_KEY) === '1') return false;
@@ -585,6 +602,56 @@ function _suMigrarBibliotecaDedup(bib) {
     // null/undefined en materiales), el caller decide qué significa "falló" para el flag.
 }
 
+// Migración one-shot V2 — corrige un caso real donde el flag V1
+// (biolab_migracion_su_biblioteca_dedup_v1) quedó en '1' en el navegador del
+// usuario SIN que la mutación se hubiera persistido de verdad (el bug de orden
+// flag-antes-de-persist que existía en una versión anterior de _suMigrarBibliotecaDedup,
+// ya corregido en el código actual, pero el flag viejo ya estaba escrito antes de
+// la corrección — al ser one-shot, V1 nunca se vuelve a correr sola). V2 ignora
+// el flag V1 por completo y corre una vez, siempre.
+//
+// A diferencia de V1 (que solo borraba un MAT-* si tenía un nombre IDÉNTICO a un
+// ING-SU-*), V2 elimina TODOS los MAT-* sin excepción — decisión explícita del
+// usuario (2026-07-16) que sustituye la política más conservadora de V1. Cada
+// MAT-* se mapea a su equivalente semántico vía SU_MAT_A_ING_MAP. Red de seguridad:
+// solo se borra un MAT-* si su reemplazo mapeado REALMENTE existe en el catálogo
+// actual — si por algún motivo el ING-SU-* de destino no está, el MAT-* se preserva
+// en vez de perder esa opción del dropdown sin reemplazo.
+//
+// Sin flag-read propio (a diferencia de V1): el caller es el único responsable del
+// gating, porque V2 siempre debe correr una vez sin importar el estado del flag V1,
+// y la lógica de gating difiere lo suficiente entre los dos callers como para que
+// mantenerla solo del lado del caller evite gates duplicados/conflictivos.
+function _suMigrarBibliotecaDedupV2(bib) {
+    var materiales = bib.materiales || [];
+    var idsPresentes = {};
+    materiales.forEach(function(m) { if (m.id) idsPresentes[m.id] = true; });
+
+    var antes = materiales.length;
+    materiales = materiales.filter(function(m) {
+        if (!(m.id && m.id.indexOf('MAT-') === 0)) return true;
+        var target = SU_MAT_A_ING_MAP[m.id];
+        return !(target && idsPresentes[target]);
+    });
+    var cambiado = materiales.length !== antes;
+    if (cambiado) {
+        console.log('[SU] Migración dedup V2: ' + (antes - materiales.length) + ' materiales legacy MAT-* eliminados (sin excepción, mapeados a su ING-SU-* correspondiente)');
+    }
+
+    var camposAgregados = false;
+    materiales.forEach(function(m) {
+        if (!('rangoOptimo' in m)) { m.rangoOptimo = null; camposAgregados = true; }
+        if (!('rangoSeguro' in m)) { m.rangoSeguro = null; camposAgregados = true; }
+    });
+    if (camposAgregados) {
+        cambiado = true;
+        console.log('[SU] Migración dedup V2: campos rangoOptimo/rangoSeguro agregados');
+    }
+
+    bib.materiales = materiales;
+    return cambiado;
+}
+
 function cargarBibliotecaDesdeStorage() {
     const stored = localStorage.getItem(SU_BIBLIOTECA_KEY);
     if (stored) {
@@ -604,6 +671,20 @@ function cargarBibliotecaDesdeStorage() {
             localStorage.setItem(SU_MIG_BIBLIOTECA_DEDUP_KEY, '1');
         } catch (e) {
             console.error('[SU] Error en migración dedup biblioteca, se reintentará en la próxima carga:', e);
+        }
+    }
+
+    var seEjecutaV2 = false;
+    try {
+        seEjecutaV2 = localStorage.getItem(SU_MIG_BIBLIOTECA_DEDUP_V2_KEY) !== '1';
+    } catch (e) { seEjecutaV2 = false; }
+    if (seEjecutaV2) {
+        try {
+            _suMigrarBibliotecaDedupV2(biblioteca);
+            guardarBiblioteca();
+            localStorage.setItem(SU_MIG_BIBLIOTECA_DEDUP_V2_KEY, '1');
+        } catch (e) {
+            console.error('[SU] Error en migración dedup biblioteca V2, se reintentará en la próxima carga:', e);
         }
     }
 }
@@ -654,6 +735,63 @@ function _suMigrarAditivosId(arr) {
     return backfillCount > 0;
 }
 
+// Migración one-shot V2 — mismo motivo que _suMigrarBibliotecaDedupV2: corrige el
+// caso real donde biolab_migracion_su_aditivos_id_v1 quedó en '1' sin que el
+// backfill hubiera persistido. Corre SIEMPRE una vez, sin mirar el flag V1.
+// Tres casos por aditivo, en este orden:
+//  1. Si a.id es un MAT-* conocido (SU_MAT_A_ING_MAP) -> redirigir al ING-SU-*
+//     correspondiente, sin importar si el MAT-* sigue en el catálogo o no.
+//  2. Si a.id ya es un id vigente en el catálogo actual -> no tocar (ya está bien).
+//  3. Si no hay id, o el id no matchea nada conocido (referencia rota) -> matchear
+//     por nombre normalizado (trim + minúsculas, para tolerar variantes de
+//     mayúsculas/espacios) contra el catálogo. Si no hay match, se deja como está
+//     (nombre/cantidad intactos, nunca se inventa ni se descarta el dato).
+// Debe correr DESPUÉS de que _suMigrarBibliotecaDedupV2 haya corrido y persistido
+// (mismo orden que ya garantiza SU.init entre cargarBibliotecaDesdeStorage y
+// cargarLotesDesdeStorage), así que biblioteca.materiales ya está deduplicado acá.
+// Sin flag-read propio ni try/catch alrededor de la mutación (mismo patrón que
+// _suMigrarBibliotecaDedupV2 / la versión final ya corregida de _suMigrarAditivosId):
+// el caller es el único responsable del gating y decide qué significa "falló".
+function _suMigrarAditivosIdV2(arr) {
+    var porNombreNorm = {};
+    (biblioteca.materiales || []).forEach(function(m) {
+        if (!m.nombre) return;
+        var key = m.nombre.trim().toLowerCase();
+        if (!(key in porNombreNorm)) porNombreNorm[key] = m.id;
+    });
+    var idsCatalogo = {};
+    (biblioteca.materiales || []).forEach(function(m) { if (m.id) idsCatalogo[m.id] = true; });
+
+    var corregidos = 0;
+    var sinMatch = 0;
+    (arr || []).forEach(function(lote) {
+        if (!Array.isArray(lote.aditivos)) return;
+        lote.aditivos.forEach(function(a) {
+            var idActual = a.id;
+            var idCorrecto = null;
+
+            if (idActual && SU_MAT_A_ING_MAP[idActual]) {
+                idCorrecto = SU_MAT_A_ING_MAP[idActual];
+            } else if (idActual && idsCatalogo[idActual]) {
+                return;
+            } else if (a.nombre) {
+                var key = a.nombre.trim().toLowerCase();
+                idCorrecto = porNombreNorm[key] || null;
+            }
+
+            if (idCorrecto && idCorrecto !== idActual) {
+                a.id = idCorrecto;
+                corregidos++;
+            } else if (!idCorrecto) {
+                sinMatch++;
+            }
+        });
+    });
+
+    console.log('[SU] Migración backfill aditivo.id V2: ' + corregidos + ' aditivos corregidos/asignados, ' + sinMatch + ' sin match (nombre/cantidad preservados)');
+    return corregidos > 0;
+}
+
 function cargarLotesDesdeStorage() {
     const stored = localStorage.getItem(SU_STORAGE_KEY);
     if (stored) {
@@ -683,12 +821,30 @@ function cargarLotesDesdeStorage() {
         }
     }
 
-    if (uuidsCambiaron || aditivosCambiaron) {
+    var aditivosCambiaronV2 = false;
+    var aditivosMigroOkV2 = false;
+    var seEjecutaAditivosV2 = false;
+    try {
+        seEjecutaAditivosV2 = localStorage.getItem(SU_MIG_ADITIVOS_ID_V2_KEY) !== '1';
+    } catch (e) { seEjecutaAditivosV2 = false; }
+    if (seEjecutaAditivosV2) {
+        try {
+            aditivosCambiaronV2 = _suMigrarAditivosIdV2(lotesData);
+            aditivosMigroOkV2 = true;
+        } catch (e) {
+            console.error('[SU] Error en migración backfill aditivo.id V2, se reintentará en la próxima carga:', e);
+        }
+    }
+
+    if (uuidsCambiaron || aditivosCambiaron || aditivosCambiaronV2) {
         localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
     }
 
     if (aditivosMigroOk) {
         try { localStorage.setItem(SU_MIG_ADITIVOS_ID_KEY, '1'); } catch (e) {}
+    }
+    if (aditivosMigroOkV2) {
+        try { localStorage.setItem(SU_MIG_ADITIVOS_ID_V2_KEY, '1'); } catch (e) {}
     }
 
     actualizarSelectorLotes();
