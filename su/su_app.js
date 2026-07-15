@@ -662,6 +662,12 @@ function cargarLotesDesdeStorage() {
     // Migración silenciosa: asignar _uuid a registros históricos sin él
     var uuidsCambiaron = _suMigrarUUIDs(lotesData);
 
+    // Nota: esta migración NO persiste su propio flag inmediatamente después de mutar
+    // (a diferencia de _suMigrarBibliotecaDedup, que persiste en el mismo bloque). Acá
+    // comparte el persist de SU_STORAGE_KEY con _suMigrarUUIDs (líneas de abajo), así que
+    // el flag se separa en una variable (aditivosMigroOk) y se escribe recién después de
+    // ese persist compartido — mismo principio (dato confirmado en storage antes que el
+    // flag), forma distinta porque acá hay dos migraciones escribiendo la misma key.
     var aditivosCambiaron = false;
     var aditivosMigroOk = false;
     var seEjecutaAditivos = false;
