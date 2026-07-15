@@ -548,43 +548,40 @@ function _suMigrarBibliotecaDedup(bib) {
         if (localStorage.getItem(SU_MIG_BIBLIOTECA_DEDUP_KEY) === '1') return false;
     } catch (e) { return false; }
 
+    var materiales = bib.materiales || [];
+    var tieneING = materiales.some(function(m) { return m.id && m.id.indexOf('ING-SU-') === 0; });
     var cambiado = false;
-    try {
-        var materiales = bib.materiales || [];
-        var tieneING = materiales.some(function(m) { return m.id && m.id.indexOf('ING-SU-') === 0; });
 
-        if (tieneING) {
-            var nombresING = {};
-            materiales.forEach(function(m) {
-                if (m.id && m.id.indexOf('ING-SU-') === 0 && m.nombre) nombresING[m.nombre] = true;
-            });
-            var antes = materiales.length;
-            materiales = materiales.filter(function(m) {
-                var esLegacyDuplicado = m.id && m.id.indexOf('MAT-') === 0 && m.nombre && nombresING[m.nombre];
-                return !esLegacyDuplicado;
-            });
-            if (materiales.length !== antes) {
-                cambiado = true;
-                console.log('[SU] Migración dedup biblioteca: ' + (antes - materiales.length) + ' materiales legacy duplicados eliminados');
-            }
-        }
-
-        var camposAgregados = false;
+    if (tieneING) {
+        var nombresING = {};
         materiales.forEach(function(m) {
-            if (!('rangoOptimo' in m)) { m.rangoOptimo = null; camposAgregados = true; }
-            if (!('rangoSeguro' in m)) { m.rangoSeguro = null; camposAgregados = true; }
+            if (m.id && m.id.indexOf('ING-SU-') === 0 && m.nombre) nombresING[m.nombre] = true;
         });
-        if (camposAgregados) {
+        var antes = materiales.length;
+        materiales = materiales.filter(function(m) {
+            var esLegacyDuplicado = m.id && m.id.indexOf('MAT-') === 0 && m.nombre && nombresING[m.nombre];
+            return !esLegacyDuplicado;
+        });
+        if (materiales.length !== antes) {
             cambiado = true;
-            console.log('[SU] Migración dedup biblioteca: campos rangoOptimo/rangoSeguro agregados');
+            console.log('[SU] Migración dedup biblioteca: ' + (antes - materiales.length) + ' materiales legacy duplicados eliminados');
         }
-
-        bib.materiales = materiales;
-    } catch (e) {
-        console.error('[SU] Error en migración dedup biblioteca:', e);
-        return false;
     }
+
+    var camposAgregados = false;
+    materiales.forEach(function(m) {
+        if (!('rangoOptimo' in m)) { m.rangoOptimo = null; camposAgregados = true; }
+        if (!('rangoSeguro' in m)) { m.rangoSeguro = null; camposAgregados = true; }
+    });
+    if (camposAgregados) {
+        cambiado = true;
+        console.log('[SU] Migración dedup biblioteca: campos rangoOptimo/rangoSeguro agregados');
+    }
+
+    bib.materiales = materiales;
     return cambiado;
+    // NOTE: sin try/catch propio alrededor de la mutación — si algo tira (ej. entrada
+    // null/undefined en materiales), el caller decide qué significa "falló" para el flag.
 }
 
 function cargarBibliotecaDesdeStorage() {
@@ -600,9 +597,13 @@ function cargarBibliotecaDesdeStorage() {
         seEjecuto = localStorage.getItem(SU_MIG_BIBLIOTECA_DEDUP_KEY) !== '1';
     } catch (e) { seEjecuto = false; }
     if (seEjecuto) {
-        _suMigrarBibliotecaDedup(biblioteca);
-        guardarBiblioteca();
-        try { localStorage.setItem(SU_MIG_BIBLIOTECA_DEDUP_KEY, '1'); } catch (e) {}
+        try {
+            _suMigrarBibliotecaDedup(biblioteca);
+            guardarBiblioteca();
+            localStorage.setItem(SU_MIG_BIBLIOTECA_DEDUP_KEY, '1');
+        } catch (e) {
+            console.error('[SU] Error en migración dedup biblioteca, se reintentará en la próxima carga:', e);
+        }
     }
 }
 
