@@ -1413,11 +1413,11 @@ function agregarFilaAditivo(id = '', cantidad = 0, nombreLegacy = '') {
     const row = document.createElement('div');
     row.className = 'aditivo-row';
 
-    const matchExiste = biblioteca.materiales.some(m => m.id === id);
+    const candidatos = biblioteca.materiales.filter(m => m.tipo === 'aditivo' || m.tipo === 'nutricion');
+    const matchExiste = candidatos.some(m => m.id === id);
 
-    const opciones = biblioteca.materiales
-        .filter(m => m.tipo === 'aditivo' || m.tipo === 'nutricion')
-        .map(m => `<option value="${m.id}" data-nombre="${cfgEscapeHtml(m.nombre)}" ${m.id === id ? 'selected' : ''}>${cfgEscapeHtml(m.nombre)}</option>`)
+    const opciones = candidatos
+        .map(m => `<option value="${cfgEscapeHtml(m.id)}" data-nombre="${cfgEscapeHtml(m.nombre)}" ${m.id === id ? 'selected' : ''}>${cfgEscapeHtml(m.nombre)}</option>`)
         .join('');
 
     // Referencia rota: el id no matchea nada del catálogo actual pero hay un nombre legacy
