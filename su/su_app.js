@@ -663,6 +663,7 @@ function cargarLotesDesdeStorage() {
     var uuidsCambiaron = _suMigrarUUIDs(lotesData);
 
     var aditivosCambiaron = false;
+    var aditivosMigroOk = false;
     var seEjecutaAditivos = false;
     try {
         seEjecutaAditivos = localStorage.getItem(SU_MIG_ADITIVOS_ID_KEY) !== '1';
@@ -670,7 +671,7 @@ function cargarLotesDesdeStorage() {
     if (seEjecutaAditivos) {
         try {
             aditivosCambiaron = _suMigrarAditivosId(lotesData);
-            localStorage.setItem(SU_MIG_ADITIVOS_ID_KEY, '1');
+            aditivosMigroOk = true;
         } catch (e) {
             console.error('[SU] Error en migración backfill aditivo.id, se reintentará en la próxima carga:', e);
         }
@@ -679,6 +680,11 @@ function cargarLotesDesdeStorage() {
     if (uuidsCambiaron || aditivosCambiaron) {
         localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
     }
+
+    if (aditivosMigroOk) {
+        try { localStorage.setItem(SU_MIG_ADITIVOS_ID_KEY, '1'); } catch (e) {}
+    }
+
     actualizarSelectorLotes();
 }
 
