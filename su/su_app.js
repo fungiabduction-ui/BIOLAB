@@ -536,12 +536,61 @@ function actualizarMetricas() {
 // BIBLIOTECA DE MATERIALES
 // ==========================================
 
+// Migración one-shot: dedup de su_biblioteca.materiales (dos generaciones de catálogo
+// superpuestas por nombre: legacy MAT-01..07 vs actual ING-SU-001..018) + agrega
+// rangoOptimo/rangoSeguro (null default) a cada material. Prerequisito MEJ-0006.
+// Solo corre si el catálogo ya tiene al menos un ING-SU-* (si no, no hay nada que
+// deduplicar todavía — evita vaciar el catálogo en una instalación sin ese set).
+function _suMigrarBibliotecaDedup(bib) {
+    var KEY_MIG = 'biolab_migracion_su_biblioteca_dedup_v1';
+    try {
+        if (localStorage.getItem(KEY_MIG) === '1') return false;
+    } catch (e) { return false; }
+
+    var cambiado = false;
+    try {
+        var materiales = bib.materiales || [];
+        var tieneING = materiales.some(function(m) { return m.id && m.id.indexOf('ING-SU-') === 0; });
+
+        if (tieneING) {
+            var nombresING = {};
+            materiales.forEach(function(m) {
+                if (m.id && m.id.indexOf('ING-SU-') === 0) nombresING[m.nombre] = true;
+            });
+            var antes = materiales.length;
+            materiales = materiales.filter(function(m) {
+                var esLegacyDuplicado = m.id && m.id.indexOf('MAT-') === 0 && nombresING[m.nombre];
+                return !esLegacyDuplicado;
+            });
+            if (materiales.length !== antes) {
+                cambiado = true;
+                console.log('[SU] Migración dedup biblioteca: ' + (antes - materiales.length) + ' materiales legacy duplicados eliminados');
+            }
+        }
+
+        materiales.forEach(function(m) {
+            if (!('rangoOptimo' in m)) { m.rangoOptimo = null; cambiado = true; }
+            if (!('rangoSeguro' in m)) { m.rangoSeguro = null; cambiado = true; }
+        });
+
+        bib.materiales = materiales;
+        try { localStorage.setItem(KEY_MIG, '1'); } catch (e) {}
+    } catch (e) {
+        console.error('[SU] Error en migración dedup biblioteca:', e);
+        return false;
+    }
+    return cambiado;
+}
+
 function cargarBibliotecaDesdeStorage() {
     const stored = localStorage.getItem(SU_BIBLIOTECA_KEY);
     if (stored) {
         biblioteca = JSON.parse(stored);
     } else {
         biblioteca = { ...bibliotecaDefault };
+        guardarBiblioteca();
+    }
+    if (_suMigrarBibliotecaDedup(biblioteca)) {
         guardarBiblioteca();
     }
 }
