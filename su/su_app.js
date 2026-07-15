@@ -542,6 +542,7 @@ function actualizarMetricas() {
 // Solo corre si el catálogo ya tiene al menos un ING-SU-* (si no, no hay nada que
 // deduplicar todavía — evita vaciar el catálogo en una instalación sin ese set).
 var SU_MIG_BIBLIOTECA_DEDUP_KEY = 'biolab_migracion_su_biblioteca_dedup_v1';
+var SU_MIG_ADITIVOS_ID_KEY = 'biolab_migracion_su_aditivos_id_v1';
 
 function _suMigrarBibliotecaDedup(bib) {
     try {
@@ -615,13 +616,67 @@ function guardarBiblioteca() {
 // GESTIÓN DE LOTES
 // ==========================================
 
+// Migración one-shot: backfillea aditivo.id en su_lotes históricos matcheando por
+// nombre exacto contra el catálogo ya deduplicado (ver _suMigrarBibliotecaDedup).
+// Debe correr DESPUÉS de que la biblioteca esté deduplicada — cargarBibliotecaDesdeStorage()
+// corre antes que cargarLotesDesdeStorage() en SU.init, así que biblioteca.materiales
+// ya está lista acá. Si un nombre no matchea ningún material (referencia rota / material
+// borrado), el aditivo se deja tal cual (sin id) — no se inventa ni se descarta el dato.
+// NOTA: sin try/catch propio alrededor de la mutación — si algo tira, el caller decide
+// qué significa "falló" para el flag (mismo patrón que _suMigrarBibliotecaDedup).
+function _suMigrarAditivosId(arr) {
+    try {
+        if (localStorage.getItem(SU_MIG_ADITIVOS_ID_KEY) === '1') return false;
+    } catch (e) { return false; }
+
+    var porNombre = {};
+    (biblioteca.materiales || []).forEach(function(m) {
+        if (m.nombre && !(m.nombre in porNombre)) porNombre[m.nombre] = m.id;
+    });
+
+    var backfillCount = 0;
+    var sinMatch = 0;
+    (arr || []).forEach(function(lote) {
+        if (!Array.isArray(lote.aditivos)) return;
+        lote.aditivos.forEach(function(a) {
+            if (a.id) return;
+            var idMatch = porNombre[a.nombre];
+            if (idMatch) {
+                a.id = idMatch;
+                backfillCount++;
+            } else {
+                sinMatch++;
+            }
+        });
+    });
+
+    console.log('[SU] Migración backfill aditivo.id: ' + backfillCount + ' aditivos actualizados, ' + sinMatch + ' sin match (quedan sin id, nombre/cantidad preservados)');
+    return backfillCount > 0;
+}
+
 function cargarLotesDesdeStorage() {
     const stored = localStorage.getItem(SU_STORAGE_KEY);
     if (stored) {
         lotesData = JSON.parse(stored);
     }
     // Migración silenciosa: asignar _uuid a registros históricos sin él
-    if (_suMigrarUUIDs(lotesData)) {
+    var uuidsCambiaron = _suMigrarUUIDs(lotesData);
+
+    var aditivosCambiaron = false;
+    var seEjecutaAditivos = false;
+    try {
+        seEjecutaAditivos = localStorage.getItem(SU_MIG_ADITIVOS_ID_KEY) !== '1';
+    } catch (e) { seEjecutaAditivos = false; }
+    if (seEjecutaAditivos) {
+        try {
+            aditivosCambiaron = _suMigrarAditivosId(lotesData);
+            localStorage.setItem(SU_MIG_ADITIVOS_ID_KEY, '1');
+        } catch (e) {
+            console.error('[SU] Error en migración backfill aditivo.id, se reintentará en la próxima carga:', e);
+        }
+    }
+
+    if (uuidsCambiaron || aditivosCambiaron) {
         localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
     }
     actualizarSelectorLotes();
