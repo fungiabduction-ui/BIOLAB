@@ -755,13 +755,18 @@ function recolectarDatosLote() {
     const bolsas = parseInt(document.getElementById('suBolsas').value) || 0;
     const pesoBolsa = parseFloat(document.getElementById('suPesoBolsa').value) || 0;
     
-    // Recolectar aditivos
+    // Recolectar aditivos — value del select es el id de catálogo; el nombre se lee
+    // del data-nombre de la opción seleccionada (se preserva incluso si el id quedó
+    // huérfano por un material borrado del catálogo, ver agregarFilaAditivo).
     const aditivos = [];
     document.querySelectorAll('.aditivo-row').forEach(row => {
-        const nombre = row.querySelector('.aditivo-select').value;
+        const select = row.querySelector('.aditivo-select');
+        const id = select.value;
+        const opt = select.options[select.selectedIndex];
+        const nombre = opt ? (opt.dataset.nombre || '') : '';
         const cantidad = parseFloat(row.querySelector('.aditivo-cant').value) || 0;
         if (nombre && cantidad > 0) {
-            aditivos.push({ nombre, cantidad });
+            aditivos.push(id ? { id, nombre, cantidad } : { nombre, cantidad });
         }
     });
     
@@ -869,7 +874,7 @@ function cargarDatosLote(lote) {
 
     if (lote.aditivos && lote.aditivos.length > 0) {
         lote.aditivos.forEach(aditivo => {
-            agregarFilaAditivo(aditivo.nombre, aditivo.cantidad);
+            agregarFilaAditivo(aditivo.id, aditivo.cantidad, aditivo.nombre);
         });
     } else {
         agregarFilaAditivo();
@@ -1403,25 +1408,35 @@ function eliminarLoteDesdeRegistro(index) {
 // ADITIVOS
 // ==========================================
 
-function agregarFilaAditivo(nombre = '', cantidad = 0) {
+function agregarFilaAditivo(id = '', cantidad = 0, nombreLegacy = '') {
     const container = document.getElementById('aditivosContainer');
     const row = document.createElement('div');
     row.className = 'aditivo-row';
-    
+
+    const matchExiste = biblioteca.materiales.some(m => m.id === id);
+
     const opciones = biblioteca.materiales
         .filter(m => m.tipo === 'aditivo' || m.tipo === 'nutricion')
-        .map(m => `<option value="${m.nombre}" ${m.nombre === nombre ? 'selected' : ''}>${m.nombre}</option>`)
+        .map(m => `<option value="${m.id}" data-nombre="${cfgEscapeHtml(m.nombre)}" ${m.id === id ? 'selected' : ''}>${cfgEscapeHtml(m.nombre)}</option>`)
         .join('');
-    
+
+    // Referencia rota: el id no matchea nada del catálogo actual pero hay un nombre legacy
+    // (dato histórico pre-migración, o material borrado del catálogo después de guardarse).
+    // Se muestra como opción huérfana para no perder el dato al re-guardar el lote.
+    const opcionHuerfana = (!matchExiste && nombreLegacy)
+        ? `<option value="" data-nombre="${cfgEscapeHtml(nombreLegacy)}" selected>${cfgEscapeHtml(nombreLegacy)} (no en catálogo)</option>`
+        : '';
+
     row.innerHTML = `
         <select class="aditivo-select" onchange="calcularSU()">
             <option value="">-- Seleccionar --</option>
+            ${opcionHuerfana}
             ${opciones}
         </select>
         <input type="number" class="aditivo-cant" value="${cantidad}" min="0" step="0.1" placeholder="g" oninput="calcularSU()">
         <button type="button" class="btn-remove" onclick="this.parentElement.remove(); calcularSU()">✕</button>
     `;
-    
+
     container.appendChild(row);
 }
 
