@@ -770,7 +770,7 @@ function _suMigrarAditivosIdV2(arr) {
             var idActual = a.id;
             var idCorrecto = null;
 
-            if (idActual && SU_MAT_A_ING_MAP[idActual]) {
+            if (idActual && SU_MAT_A_ING_MAP[idActual] && idsCatalogo[SU_MAT_A_ING_MAP[idActual]]) {
                 idCorrecto = SU_MAT_A_ING_MAP[idActual];
             } else if (idActual && idsCatalogo[idActual]) {
                 return;
