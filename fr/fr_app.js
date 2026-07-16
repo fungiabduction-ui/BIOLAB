@@ -132,8 +132,8 @@
             String(d.getHours()).padStart(2, '0') + ':' +
             String(d.getMinutes()).padStart(2, '0');
     }
-    function genFrId() {
-        var d = new Date();
+    function genFrId(fechaISO) {
+        var d = fechaISO ? new Date(fechaISO + 'T00:00:00') : new Date();
         var dia = String(d.getDate()).padStart(2, '0');
         var mes = String(d.getMonth() + 1).padStart(2, '0');
         var base = 'FR' + dia + mes;  // ej: FR234
@@ -1056,16 +1056,19 @@
 
     /**
      * Confirma el armado físico de una bolsa pendiente.
-     * Genera el ID definitivo con genFrId() (usando la fecha de HOY — día del armado real).
+     * Genera el ID definitivo con genFrId() usando la fecha real de armado
+     * (fechaOverride, elegida por el usuario en la fila) — no la fecha del click.
      * Pasa la bolsa de estado 'pendiente' a 'colonizando' y la incorpora al flujo normal.
      */
-    FR.confirmarBolsa = function(frUuid) {
+    FR.confirmarBolsa = function(frUuid, fechaOverride) {
         if (!frUuid) return;
         var b = bolsas.find(function(x) { return x._frUuid === frUuid; });
         if (!b) { console.warn('[FR] confirmarBolsa: uuid no encontrado', frUuid); return; }
         if (!esPendiente(b)) { console.warn('[FR] confirmarBolsa: bolsa no está pendiente', frUuid); return; }
 
-        var idNuevo = genFrId();
+        var fechaArmado = fechaOverride || b.fechaInicio || hoyISO();
+        b.fechaInicio = fechaArmado;
+        var idNuevo = genFrId(fechaArmado);
         b.id = idNuevo;
         b.fechaEntradaFR = hoyISO();
         b.pendienteConfirmacion = false;
@@ -1168,7 +1171,7 @@
         var contPctTxt = (agg && agg.contPct != null) ? fmt(agg.contPct, 1) + '%' : '—';
         var diasColTxt = (agg && agg.diasColAvg != null) ? fmt(agg.diasColAvg, 1) + 'd' : '—';
         var ratioTxt   = (agg && agg.ratio != null)     ? fmt(agg.ratio, 1) + '%' : '—';
-        var fEntrada   = fmtFecha(b.fechaEntradaFR || _parseFechaFromId(b.id) || b.fechaInicio);
+        var fEntrada   = fmtFecha(b.fechaInicio || b.fechaEntradaFR || _parseFechaFromId(b.id));
         var fUltCos    = '—';
         var fArchFecha = '—';
         if (fN > 0) {
@@ -1202,7 +1205,7 @@
             + '<td onclick="event.stopPropagation()" style="width:28px;text-align:center">'
             +   '<input type="checkbox" class="fr-sel-cb" data-fr-id="' + esc(b.id) + '" onclick="event.stopPropagation();FR._actualizarContadorSel(this.closest(\'table\'))">'
             + '</td>'
-            + '<td class="fr-num-days" ' + cl + ' title="Fecha de entrada en FR">' + esc(fEntrada) + '</td>'
+            + '<td class="fr-num-days" ' + cl + ' title="Fecha de armado de la bolsa">' + esc(fEntrada) + '</td>'
             + '<td ' + cl + '><strong>' + esc(b.id) + '</strong>' + huerfanaBadge + '</td>'
             + '<td ' + cl + '>' + esc(ge) + '</td>'
             + '<td ' + cl + '><span class="fr-traza">' + esc(suTxt) + '</span></td>'
@@ -1241,7 +1244,7 @@
      * filaTabla(b, tabNombre) emite exactamente las mismas columnas en el mismo orden.
      */
     var _COL_BASE = [
-        { key: 'entrada',  label: 'FECHA',      title: 'Ordenar cronologicamente por fecha de entrada en FR' },
+        { key: 'entrada',  label: 'FECHA',      title: 'Ordenar cronologicamente por fecha de armado de la bolsa' },
         { key: 'id',       label: 'ID',         title: 'Ordenar por ID' },
         { key: 'ge',       label: 'GE',         title: 'Ordenar por Genetica' },
         { key: 'su',       label: 'SU',         title: 'Ordenar por lote SU' },
@@ -1280,7 +1283,7 @@
     /** Extrae el valor de ordenamiento de una bolsa para la columna dada. */
     function _sortValue(b, key) {
         var ag;
-        if (key === 'entrada')     return b.fechaEntradaFR || _parseFechaFromId(b.id) || b.fechaInicio || '';
+        if (key === 'entrada')     return b.fechaInicio || b.fechaEntradaFR || _parseFechaFromId(b.id) || '';
         if (key === 'ult_cosecha') {
             var fs = b.flushes || [];
             return fs.reduce(function(max, f) { return (f.fecha || '') > max ? (f.fecha || '') : max; }, b.fechaCosecha || '');
@@ -1851,7 +1854,7 @@
         var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo : hoy;
         var d0 = diasEntre(b.fechaInicio, fechaRef);
         set('frDayNow', d0 != null ? d0 : 0);
-        set('frDaysInicio', 'dia 0');
+        set('frDaysInicio', b.fechaInicio ? (d0 > 0 ? ('hace ' + d0 + ' d') : 'hoy') : '—');
         set('frDaysColon', b.fechaColonizacion ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaColonizacion) || 0)) : 'pendiente');
         set('frDaysPines',  b.fechaPines       ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaPines) || 0))       : 'pendiente');
         set('frDaysCosecha',b.fechaCosecha     ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaCosecha) || 0))     : 'pendiente');
@@ -2769,16 +2772,16 @@
         var grTxt = _grTxtFromBolsa(b);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
         var uuid  = esc(b._frUuid || '');
-        var fechaTxt = b.fechaInicio ? fmtFecha(b.fechaInicio) : '—';
+        var fechaVal = b.fechaInicio ? esc(b.fechaInicio) : '';
         return '<tr class="fr-row fr-row-pendiente">'
             + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
             + '<td>' + esc(ge) + '</td>'
             + '<td><span class="fr-traza">' + esc(suTxt) + '</span></td>'
             + '<td><span class="fr-traza">' + esc(grTxt) + '</span></td>'
-            + '<td class="fr-num-days">' + fechaTxt + '</td>'
+            + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + fechaVal + '" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
             + '<td class="fr-num">' + seco + '</td>'
             + '<td class="fr-acciones" style="white-space:nowrap">'
-            +   '<button class="fr-btn-confirmar" onclick="FR.confirmarBolsa(\'' + uuid + '\')" title="Confirmar armado — genera el ID definitivo">✅ Confirmar</button>'
+            +   '<button class="fr-btn-confirmar" onclick="FR.confirmarBolsa(\'' + uuid + '\', this.closest(\'tr\').querySelector(\'.fr-fecha-armado-input\').value)" title="Confirmar armado — genera el ID definitivo">✅ Confirmar</button>'
             +   ' <button class="fr-btn-cancelar-pend" onclick="FR.cancelarBolsa(\'' + uuid + '\')" title="Descartar — queda en Archivo para trazabilidad">✕ Cancelar</button>'
             + '</td>'
             + '</tr>';
@@ -3079,9 +3082,12 @@
     // EDICION INLINE EN VIVO (sin modo edit global).
     // Cada campo editable del dashboard llama FR.updateField(field, valueRaw)
     // en su onchange. La funcion sanitiza, persiste y recalcula estado.
-    // Campos read-only (sustrato seco, fecha inicio, grano) NO llaman aqui.
+    // Campos read-only (sustrato seco, grano) NO llaman aqui.
+    // fechaInicio SI llama aqui (corrección manual post-confirmación, ver caso
+    // especial mas abajo) pero NO es la fuente de verdad del id — esa se fija
+    // una sola vez en FR.confirmarBolsa() con la fecha elegida en Pendientes.
     // ------------------------------------------------------
-    var _CAMPOS_FECHA = { fechaColonizacion: 1, fechaPines: 1, fechaCosecha: 1 };
+    var _CAMPOS_FECHA = { fechaColonizacion: 1, fechaPines: 1, fechaCosecha: 1, fechaInicio: 1 };
     // pesoSustratoSeco y granoPorBolsa solo editables en bolsas huerfanas (se habilitan dinámicamente)
     // pesoSustratoSeco y granoPorBolsa solo editables en bolsas huérfanas.
     // pesoPrecosecha: entrada manual del operador antes de cada cosecha.
@@ -3094,7 +3100,14 @@
         var raw = (valueRaw == null) ? '' : String(valueRaw).trim();
 
         if (_CAMPOS_FECHA[field]) {
-            b[field] = raw === '' ? null : raw;
+            var nuevoValorFecha = raw === '' ? null : raw;
+            if (field === 'fechaInicio' && nuevoValorFecha !== b.fechaInicio) {
+                addObsTo(b, 'Fecha de armado corregida manualmente: ' +
+                    (b.fechaInicio ? fmtFecha(b.fechaInicio) : '—') + ' → ' +
+                    (nuevoValorFecha ? fmtFecha(nuevoValorFecha) : '—') +
+                    '. El ID (' + b.id + ') no se modifica.', 'auto', 'none');
+            }
+            b[field] = nuevoValorFecha;
         } else if (_CAMPOS_NUM[field]) {
             b[field] = raw === '' ? null : num(raw);
         } else {
@@ -3170,7 +3183,9 @@
         // perder foco si el usuario sigue tabulando).
         var hoy = hoyISO();
         var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo : hoy;
-        set('frDayNow', diasEntre(b.fechaInicio, fechaRef) || 0);
+        var _diasDesdeInicio = diasEntre(b.fechaInicio, fechaRef);
+        set('frDayNow', _diasDesdeInicio || 0);
+        set('frDaysInicio', b.fechaInicio ? (_diasDesdeInicio > 0 ? ('hace ' + _diasDesdeInicio + ' d') : 'hoy') : '—');
         set('frDaysColon',   b.fechaColonizacion ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaColonizacion) || 0)) : 'pendiente');
         set('frDaysPines',   b.fechaPines        ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaPines) || 0))        : 'pendiente');
         set('frDaysCosecha', b.fechaCosecha      ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaCosecha) || 0))      : 'pendiente');
@@ -4124,6 +4139,10 @@
     //   origen: 'huerfana'  (vs 'su' para las creadas por sincronización)
     // Entra al mismo flujo de dashboard, flushes, BE, observaciones, etc.
 
+    // true una vez que el usuario edita frHId a mano — a partir de ahí
+    // huerfanaOnFechaInicioChange() deja de pisar el ID con la sugerencia automática.
+    var _frHIdDirty = false;
+
     FR.abrirModalHuerfana = function() {
         var modal = document.getElementById('frModalHuerfana');
         if (!modal) { console.warn('[FR] Modal huerfana no encontrado en el DOM'); return; }
@@ -4133,10 +4152,27 @@
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
+        _frHIdDirty = false;
         var idEl = document.getElementById('frHId');
         if (idEl) idEl.value = genFrId();
         _frHuerfanaPopularGenetica();
         modal.style.display = 'flex';
+    };
+
+    // Marca el ID como editado a mano — se llama por oninput en frHId.
+    FR.huerfanaMarcarIdDirty = function() {
+        _frHIdDirty = true;
+    };
+
+    // Recalcula el ID sugerido a partir de la fecha real de armado elegida.
+    // No pisa el campo si el usuario ya lo editó a mano (_frHIdDirty).
+    FR.huerfanaOnFechaInicioChange = function() {
+        if (_frHIdDirty) return;
+        var fechaEl = document.getElementById('frHFechaInicio');
+        var idEl = document.getElementById('frHId');
+        if (!idEl) return;
+        var fecha = fechaEl ? fechaEl.value : '';
+        idEl.value = fecha ? genFrId(fecha) : genFrId();
     };
 
     FR.cerrarModalHuerfana = function() {
@@ -4516,6 +4552,77 @@
         }
     }
 
+    // ======================================================
+    // MIGRACIÓN CORRECTIVA — fechaInicio de 26 bolsas puntuales (2026-03 a 2026-07)
+    // ======================================================
+    // Antes del fix de confirmarBolsa (2026-07-15), fechaInicio se poblaba con
+    // lote.fecha de SU al crear la bolsa pendiente, y el id se generaba con la
+    // fecha del día de CONFIRMACIÓN (bug ya corregido). Para estas 26 bolsas
+    // puntuales el operador confirmó contra su backup real (2026-07-16, dos
+    // rondas de revisión) que el DDMM del id SÍ refleja el armado real (confirmó
+    // el mismo día que armó) y que fechaInicio (de SU) es el dato desalineado —
+    // el caso inverso al bug original. Las primeras 10 (jun-jul, formato con
+    // padding de 2 dígitos) y las 16 restantes (mar-may, formato viejo SIN
+    // padding — mismo esquema día+mes, solo sin ceros) se revisaron por separado;
+    // 5 de esas 16 (FR15/b/c/d, FR125) tenían más de una lectura día/mes
+    // numéricamente válida y el operador confirmó cuál a mano. Lista cerrada,
+    // revisada bolsa por bolsa — NO una regla general "el id siempre tiene razón"
+    // (esa regla rompería el caso original que motivó el fix de confirmarBolsa).
+    var FR_MIG_FECHAINICIO_IDCONFIRMADO = [
+        // Formato con padding (jun-jul 2026)
+        { id: 'FR0306',  fechaCorrecta: '2026-06-03' },
+        { id: 'FR0306b', fechaCorrecta: '2026-06-03' },
+        { id: 'FR1106',  fechaCorrecta: '2026-06-11' },
+        { id: 'FR1106b', fechaCorrecta: '2026-06-11' },
+        { id: 'FR1106c', fechaCorrecta: '2026-06-11' },
+        { id: 'FR1106d', fechaCorrecta: '2026-06-11' },
+        { id: 'FR1207',  fechaCorrecta: '2026-07-12' },
+        { id: 'FR1207b', fechaCorrecta: '2026-07-12' },
+        { id: 'FR1207c', fechaCorrecta: '2026-07-12' },
+        { id: 'FR1207d', fechaCorrecta: '2026-07-12' },
+        // Formato viejo sin padding (mar-may 2026), lectura única
+        { id: 'FR234a',  fechaCorrecta: '2026-04-23' },
+        { id: 'FR234b',  fechaCorrecta: '2026-04-23' },
+        { id: 'FR254a',  fechaCorrecta: '2026-04-25' },
+        { id: 'FR254b',  fechaCorrecta: '2026-04-25' },
+        { id: 'FR254c',  fechaCorrecta: '2026-04-25' },
+        { id: 'FR254d',  fechaCorrecta: '2026-04-25' },
+        { id: 'FR145',   fechaCorrecta: '2026-05-14' },
+        { id: 'FR245a',  fechaCorrecta: '2026-05-24' },
+        { id: 'FR245b',  fechaCorrecta: '2026-05-24' },
+        { id: 'FR285',   fechaCorrecta: '2026-05-28' },
+        { id: 'FR285b',  fechaCorrecta: '2026-05-28' },
+        // Formato viejo sin padding, lectura ambigua — confirmado a mano por el operador
+        { id: 'FR15',    fechaCorrecta: '2026-05-01' },
+        { id: 'FR15b',   fechaCorrecta: '2026-05-01' },
+        { id: 'FR15c',   fechaCorrecta: '2026-05-01' },
+        { id: 'FR15d',   fechaCorrecta: '2026-05-01' },
+        { id: 'FR125',   fechaCorrecta: '2026-05-12' }
+    ];
+    function _frMigrarFechaInicioIdConfirmado() {
+        var KEY_MIG = 'biolab_migracion_fr_fechainicio_id_v1';
+        try { if (localStorage.getItem(KEY_MIG) === '1') return; } catch (e) { return; }
+        var cambiadas = 0;
+        FR_MIG_FECHAINICIO_IDCONFIRMADO.forEach(function(item) {
+            var b = bolsas.find(function(x) { return x.id === item.id; });
+            if (!b) return; // ya no existe con ese id (renombrada a mano, etc.) — no tocar nada
+            if (b.fechaInicio === item.fechaCorrecta) return; // ya corregida, no duplicar log
+            var anterior = b.fechaInicio;
+            b.fechaInicio = item.fechaCorrecta;
+            addObsTo(b, 'Migración correctiva (2026-07-16): fechaInicio ajustada a la fecha implícita en el id — ' +
+                (anterior ? fmtFecha(anterior) : '—') + ' → ' + fmtFecha(item.fechaCorrecta) +
+                '. Confirmado por el operador contra backup real.', 'auto', 'none');
+            cambiadas++;
+        });
+        if (cambiadas > 0) {
+            try { saveBolsas(); } catch (e) { console.warn('[FR] migracion fechaInicio idConfirmado save:', e); }
+        }
+        try { localStorage.setItem(KEY_MIG, '1'); } catch (e) {}
+        if (cambiadas > 0) {
+            console.log('[FR] Migracion correctiva fechaInicio idConfirmado ejecutada. Bolsas corregidas: ' + cambiadas + '.');
+        }
+    }
+
     function _migrarFrInoculoSourceNull() {
         var KEY_MIG = 'biolab_migracion_fr_inoculo_source_v1';
         try {
@@ -4596,7 +4703,11 @@
                         nombre: a.nombre,
                         pct:    pct,
                         bucket: bucket,
-                        slug:   slugify(a.nombre) + '_' + bucket
+                        // Preferir a.id (catálogo su_biblioteca.materiales, ver prerequisito
+                        // MEJ-0006 en SU) como clave de agrupamiento — evita que dos productos
+                        // distintos tipeados con el mismo texto se mezclen en la correlación.
+                        // Fallback a slug por nombre para aditivos legacy sin id (nunca excluye).
+                        slug:   (a.id || slugify(a.nombre)) + '_' + bucket
                     });
                 });
             }
@@ -5198,6 +5309,7 @@
         try { loadBolsas(); } catch (e) { console.warn('[FR] loadBolsas:', e); }
         try { loadExperimentos(); } catch (e) { console.warn('[FR-EX] loadExperimentos:', e); }
         try { migrarLegacySUtoFRv2(); } catch (e) { console.warn('[FR] migracion v2:', e); }
+        try { _frMigrarFechaInicioIdConfirmado(); } catch (e) { console.warn('[FR] migracion fechaInicio idConfirmado:', e); }
         try { _frMigrarUUIDs(); } catch (e) { console.warn('[FR] migracion uuid:', e); }
         try { sincronizarTodo(); } catch (e) { console.warn('[FR] sync init:', e); }
 

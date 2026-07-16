@@ -91,8 +91,8 @@
                     <div class="section-content">
                         <div class="fr-timeline">
                             <div class="fr-phase">
-                                <span class="fr-phase-label">Inicio (SU)</span>
-                                <input type="date" id="frFechaInicio" class="fr-dash-input fr-dash-locked" disabled title="Fecha de inoculación (heredada de SU, no editable)">
+                                <span class="fr-phase-label">Armado de bolsa</span>
+                                <input type="date" id="frFechaInicio" class="fr-dash-input" onchange="FR.updateField('fechaInicio', this.value)" title="Fecha real de armado — se completa al confirmar en Pendientes. Corregila acá si hace falta; no vuelve a generar el ID.">
                                 <span class="fr-phase-days" id="frDaysInicio">día 0</span>
                             </div>
                             <div class="fr-phase">
@@ -581,7 +581,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="frHId">ID bolsa *</label>
-                    <input type="text" id="frHId" class="fr-dash-input" placeholder="ej: FR234">
+                    <input type="text" id="frHId" class="fr-dash-input" placeholder="ej: FR234" oninput="FR.huerfanaMarcarIdDirty()" title="Se sugiere automáticamente a partir de la Fecha inicio. Si lo editás a mano, deja de auto-actualizarse.">
                 </div>
             </div>
 
@@ -618,7 +618,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="frHFechaInicio">Fecha inicio</label>
-                    <input type="date" id="frHFechaInicio" class="fr-dash-input">
+                    <input type="date" id="frHFechaInicio" class="fr-dash-input" onchange="FR.huerfanaOnFechaInicioChange()" title="Fecha real de armado — el ID sugerido arriba se recalcula a partir de esta fecha">
                 </div>
                 <div class="form-group">
                     <label for="frHFechaColon">Fecha colonización <span class="fr-opt">(opcional)</span></label>
