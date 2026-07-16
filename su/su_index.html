@@ -106,89 +106,92 @@
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="section-content" id="calculadora">
-                    
-                    <!-- Fórmula Visual -->
-                    <div class="calc-su-container">
-                        <div class="calc-su-formula">
-                            <div class="form-group fibra">
-                                <label>SUSTRATO SECO (g)</label>
-                                <input type="number" id="suFibra" value="0" min="0" step="1" style="background:var(--dark)">
+
+                    <div class="su-main-grid">
+                        <!-- IZQUIERDA: Fórmula + Composición + Resultados (compacto) -->
+                        <div class="calc-su-container">
+                            <div class="calc-su-formula">
+                                <div class="form-group fibra">
+                                    <label>SUSTRATO SECO (g)</label>
+                                    <input type="number" id="suFibra" value="0" min="0" step="1" style="background:var(--dark)">
+                                </div>
+                                <div class="operator">×</div>
+                                <div class="form-group ratio">
+                                    <label>RATIO</label>
+                                    <input type="number" id="suRatio" value="0" min="0" step="0.1" style="background:var(--dark)">
+                                </div>
+                                <div class="operator">=</div>
+                                <div class="form-group agua">
+                                    <label>AGUA (ml)</label>
+                                    <input type="number" id="suAguaInput" readonly style="background:var(--dark)">
+                                </div>
                             </div>
-                            <div class="operator">×</div>
-                            <div class="form-group ratio">
-                                <label>RATIO</label>
-                                <input type="number" id="suRatio" value="0" min="0" step="0.1" style="background:var(--dark)">
+
+                            <!-- Barra de Composición -->
+                            <div class="composition-bar-container">
+                                <div class="composition-bar-label">
+                                    <span>Composición</span>
+                                    <span id="compositionLabel"></span>
+                                </div>
+                                <div class="composition-bar" id="compositionBar">
+                                    <div class="composition-segment empty">Sin datos</div>
+                                </div>
                             </div>
-                            <div class="operator">=</div>
-                            <div class="form-group agua">
-                                <label>AGUA (ml)</label>
-                                <input type="number" id="suAguaInput" readonly style="background:var(--dark)">
+
+                            <!-- Resultados secundarios: tira compacta -->
+                            <div class="calc-stat-strip">
+                                <div class="calc-stat">
+                                    <label>Peso Agua <span class="calc-badge su">Auto</span></label>
+                                    <input type="number" id="suPesoAgua" readonly>
+                                </div>
+                                <div class="calc-stat">
+                                    <label>Total <span class="calc-badge su">Auto</span></label>
+                                    <input type="number" id="suTotal" readonly>
+                                </div>
+                                <div class="calc-stat">
+                                    <label>Hyd % <span class="calc-badge">Auto</span></label>
+                                    <div class="calc-stat-value" id="suHyd">0</div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Barra de Composición -->
-                        <div class="composition-bar-container">
-                            <div class="composition-bar-label">
-                                <span>Composición</span>
-                                <span id="compositionLabel"></span>
+
+                        <!-- DERECHA: Aditivos + Producción -->
+                        <div class="su-side-col">
+                            <div class="aditivos-container">
+                                <h3 style="color:var(--secondary)">🔧 Aditivos e Ingredientes Extra</h3>
+                                <p class="section-desc">Agregue aditivos o suplementos al sustrato</p>
+                                <div id="aditivosContainer">
+                                    <!-- Filas de aditivos se agregan dinámicamente -->
+                                </div>
+                                <button type="button" class="btn btn-add" onclick="agregarFilaAditivo()">+ Agregar Aditivo</button>
                             </div>
-                            <div class="composition-bar" id="compositionBar">
-                                <div class="composition-segment empty">Sin datos</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Resultados secundarios -->
-                        <div class="form-row" style="margin-top:20px">
-                            <div class="form-group">
-                                <label>Peso Agua (g) <span class="calc-badge su">Auto</span></label>
-                                <input type="number" id="suPesoAgua" readonly style="background:var(--dark)">
-                            </div>
-                            <div class="form-group">
-                                <label>Total Teórico (g) <span class="calc-badge su">Auto</span></label>
-                                <input type="number" id="suTotal" readonly style="background:var(--dark)">
-                            </div>
-                            <div class="form-group">
-                                <label>Hyd % <span class="calc-badge">Auto</span></label>
-                                <div style="font-size:1.5rem;font-weight:700;color:var(--su-hyd)" id="suHyd">0</div>
+
+                            <div class="produccion-container">
+                                <h3 style="color:var(--highlight)">📦 Producción de Bolsas</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="suModo">Modo</label>
+                                        <select id="suModo" style="background:var(--dark)">
+                                            <option value="normal">Normal - defino cantidad de bolsas</option>
+                                            <option value="inverso">Inverso - defino peso por bolsa</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="divBolsas">
+                                        <label for="suBolsas">Cantidad de bolsas</label>
+                                        <input type="number" id="suBolsas" value="0" min="1" style="background:var(--dark)">
+                                    </div>
+                                    <div class="form-group" id="divPesoBolsa" style="display:none">
+                                        <label for="suPesoBolsa">Peso deseado por bolsa (g)</label>
+                                        <input type="number" id="suPesoBolsa" value="0" min="1" step="50" style="background:var(--dark)">
+                                    </div>
+                                </div>
+                                <div class="produccion-resultado" id="suProdResultado">
+                                    <span style="color:var(--text-muted)">Ingrese fibra y ratio para calcular</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- ADITIVOS - Debajo de Calculadora -->
-                    <div class="aditivos-container" style="margin-top:20px;margin-bottom:20px">
-                        <h3 style="color:var(--secondary);margin-bottom:15px">🔧 Aditivos e Ingredientes Extra</h3>
-                        <p class="section-desc">Agregue aditivos o suplementos al sustrato</p>
-                        <div id="aditivosContainer">
-                            <!-- Filas de aditivos se agregan dinámicamente -->
-                        </div>
-                        <button type="button" class="btn btn-add" onclick="agregarFilaAditivo()">+ Agregar Aditivo</button>
-                    </div>
-                    
-                    <!-- Producción de Bolsas -->
-                    <div class="produccion-container">
-                        <h3 style="color:var(--highlight);margin-bottom:15px">📦 Producción de Bolsas</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="suModo">Modo</label>
-                                <select id="suModo" style="background:var(--dark)">
-                                    <option value="normal">Normal - defino cantidad de bolsas</option>
-                                    <option value="inverso">Inverso - defino peso por bolsa</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="divBolsas">
-                                <label for="suBolsas">Cantidad de bolsas</label>
-                                <input type="number" id="suBolsas" value="0" min="1" style="background:var(--dark)">
-                            </div>
-                            <div class="form-group" id="divPesoBolsa" style="display:none">
-                                <label for="suPesoBolsa">Peso deseado por bolsa (g)</label>
-                                <input type="number" id="suPesoBolsa" value="0" min="1" step="50" style="background:var(--dark)">
-                            </div>
-                        </div>
-                        <div class="produccion-resultado" id="suProdResultado">
-                            <span style="color:var(--text-muted)">Ingrese fibra y ratio para calcular</span>
-                        </div>
-                    </div>
-                    
+
                 </div>
             </section>
 
@@ -394,6 +397,8 @@
                                 <th>Volumen (ml)</th>
                                 <th>Densidad (g/ml)</th>
                                 <th>Notas</th>
+                                <th>Rango Óptimo (%)</th>
+                                <th>Rango Seguro (%)</th>
                                 <th class="col-acciones"></th>
                             </tr>
                         </thead>

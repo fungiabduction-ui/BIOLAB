@@ -384,9 +384,12 @@ function calcularSU() {
     
     // Actualizar barra de composición
     actualizarBarraComposicion(fibra, pesoAgua, aditivos);
-    
+
     // Calcular producción
     calcularProduccion();
+
+    // Aviso no bloqueante de dosis fuera de rango seguro por aditivo
+    _suCheckRangosAditivos();
 }
 
 function calcularProduccion() {
@@ -1657,10 +1660,52 @@ function agregarFilaAditivo(id = '', cantidad = 0, nombreLegacy = '') {
             ${opciones}
         </select>
         <input type="number" class="aditivo-cant" value="${cantidad}" min="0" step="0.1" placeholder="g" oninput="calcularSU()">
+        <span class="aditivo-pct"></span>
+        <span class="aditivo-warning" style="display:none"></span>
         <button type="button" class="btn-remove" onclick="this.parentElement.remove(); calcularSU()">✕</button>
     `;
 
     container.appendChild(row);
+}
+
+// Aviso no bloqueante (independiente de CILAB, no llama código de ese módulo):
+// rangoOptimo/rangoSeguro están en % de fibra seca (dosis/fibra × 100), no en
+// gramos absolutos — un mismo gramaje significa dosis distinta según el tamaño
+// del lote, y el % es lo comparable entre lotes (convención estándar de
+// suplementación en sustratos). Muestra siempre el % que representa la cantidad
+// cargada (independiente de si hay rango configurado), y además, si cae fuera
+// del rangoSeguro configurado en su_biblioteca.materiales, un aviso en rojo.
+// Nunca impide guardar el lote — es solo visual, no valida ni bloquea recolectarDatosLote.
+function _suCheckRangosAditivos() {
+    var fibra = parseFloat(document.getElementById('suFibra').value) || 0;
+
+    document.querySelectorAll('.aditivo-row').forEach(function(row) {
+        var select = row.querySelector('.aditivo-select');
+        var cantInput = row.querySelector('.aditivo-cant');
+        var pctEl = row.querySelector('.aditivo-pct');
+        var warnEl = row.querySelector('.aditivo-warning');
+        if (!select || !cantInput || !pctEl || !warnEl) return;
+
+        var id = select.value;
+        var cantidad = parseFloat(cantInput.value) || 0;
+        var material = id ? biblioteca.materiales.find(function(m) { return m.id === id; }) : null;
+        var rango = material && material.rangoSeguro;
+
+        var pct = (cantidad > 0 && fibra > 0) ? (cantidad / fibra) * 100 : null;
+        pctEl.textContent = pct != null ? ('= ' + pct.toFixed(1) + '% de la fibra') : '';
+
+        var msg = '';
+        if (rango && pct != null) {
+            if (rango.min != null && pct < rango.min) {
+                msg = '⚠ por debajo del rango seguro (mín. ' + rango.min + '%)';
+            } else if (rango.max != null && pct > rango.max) {
+                msg = '⚠ supera el rango seguro (máx. ' + rango.max + '%)';
+            }
+        }
+
+        warnEl.textContent = msg;
+        warnEl.style.display = msg ? 'inline' : 'none';
+    });
 }
 
 // ==========================================
@@ -2275,10 +2320,14 @@ function cfgGuardarCambiosMateriales() {
     var inputsAll = document.querySelectorAll('#cfgBibliotecaTable input, #cfgBibliotecaTable select');
     if (inputsAll.length === 0) return;
 
-    var numCols = 9;
+    var numCols = 13;
     var nuevosMateriales = [];
     for (var i = 0; i < inputsAll.length; i += numCols) {
         var idx = Math.floor(i / numCols);
+        var rOptMin = parseFloat(inputsAll[i + 9].value);
+        var rOptMax = parseFloat(inputsAll[i + 10].value);
+        var rSegMin = parseFloat(inputsAll[i + 11].value);
+        var rSegMax = parseFloat(inputsAll[i + 12].value);
         nuevosMateriales.push({
             id: biblioteca.materiales[idx] ? biblioteca.materiales[idx].id : 'ING-SU-' + String(idx + 1).padStart(3, '0'),
             nombre: inputsAll[i + 1].value,
@@ -2289,8 +2338,8 @@ function cfgGuardarCambiosMateriales() {
             volumen: parseFloat(inputsAll[i + 6].value) || 0,
             densidad: parseFloat(inputsAll[i + 7].value) || 0,
             notas: inputsAll[i + 8].value,
-            rangoOptimo: (biblioteca.materiales[idx] && biblioteca.materiales[idx].rangoOptimo != null) ? biblioteca.materiales[idx].rangoOptimo : null,
-            rangoSeguro: (biblioteca.materiales[idx] && biblioteca.materiales[idx].rangoSeguro != null) ? biblioteca.materiales[idx].rangoSeguro : null
+            rangoOptimo: (!isNaN(rOptMin) || !isNaN(rOptMax)) ? { min: isNaN(rOptMin) ? null : rOptMin, max: isNaN(rOptMax) ? null : rOptMax } : null,
+            rangoSeguro: (!isNaN(rSegMin) || !isNaN(rSegMax)) ? { min: isNaN(rSegMin) ? null : rSegMin, max: isNaN(rSegMax) ? null : rSegMax } : null
         });
     }
 
@@ -2320,7 +2369,7 @@ function cfgRenderizarBiblioteca() {
 
     if (!biblioteca.materiales.length) {
         colsAcciones.forEach(function(el) { el.classList.remove('visible'); });
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Sin materiales registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Sin materiales registrados</td></tr>';
         return;
     }
 
@@ -2344,6 +2393,8 @@ function cfgRenderizarBiblioteca() {
                 '<td><input type="number" class="edit-input" step="0.001" value="' + (m.volumen || 0) + '"></td>' +
                 '<td><input type="number" class="edit-input" step="0.001" value="' + (m.densidad || 0) + '"></td>' +
                 '<td><input type="text" class="edit-input" value="' + cfgEscapeHtml(m.notas || '') + '"></td>' +
+                '<td><input type="number" class="edit-input" step="0.1" style="width:55px" placeholder="min %" value="' + ((m.rangoOptimo && m.rangoOptimo.min != null) ? m.rangoOptimo.min : '') + '"> – <input type="number" class="edit-input" step="0.1" style="width:55px" placeholder="max %" value="' + ((m.rangoOptimo && m.rangoOptimo.max != null) ? m.rangoOptimo.max : '') + '"></td>' +
+                '<td><input type="number" class="edit-input" step="0.1" style="width:55px" placeholder="min %" value="' + ((m.rangoSeguro && m.rangoSeguro.min != null) ? m.rangoSeguro.min : '') + '"> – <input type="number" class="edit-input" step="0.1" style="width:55px" placeholder="max %" value="' + ((m.rangoSeguro && m.rangoSeguro.max != null) ? m.rangoSeguro.max : '') + '"></td>' +
                 '<td class="col-acciones"><button class="btn-delete-row" onclick="cfgEliminarMaterial(' + index + ')">✕</button></td>' +
             '</tr>';
         } else {
@@ -2357,6 +2408,8 @@ function cfgRenderizarBiblioteca() {
                 '<td>' + (m.volumen || '-') + '</td>' +
                 '<td>' + (m.densidad || '-') + '</td>' +
                 '<td>' + (m.notas || '-') + '</td>' +
+                '<td>' + ((m.rangoOptimo && (m.rangoOptimo.min != null || m.rangoOptimo.max != null)) ? ((m.rangoOptimo.min != null ? m.rangoOptimo.min : '?') + '–' + (m.rangoOptimo.max != null ? m.rangoOptimo.max : '?') + '%') : '-') + '</td>' +
+                '<td>' + ((m.rangoSeguro && (m.rangoSeguro.min != null || m.rangoSeguro.max != null)) ? ((m.rangoSeguro.min != null ? m.rangoSeguro.min : '?') + '–' + (m.rangoSeguro.max != null ? m.rangoSeguro.max : '?') + '%') : '-') + '</td>' +
                 '<td class="col-acciones" style="display:none"></td>' +
             '</tr>';
         }
@@ -2379,7 +2432,9 @@ function cfgAgregarMaterial() {
         peso: parseFloat(document.getElementById('cfgMatPeso').value) || 0,
         volumen: parseFloat(document.getElementById('cfgMatVolumen').value) || 0,
         densidad: parseFloat(document.getElementById('cfgMatDensidad').value) || 0,
-        notas: document.getElementById('cfgMatNotas').value.trim()
+        notas: document.getElementById('cfgMatNotas').value.trim(),
+        rangoOptimo: null,
+        rangoSeguro: null
     };
 
     biblioteca.materiales.push(nuevo);
