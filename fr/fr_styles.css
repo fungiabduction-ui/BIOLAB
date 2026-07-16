@@ -1230,6 +1230,34 @@ p.fr-hint {
 }
 .fr-btn-cancelar-pend:active { transform: translateY(0); }
 
+/* Input de fecha real de armado, editable al confirmar una bolsa pendiente */
+.fr-fecha-armado-input {
+    color-scheme: dark;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(212,160,23,0.4);
+    background: rgba(212,160,23,0.08);
+    color: var(--fr-main-soft);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+}
+.fr-fecha-armado-input:hover {
+    background: rgba(212,160,23,0.16);
+    border-color: var(--fr-main-soft);
+}
+.fr-fecha-armado-input:focus {
+    outline: none;
+    background: rgba(212,160,23,0.18);
+    border-color: var(--fr-main);
+}
+.fr-fecha-armado-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.8) sepia(1) saturate(3) hue-rotate(0deg);
+    cursor: pointer;
+}
+
 /* Badge de conteo en el encabezado de la sección pendientes */
 .fr-pendientes-badge {
     font-size: 0.78rem;
