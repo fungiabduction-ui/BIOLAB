@@ -2322,6 +2322,22 @@ function segOnChangeInoculoCi(selectEl) {
     segEmitirNotaAuto(frmId, 'none',
       `🔗 Inoculo trace seleccionado — ${ts} — ${optLabel} [${tanda}]`,
       tanda !== '—' ? tanda : null);
+
+    // Autocompletar 🧬 Genética desde el cultivo trazado: el Inoculo trace
+    // ya determina la genética (no tiene sentido pedirla dos veces). Solo
+    // si la opción existe en el select (evita vaciarlo si GE no la tiene).
+    try {
+      const cultivos = JSON.parse(localStorage.getItem('bl2_cultivos')) || [];
+      const cultivo  = cultivos.find(c => c && c.id === cultivoCiId);
+      const geneticaSel = row.querySelector('.seg-genetica');
+      if (cultivo && cultivo.geneticaId && geneticaSel) {
+        const hasOption = Array.from(geneticaSel.options).some(o => o.value === cultivo.geneticaId);
+        if (hasOption && geneticaSel.value !== cultivo.geneticaId) {
+          geneticaSel.value = cultivo.geneticaId;
+          segOnChangeGenetica(geneticaSel);
+        }
+      }
+    } catch(e) { console.warn('[CI] autocompletar genética desde Inoculo trace falló', e); }
   }
   // Auto-save: el cambio de inóculo también dispara el guardado
   if (frmId) segActualizarResumen(frmId);
@@ -3711,11 +3727,15 @@ function segPersistirNotas() {
       const memManualKeys = new Set();
       const memAutoKeys  = new Set();
       memArr.forEach(function(n) {
-        if (n.auto && n._eventType) memAutoKeys.add(n._eventType + ':' + (n.tandaId || '__general__'));
+        // Solo tratamos como "misma nota" a auto-notas con tandaId real —
+        // agrupar bajo '__general__' compartido borraba notas de eventos
+        // distintos sin tanda que coincidían en texto (ver segCargarNotas
+        // más abajo, mismo bug, MEJ-0010).
+        if (n.auto && n._eventType && n.tandaId) memAutoKeys.add(n._eventType + ':' + n.tandaId);
         else memManualKeys.add(n.ts + '||' + n.texto);
       });
       const soloEnStorage = storArr.filter(function(n) {
-        if (n.auto && n._eventType) return !memAutoKeys.has(n._eventType + ':' + (n.tandaId || '__general__'));
+        if (n.auto && n._eventType && n.tandaId) return !memAutoKeys.has(n._eventType + ':' + n.tandaId);
         return !memManualKeys.has(n.ts + '||' + n.texto);
       });
       merged[fId] = soloEnStorage.concat(memArr);
@@ -3801,12 +3821,20 @@ function segCargarNotas() {
           nota._eventType = nota.texto.split(' — ')[0];
         }
       });
-      // Paso 2: dedup — conservar solo la primera ocurrencia (más reciente, están en orden unshift)
+      // Paso 2: dedup — conservar solo la primera ocurrencia (más reciente, están en orden unshift).
+      // Solo dentro de una MISMA tanda real conocida (nota.tandaId truthy) — nunca
+      // pooleando notas sin tanda bajo un '__general__' compartido. Dos eventos
+      // reales distintos sin tanda (ej. auto-notas de CILAB Conocimiento sobre
+      // ensayos distintos que coinciden en texto/score) pueden compartir el mismo
+      // _eventType sin ser el mismo evento — agruparlos bajo la misma key de dedup
+      // borraba notas reales de ensayos distintos (bug encontrado y corregido
+      // 2026-07-22 tras perder 2 notas de CI-0012/CRE-0068 y CRE-0071 en producción,
+      // ver mejoras_app.md MEJ-0010).
       const seen = new Set();
       for (let i = 0; i < arr.length; i++) {
         const nota = arr[i];
-        if (!nota.auto || !nota._eventType) continue;
-        const key = nota._eventType + ':' + (nota.tandaId || '__general__');
+        if (!nota.auto || !nota._eventType || !nota.tandaId) continue;
+        const key = nota._eventType + ':' + nota.tandaId;
         if (seen.has(key)) { arr.splice(i, 1); i--; }
         else seen.add(key);
       }

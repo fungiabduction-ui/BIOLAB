@@ -372,6 +372,10 @@ function creCreate({ formulaId, tandaId, formulaSnapshot, geneticaId, geneticaLa
   if (cultivoId)     rec.cultivoId     = cultivoId;
   if (experimentoId) rec.experimentoId = experimentoId;
   if (frascoId)      rec.frascoId      = frascoId;
+  // MEJ-0007: si el snapshot ya trae los extras del frasco mergeados
+  // (creGetSnapshotWithExtras), no dejar que creAddObs() los vuelva a
+  // aplicar al cerrar vía _creBackfillExtras() — duplicaba la dosis.
+  if (formulaSnapshot && formulaSnapshot._extrasIncluded) rec._extrasBackfilled = true;
   arr.push(rec);
   creWrite(arr);
   return rec;
@@ -407,8 +411,18 @@ function creAddObs(creId, obs) {
   }
 
   creWrite(arr);
-  // Mantiene el timeline de CI Seguimiento sincronizado
-  _creWriteAutoNota(arr[idx].formulaId, _creFormatAutoNota(arr[idx], full), 'none');
+  // Mantiene el timeline de CI Seguimiento sincronizado.
+  // tandaId = arr[idx].id (ej. "CRE-0068"): CI's segCargarNotas() deduplica
+  // auto-notas por `_eventType + ':' + (tandaId || '__general__')`, y
+  // _eventType se deriva del texto ANTES de " — " (que acá incluye el score,
+  // no el id del record). Dos ensayos distintos que puntúan igual (mismo
+  // score redondeado) generaban el mismo _eventType, y como esta nota nunca
+  // llevaba tandaId, ambos caían en el mismo '__general__' — la migración
+  // de CI borraba una de las dos notas como "duplicado", perdiendo el
+  // registro de un ensayo real (bug encontrado y corregido 2026-07-22, ver
+  // mejoras_app.md). Usar el id del record, que _creNextId() garantiza único,
+  // asegura que la key de dedup nunca colisione entre records distintos.
+  _creWriteAutoNota(arr[idx].formulaId, _creFormatAutoNota(arr[idx], full), 'none', arr[idx].id);
   if (obs.tipo === 'definitiva') {
     rizoLearnInvalidate();
     // Advertencia de calidad de datos para el motor de aprendizaje
@@ -631,8 +645,10 @@ function creGetSnapshotWithExtras(formulaId, frasco) {
   const allIngs   = readIngredientes();
   const merged    = [...base.ings];
   const normFactor = (frasco.volFrasco > 0) ? (1000 / frasco.volFrasco) : 1;
+  let anyMerged = false;
   frasco.extras.forEach(ex => {
     if (!ex.ingId || !(ex.qty > 0)) return;
+    anyMerged = true;
     const normalizedQty = ex.qty * normFactor;
     const existing = merged.find(i => i.id === ex.ingId);
     if (existing) {
@@ -647,7 +663,9 @@ function creGetSnapshotWithExtras(formulaId, frasco) {
       });
     }
   });
-  return { ...base, ings: merged };
+  // MEJ-0007: marca que este snapshot ya incluye los extras mergeados —
+  // creCreate() la usa para no dejar que creAddObs() los vuelva a aplicar.
+  return anyMerged ? { ...base, ings: merged, _extrasIncluded: true } : { ...base, ings: merged };
 }
 
 
@@ -1035,13 +1053,19 @@ function _creExtrasBackfill() {
 /**
  * Migración V2: re-sella extras en records ya procesados por V1 con cantidades incorrectas.
  * V1 no aplicaba normalizacion volumetrica (extra.qty * 1000/volFrasco).
- * Esta funcion reconstruye formulaSnapshot.ings desde la formula base + extras normalizados.
+ * MEJ-0008 (2026-07-22): esta función ANTES reconstruía formulaSnapshot.ings
+ * desde bl2_forms EN VIVO — si la fórmula base se editaba in-place (posible,
+ * ver frmDelIngRow en ci_app.js) después de que el record cerró, esto
+ * reescribía silenciosamente los ingredientes base del record viejo con los
+ * de la fórmula editada, violando su inmutabilidad. Ahora parte del propio
+ * formulaSnapshot ya sellado — nunca lee bl2_forms — y solo toca los
+ * ingredientes marcados _extra (el merge previo, posiblemente mal
+ * normalizado o duplicado) para reaplicarlos con la normalización correcta.
  * Idempotente: solo procesa records con _extrasBackfilled=true y _extrasBackfilledV2 ausente.
  */
 function _creExtrasBackfillV2() {
   var exps = [];
   try { exps = JSON.parse(localStorage.getItem('bl2_experimentos')) || []; } catch(e) {}
-  var forms   = typeof readForms === 'function' ? readForms() : [];
   var allIngs = typeof readIngredientes === 'function' ? readIngredientes() : [];
   var arr = creRead();
   var n   = 0;
@@ -1063,21 +1087,12 @@ function _creExtrasBackfillV2() {
     if (volFrasco <= 0) { r._extrasBackfilledV2 = true; return; }
     var normFactor = 1000 / volFrasco;
 
-    // Reconstruir snapshot desde formula base canonical (1L) — fuente de verdad
-    var baseForm = forms.find(function(f) { return f.id === r.formulaId; });
-    if (!baseForm) { r._extrasBackfilledV2 = true; return; }
+    if (!r.formulaSnapshot || !Array.isArray(r.formulaSnapshot.ings)) { r._extrasBackfilledV2 = true; return; }
 
-    var baseIngs = (baseForm.ingredientes || [])
-      .filter(function(fi) { return (fi.qty || 0) > 0; })
-      .map(function(fi) {
-        var ing = allIngs.find(function(i) { return i.id === fi.id; });
-        return {
-          id:     fi.id,
-          nombre: (fi.snapshot && fi.snapshot.nombre) || (ing && ing.nombre) || fi.id,
-          qty:    fi.qty || 0,
-          unidad: fi.unidad || (ing && ing.unidad) || 'gr',
-        };
-      });
+    // Partir del snapshot YA sellado (nunca de bl2_forms), descartando solo
+    // las entradas _extra de un merge previo — el resto (ingredientes base
+    // reales) queda intacto tal cual se cerró el ensayo.
+    var baseIngs = r.formulaSnapshot.ings.filter(function(i) { return !i._extra; });
 
     // Merge extras normalizados sobre base
     extras.forEach(function(ex) {
@@ -1097,7 +1112,6 @@ function _creExtrasBackfillV2() {
       }
     });
 
-    if (!r.formulaSnapshot) r.formulaSnapshot = { ings: [] };
     r.formulaSnapshot.ings = baseIngs;
     r._extrasBackfilledV2  = true;
     n++;
