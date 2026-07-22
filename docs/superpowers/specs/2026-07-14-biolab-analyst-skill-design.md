@@ -250,3 +250,99 @@ Cuando el Diagnóstico experto llega a una conclusión que la app hoy no puede v
 - El backlog nunca se auto-cierra ni se auto-reabre — ambas transiciones requieren confirmación explícita del usuario en conversación.
 - La coincidencia entre un hallazgo nuevo y un item existente del backlog es un juicio del skill al releer el archivo, no un algoritmo de matching determinístico — consistente con la decisión original de no mantener un script de análisis para este skill.
 - La heurística de revisar código fuente no incluye ningún mecanismo para que el skill modifique ese código — solo lo lee y lo documenta como item del backlog. Aplicar el fix sigue siendo una tarea de programación aparte (con su propio plan/revisión), como ya se hizo con el fix de `bioConflict`.
+
+---
+
+## Extensión — Sistema de hipótesis escalable + dashboard local (2026-07-22, nueva sesión)
+
+**Goal:** `docs/lab-intelligence/hipotesis.md` (agregado en una sesión posterior a este spec, ya en producción con 4 secciones de módulo + cola de experimentos conceptuales, 116 líneas) va a crecer mucho — es la pieza que el usuario más valora del sistema ("el motor más gigante de inteligencia"). Sin estructura, un solo archivo se vuelve BIOLAB_SYSTEM.md v2: crece sin que nadie lo reorganice a tiempo. Esta extensión: (1) le da la misma estructura escalable que ya tienen `mejoras_app.md` (estado) y los módulos de la app (contexto por módulo), (2) conecta Modo análisis/anotación con las hipótesis abiertas sin romper el principio de un solo escritor, (3) agrega precisión de fecha+hora en los tres sistemas de bitácora, y (4) genera un dashboard HTML local para ver todo de un vistazo.
+
+### 1. Estructura de archivos — split por módulo
+
+`docs/lab-intelligence/hipotesis.md` se reemplaza por:
+
+```
+docs/lab-intelligence/hipotesis/
+  index.md                 — convención de IDs, leyenda de estados, qué archivo mirar por tema
+  ge-ci-cilab.md
+  gr.md
+  su.md
+  fr.md
+  cross-modulo.md           — hipótesis que involucran más de un módulo (ej. GR→FR, SU→FR)
+  experimentos-en-cola.md   — la cola EXP-C-XXXX existente, se muda tal cual (misma convención de id)
+```
+
+**Migración (tarea única, parte de la implementación):** las 4 secciones de módulo del `hipotesis.md` actual se mudan a su archivo correspondiente, asignando IDs retroactivos (ver esquema abajo) en el orden en que ya aparecen. La sección `## 🧪 Diseños Conceptuales de Experimentos (En Cola)` se muda completa a `experimentos-en-cola.md` sin tocar sus IDs `EXP-C-XXXX` existentes. El archivo `hipotesis.md` original se elimina una vez migrado — no queda como alias ni redirect.
+
+Razón de fondo para el split: cada invocación de Modo hipótesis y preguntas o del cruce de lectura (punto 3) solo necesita cargar el archivo del módulo en alcance, no los otros — mismo principio de "leer solo lo necesario" que ya rige el resto del proyecto, aplicado a este archivo de contexto igual que ya se aplica a `CI_CONTEXT.md`/`CILAB_INTELIGENCIA_CONTEXT.md` en vez de todo metido en `CLAUDE.md`.
+
+### 2. Esquema de cada hipótesis — ID, estado, evidencia
+
+```markdown
+### HIP-FR-0001 · estado: abierta
+
+**Registrada:** 2026-07-14 14:32
+**Contexto:** ...
+**Preguntas:**
+- ...
+**Evidencia:**
+- 2026-07-16 09:10 — CRE-0044 aporta evidencia parcial: ...
+**Respondida:** (vacío hasta confirmación explícita del usuario)
+```
+
+**ID:** `HIP-<MOD>-00NN`, `MOD` ∈ `{CILAB, GR, SU, FR, X}` (`X` = `cross-modulo.md`). `ge-ci-cilab.md` usa el prefijo `CILAB` (no `GE`/`CI` separados) porque el archivo bundlea los tres a propósito — igual que ya hace la sección original de `hipotesis.md` — y CILAB es donde esas preguntas de GE/CI terminan evaluándose (scoring, OLS). Evita además colisión conceptual con `CI-XXXX` (id real de fórmula en `bl2_forms`). Padding de 4 dígitos, misma convención que `ING-`/`CRE-`/`MEJ-`/`EXP-C-`. Granularidad: una hipótesis = una sección numerada como las que ya existen (ej. "El Factor Rizo..."), no una por cada pregunta suelta dentro — si algunas preguntas de una sección se responden y otras no, se refleja en el texto de `Preguntas`, no fragmentando el ID.
+
+**Estados y transición** (mismo rigor que `mejoras_app.md`, adaptado — la semántica no es "más evidencia del mismo bug" sino "avanzó la investigación"):
+- `abierta` — recién registrada, sin experimento real en curso todavía.
+- `en_investigación` — el usuario confirma que un `EXP-C-XXXX`/`EXP-XXXX`/`CRE-XXXX` real está corriendo específicamente para responder esta pregunta. Transición manual, vía Modo hipótesis y preguntas, nunca automática.
+- `respondida` — solo por confirmación explícita del usuario (mismo patrón que "Confirmar resolución de un item del backlog"), con fecha+hora y una línea `Respondida:` citando qué la contestó.
+
+### 3. Fecha + hora en los tres sistemas de bitácora
+
+Trazabilidad biológica real requiere poder ordenar eventos del mismo día. Aplica a `notebook.md`, `anotaciones.md` e hipótesis — **solo hacia adelante**, no se les inventa una hora a entradas históricas que no la registraron (ej. las 3 entradas `## 2026-07-14 — full` ya existentes en `notebook.md` quedan como están; fabricar una hora sería inventar dato, no documentarlo).
+
+- `notebook.md`: el header de cada entrada nueva pasa a `## 2026-07-14 14:32 — full` (antes solo fecha).
+- `anotaciones.md`: el header de día se mantiene (`## 2026-07-14`), pero cada bullet nuevo lleva su propia hora al frente: `- **14:32 · [FR245b · _frUuid ...]** texto...`.
+- Hipótesis: campo `Registrada` y cada línea de `Evidencia` llevan `YYYY-MM-DD HH:MM`.
+
+Formato: hora local de 24h, sin zona horaria (consistente con cómo el usuario ya lee timestamps en el resto de la app — `su_app.js`/`fr_app.js` ya usan formatos locale-string, no ISO crudo, en UI pensada para humanos).
+
+### 4. Integración con Modo análisis / Modo anotación — solo lectura, un solo escritor
+
+**Regla que no se rompe:** solo Modo hipótesis y preguntas escribe en `docs/lab-intelligence/hipotesis/`. Ni Modo análisis ni Modo anotación escriben ahí directamente, sin excepción — evita mezclar la agenda de investigación curada del usuario con patrones estadísticos que el modelo encontró solo (decisión explícita del usuario en el brainstorm de esta extensión).
+
+**Modo análisis — nuevo paso de cruce (entre el paso 9 y el paso 10 del skill existente):**
+- Determina qué archivo(s) de `hipotesis/` tocan el alcance de la corrida (por módulo de los ids en juego — ej. si hay `fr_bolsas` en alcance, lee `fr.md` + `cross-modulo.md`).
+- Para cada hipótesis `abierta`/`en_investigación` cuyo tema se solape con un hallazgo de esta corrida (mismo ingrediente/cepa/patrón), lo menciona en el texto del hallazgo ("esto es evidencia para/contra HIP-FR-0002").
+- Si el hallazgo sugiere registrar esa evidencia formalmente, lo deja como sugerencia explícita en `**Sugerencias para la app:**` o en el propio hallazgo ("considerá registrar esto en HIP-FR-0002 vía Modo hipótesis y preguntas") — nunca lo escribe él mismo.
+- Si aparece un patrón nuevo sin hipótesis existente que lo cubra, lo propone en la sección ya existente `**Hipótesis a probar / próximos experimentos:**` del notebook (comportamiento que ya tenía) y opcionalmente nota "candidata a nueva entrada en `hipotesis/<mod>.md` si el usuario quiere registrarla".
+
+**Modo anotación — mismo cruce, versión liviana:** al guardar una anotación puntual, si el id/tema coincide con una hipótesis abierta del módulo correspondiente, se menciona en la misma respuesta de confirmación. Igual que arriba, nunca escribe en `hipotesis/` por su cuenta.
+
+**Modo hipótesis y preguntas — nueva sub-acción: "registrar evidencia para hipótesis existente."** Se dispara cuando el usuario confirma explícitamente (después de que Modo análisis/anotación lo sugirió, o espontáneamente: "anotá esa evidencia en HIP-FR-0002"). Agrega la línea de `Evidencia` con fecha+hora, y si corresponde transiciona `abierta` → `en_investigación`. Este es el único punto de escritura — todo lo demás es lectura y sugerencia.
+
+### 5. Dashboard local (`docs/lab-intelligence/dashboard.html`)
+
+**Decisión de hosting:** archivo estático local, nunca un Artifact publicado — `docs/lab-intelligence/` ya está excluido de git por ser data propietaria (ver arriba en este mismo spec), y esa misma razón aplica a no mandar esta data a ningún host externo, ni siquiera uno privado por default.
+
+**Generación:** sin script/build nuevo. Claude regenera el archivo directamente (lee los `.md` de `hipotesis/`, escribe HTML autocontenido con CSS/JS inline) como último paso de la sub-acción de escritura de Modo hipótesis y preguntas — cada vez que ese modo crea una hipótesis nueva, agrega evidencia, o cambia un estado. Consistente con la decisión original de este skill de no mantener scripts deterministas para nada que dependa de leer/interpretar estos archivos (ver "Por qué no hay un script de análisis mantenido" arriba).
+
+**Contenido v1 (acotado a lo que se pidió, sin agregar features no pedidas):**
+- Una sección por módulo (mismo orden que los archivos: CILAB, GR, SU, FR, cross-módulo, experimentos en cola).
+- Por hipótesis: ID, estado (badge de color), contexto resumido, lista de evidencia (colapsable), fecha de registro.
+- Contador simple arriba: abiertas / en investigación / respondidas, total y por módulo.
+- No incluye `mejoras_app.md` ni `notebook.md` en v1 — el pedido fue específicamente sobre preguntas/respuestas de hipótesis. Se puede extender después si hace falta, no ahora (YAGNI).
+
+**Sin interactividad de servidor, sin build tool, sin dependencias externas** — un solo archivo HTML que se abre con doble click o `file://`.
+
+### 6. `CLAUDE.md` — actualizar sección existente
+
+La sección `## CAPA DE INTELIGENCIA DE LABORATORIO (Bitácora & Skill)` de `CLAUDE.md` (repo) ya documenta este skill a alto nivel. Se actualiza para reflejar `docs/lab-intelligence/hipotesis/` (en vez del archivo único) y la existencia del dashboard local. `BIOLAB_SYSTEM.md` no se toca — es arquitectura de la app real (localStorage, módulos), y este sistema nunca escribe ahí ni depende de eso.
+
+### Fuera de alcance (esta extensión)
+
+- No hay autopopulado de `hipotesis/` desde patrones estadísticos — decisión explícita del usuario, mismo principio de un solo escritor que ya rige el resto del skill.
+- No hay IDs por pregunta individual dentro de una hipótesis — la granularidad queda en la sección completa (ver punto 2).
+- No se les fabrica hora a las entradas históricas de `notebook.md` sin ese dato — solo entradas nuevas la llevan.
+- El dashboard no incluye `mejoras_app.md`/`notebook.md` en esta versión, ni gráficos, ni filtros/búsqueda — sección por módulo + badges + contadores alcanza para "ver todo de un vistazo" sin construir de más.
+- Sin modo nuevo tipo "qué debería estar mirando ahora" atado al estado en vivo de CI/GR/SU/FR — el usuario descartó esa opción en el brainstorm, se queda con cruce en Modo análisis + Modo anotación únicamente.
