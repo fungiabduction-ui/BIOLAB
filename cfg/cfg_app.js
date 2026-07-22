@@ -72,8 +72,24 @@
     return data;
   }
 
-  function bkRestoreAll(data) {
+  function bkRestoreAll(data, opts) {
     if (!data || typeof data !== 'object') throw new Error('JSON inválido');
+    opts = opts || {};
+    // wipe:true = restauración real (vuelve exactamente al estado del backup,
+    // no un merge). Antes, restaurar solo hacía setItem por cada key presente
+    // en el backup y nunca borraba nada — una key que solo existiera en el
+    // estado actual (creada después del backup) sobrevivía mezclada con los
+    // datos viejos restaurados, y una key presente en ambos quedaba en el
+    // valor del backup sin que el resto del sistema volviera atrás con ella.
+    // Nunca se borra bl2_gh (config/token de GitHub) — no forma parte de
+    // ningún backup (bkCollectAll siempre lo excluye) y el usuario no debería
+    // tener que volver a cargar su token después de restaurar.
+    if (opts.wipe) {
+      bkAllKeys().forEach(k => {
+        if (k === K.gh) return;
+        localStorage.removeItem(k);
+      });
+    }
     let count = 0;
     Object.entries(data).forEach(([k, v]) => {
       if (k.startsWith('_')) return;
@@ -84,6 +100,11 @@
     });
     return count;
   }
+
+  const BK_RESTORE_WARNING =
+    '⚠ Esto va a BORRAR todos los datos actuales de la app y reemplazarlos por completo con los del backup elegido.\n\n' +
+    'No se puede deshacer — cualquier cambio hecho después de ese backup se pierde.\n\n' +
+    '¿Continuar?';
 
   /* ── Backup / Restore local ── */
   function localExport() {
@@ -99,12 +120,13 @@
 
   function localImport(input) {
     const file = input.files[0]; if (!file) return;
+    if (!confirm(BK_RESTORE_WARNING)) { input.value = ''; return; }
     const r = new FileReader();
     r.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
-        const n = bkRestoreAll(data);
-        sN(`Datos importados (${n} keys) — recargando...`);
+        const n = bkRestoreAll(data, { wipe: true });
+        sN(`Datos restaurados (${n} keys) — recargando...`);
         setTimeout(() => location.reload(), 1200);
       } catch (err) { sN('Error al importar: ' + err.message, true); }
     };
@@ -123,12 +145,14 @@
 
   function importData(e) {
     const file = e.target.files[0]; if (!file) return;
+    if (!confirm(BK_RESTORE_WARNING)) { e.target.value = ''; return; }
     const reader = new FileReader();
     reader.onload = ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        const n = bkRestoreAll(d);
-        sN(`Datos importados (${n} keys)`);
+        const n = bkRestoreAll(d, { wipe: true });
+        sN(`Datos restaurados (${n} keys) — recargando...`);
+        setTimeout(() => location.reload(), 1200);
       } catch (err) { sN('Error al importar: ' + err.message, true); }
     };
     reader.readAsText(file);
@@ -377,6 +401,7 @@
   }
 
   async function ghPull() {
+    if (!confirm(BK_RESTORE_WARNING)) return;
     const el = document.getElementById('gh-status-box');
     el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Cargando...';
     try {
@@ -386,7 +411,7 @@
       const blob = await ghApiBlob(file.sha);
       const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
       const data = JSON.parse(decoded);
-      const n = bkRestoreAll(data);
+      const n = bkRestoreAll(data, { wipe: true });
       el.className = 'rbox'; el.innerHTML = `✓ Datos cargados desde GitHub (${n} keys) — recargando...`;
       sN(`Datos cargados desde GitHub (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
@@ -399,13 +424,50 @@
     try {
       const gc = gOb(K.gh, {});
       if (!gc.token || !gc.repo) { el.className = 'rbox er'; el.innerHTML = '⚠ No configurado'; return; }
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const _n = new Date();
+      const _pad = v => String(v).padStart(2, '0');
+      const ts = `FECHA_${_pad(_n.getDate())}-${_pad(_n.getMonth() + 1)}-${_n.getFullYear()}`
+               + `_HORA_${_pad(_n.getHours())}-${_pad(_n.getMinutes())}-${_pad(_n.getSeconds())}`;
       const path = `backups/biolab-backup-${ts}.json`;
       const content = btoa(unescape(encodeURIComponent(JSON.stringify(ghData(), null, 2))));
       await ghApi('PUT', path, { message: `BIOLAB backup · ${ts}`, content });
       el.className = 'rbox'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
       sN('Backup guardado');
     } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
+  }
+
+  // Extrae un key YYYYMMDDHHMMSS ordenable, en HORA LOCAL, de un nombre de
+  // backup — soportando el formato nuevo (FECHA_DD-MM-YYYY_HORA_HH-MM-SS,
+  // ya en hora local) y el viejo (ISO YYYY-MM-DDTHH-MM-SS, en UTC).
+  // Crítico: el formato viejo está en UTC (toISOString()) y el nuevo en hora
+  // local (Argentina, UTC-3) — comparar los dígitos crudos sin convertir
+  // huso horario hacía que "17:15 UTC" (= 14:15 local) ordenara DESPUÉS de
+  // "14:53 local", cuando en la realidad pasó antes. Todo se normaliza acá
+  // a hora local antes de construir la key.
+  function _bkParseFileTs(name) {
+    const p = v => String(v).padStart(2, '0');
+    let m = name.match(/FECHA_(\d{2})-(\d{2})-(\d{4})_HORA_(\d{2})-(\d{2})-(\d{2})/);
+    if (m) {
+      const [, dd, mm, yyyy, hh, mi, ss] = m;
+      return yyyy + mm + dd + hh + mi + ss; // ya en hora local
+    }
+    m = name.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/);
+    if (m) {
+      const [, yyyy, mm, dd, hh, mi, ss] = m;
+      const d = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss)); // UTC → local
+      return '' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+             + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+    }
+    return name;
+  }
+
+  // Convierte la key ordenable (YYYYMMDDHHMMSS o el nombre crudo si no matcheó
+  // ningún formato conocido) a algo legible: DD/MM/YYYY HH:MM:SS.
+  function _bkKeyToDisplay(key) {
+    const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(key);
+    if (!m) return key;
+    const [, yyyy, mm, dd, hh, mi, ss] = m;
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
   }
 
   async function ghListBackups() {
@@ -416,17 +478,28 @@
       if (!gc.token || !gc.repo) { el.innerHTML = 'No configurado'; return; }
       const files = await ghApi('GET', 'backups').catch(() => []);
       if (!files.length) { el.innerHTML = '<div class="empty">Sin backups todavía</div>'; return; }
-      el.innerHTML = `<div class="tw"><table><thead><tr><th>Archivo</th><th>Acción</th></tr></thead><tbody>${
-        files.map(f => `<tr>
-          <td style="font-size:12px;color:var(--tx2)">${f.name}</td>
-          <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button></td>
-        </tr>`).join('')
+      files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name))); // más nuevo primero
+      // size y sha ya vienen en la respuesta de listado — sin llamadas extra a la API.
+      // sha corto = huella exacta del contenido: dos filas con el mismo sha son
+      // byte-a-byte idénticas (confirma o descarta "¿son realmente distintos?").
+      el.innerHTML = `<div class="tw"><table><thead><tr><th>Fecha</th><th>Tamaño</th><th>SHA</th><th>Acción</th></tr></thead><tbody>${
+        files.map(f => {
+          const fecha = _bkKeyToDisplay(_bkParseFileTs(f.name));
+          const kb = f.size != null ? (f.size / 1024).toFixed(1) + ' KB' : '—';
+          const shaCorta = f.sha ? f.sha.slice(0, 7) : '—';
+          return `<tr>
+            <td style="font-size:12px;color:var(--tx2)" title="${esc(f.name)}">${esc(fecha)}</td>
+            <td style="font-size:12px;color:var(--tx2)">${kb}</td>
+            <td style="font-size:11px;color:var(--tx3);font-family:monospace">${shaCorta}</td>
+            <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button></td>
+          </tr>`;
+        }).join('')
       }</tbody></table></div>`;
     } catch (e) { el.innerHTML = 'Error: ' + e.message; }
   }
 
   async function ghRestore(path) {
-    if (!confirm('¿Restaurar este backup? Se sobreescribirán los datos actuales.')) return;
+    if (!confirm(BK_RESTORE_WARNING)) return;
     const el = document.getElementById('gh-status-box');
     el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Restaurando...';
     try {
@@ -434,7 +507,7 @@
       const blob = await ghApiBlob(file.sha);
       const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
       const data = JSON.parse(decoded);
-      const n = bkRestoreAll(data);
+      const n = bkRestoreAll(data, { wipe: true });
       el.className = 'rbox'; el.innerHTML = `✓ Backup restaurado (${n} keys) — recargando...`;
       sN(`Backup restaurado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);

@@ -2097,15 +2097,34 @@
             }
         } catch (_e) {}
 
-        // Lookup SU lote → aditivos[]
+        // Lookup SU lote → aditivos[], normalizados por bolsa.
+        // aditivos[].cantidad en su_lotes es el total del LOTE (puede repartirse
+        // en varias bolsas, ej. SU26 → 380g fibra / 2 bolsas). pesoSustratoSeco
+        // en la bolsa YA está dividido por bolsa (ver sustratoPorBolsa más arriba
+        // en este archivo) — se usa esa misma proporción (bolsa/lote) para
+        // escalar cada aditivo, en vez de mostrar el total del lote como si
+        // fuera de una sola bolsa (bug real encontrado 2026-07-22: mostraba
+        // 150g de café molido en una bolsa cuyo sustrato real era 190g de 380g
+        // totales del lote — la dosis real por bolsa era 75g).
         var suLoteAditivos = null;
         try {
             if (b.suLoteId) {
                 var _suAll = JSON.parse(localStorage.getItem(SU_KEY) || '[]');
                 for (var _si = 0; _si < _suAll.length; _si++) {
                     if (_suAll[_si].id === b.suLoteId) {
-                        var _sa = _suAll[_si].aditivos;
-                        if (Array.isArray(_sa) && _sa.length > 0) suLoteAditivos = _sa;
+                        var _loteSU = _suAll[_si];
+                        var _sa = _loteSU.aditivos;
+                        if (Array.isArray(_sa) && _sa.length > 0) {
+                            var _fibraLote = parseFloat(_loteSU.fibra) || 0;
+                            var _factorBolsa = (_fibraLote > 0 && b.pesoSustratoSeco > 0)
+                                ? (b.pesoSustratoSeco / _fibraLote) : null;
+                            suLoteAditivos = _sa.map(function(ad) {
+                                var cantLote = parseFloat(ad.cantidad) || 0;
+                                return Object.assign({}, ad, {
+                                    cantidad: (_factorBolsa != null && cantLote > 0) ? cantLote * _factorBolsa : null
+                                });
+                            });
+                        }
                         break;
                     }
                 }
