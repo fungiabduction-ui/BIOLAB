@@ -387,7 +387,7 @@ console.log('statsB.penalty === 1.75:', statsB.penalty === 1.75);
 var compA = _creCalcCompound(6.9, null, null, 'CI-0006', 'NODE-X', frA);
 var compB = _creCalcCompound(3.8, null, null, 'CI-0006', 'NODE-X', frB);
 console.log('compA === 6.4:', compA === 6.4);   // 6.9 - 0.5
-console.log('compB === 2.1:', compB === 2.1);   // 3.8 - 1.75 (redondeado a 1 decimal por +Math...toFixed(1))
+console.log('compB === 2.0:', compB === 2.0);   // 3.8 - 1.75: en IEEE 754 da 2.0499999999999998, no 2.05 exacto — toFixed(1) redondea a "2.0", no "2.1"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
