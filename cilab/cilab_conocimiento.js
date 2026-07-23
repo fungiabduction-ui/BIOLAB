@@ -5547,12 +5547,20 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
   var colonizGIds = []; // cepas que efectivamente registraron colonizacion_completa en esta llamada (no las salteadas)
 
   _sp.selected.forEach(function(key) {
-    var gId = key.split('|')[2];
+    // frCtx se resuelve desde la propia key seleccionada (expId|frascoLabel|geneticaId), no
+    // desde _sp.frasco: hoy es equivalente porque creSetScoringFrasco limpia _sp.selected en
+    // cada cambio de tab, pero si esa invariante cambia a futuro, leer de la key evita atribuir
+    // en silencio una fase al frasco equivocado (mismo criterio defensivo que _saveTarget).
+    var parts = key.split('|');
+    var kExp  = parts[0] || null;
+    var kFr   = parts[1] || null;
+    var gId   = parts[2];
     if (!gId) return;
-    var fases    = _creFasesRead(formulaId, gId, _sp.frasco);
+    var frCtx = kExp ? { expId: kExp, frascoLabel: kFr } : null;
+    var fases    = _creFasesRead(formulaId, gId, frCtx);
     var already  = fases.find(function(f) { return f.fase === faseId; });
     if (already && already.auto !== 'inferred') return; // ya registrada — batch no sobreescribe (protege el ancla de inoculación y evita perder una fecha real ya cargada)
-    var inocDate = _creInoculacionDate(formulaId, gId, _sp.frasco);
+    var inocDate = _creInoculacionDate(formulaId, gId, frCtx);
     var dia = 0;
     if (inocDate) {
       var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
@@ -5561,15 +5569,15 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
     }
     var entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
     if (faseId !== 'inoculacion' && faseId !== 'colonizacion_completa') {
-      var _fCtxB = _sp.frasco;
+      var _fCtxB = frCtx;
       entry.placasObservadas = null;
       entry.totalPlacas = _creGetPlacasFromCI(formulaId, gId, _fCtxB ? _fCtxB.expId : null, _fCtxB ? _fCtxB.frascoLabel : null);
     }
     fases = fases.filter(function(f) { return f.fase !== faseId; });
     fases.push(entry);
     fases.sort(function(a, b) { return order.indexOf(a.fase) - order.indexOf(b.fase); });
-    _creFasesWrite(formulaId, gId, fases, _sp.frasco);
-    _creLogFase(formulaId, gId, faseId, dia, todayIso, false, _sp.frasco);
+    _creFasesWrite(formulaId, gId, fases, frCtx);
+    _creLogFase(formulaId, gId, faseId, dia, todayIso, false, frCtx);
     if (faseId === 'colonizacion_completa') {
       _creSyncColonizacionToCI(formulaId, gId, todayIso);
       colonizGIds.push(gId);
