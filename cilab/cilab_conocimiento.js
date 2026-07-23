@@ -5324,7 +5324,7 @@ function creSelectSPTab(formulaId, geneticaId, tab) {
 
 function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
   _creLiftCleared(formulaId);
-  var fases    = _creFasesRead(formulaId, geneticaId);
+  var fases    = _creFasesRead(formulaId, geneticaId, _sp.frasco);
   var todayIso = _creHoyISO();
   var tsNow    = now();
 
@@ -5332,7 +5332,7 @@ function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
   if (faseId === 'inoculacion') {
     entry = { fase: 'inoculacion', dia: 0, fecha: todayIso, ts: tsNow, auto: false };
   } else {
-    var inocDate = _creInoculacionDate(formulaId, geneticaId);
+    var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
       var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
@@ -5351,7 +5351,7 @@ function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
   fases = fases.filter(function(f) { return f.fase !== faseId; });
   fases.push(entry);
   fases.sort(function(a, b) { return order.indexOf(a.fase) - order.indexOf(b.fase); });
-  _creFasesWrite(formulaId, geneticaId, fases);
+  _creFasesWrite(formulaId, geneticaId, fases, _sp.frasco);
   _creLogFase(formulaId, geneticaId, faseId, entry.dia, entry.fecha, false, _sp.frasco);
 
   if (faseId === 'colonizacion_completa') {
@@ -5378,7 +5378,7 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
   var horaStr  = (horaEl && horaEl.value) ? horaEl.value : '00:00';
   var tsNew    = new Date(fechaStr + 'T' + horaStr + ':00').toISOString();
 
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, _sp.frasco);
   var reg = fases.find(function(f) { return f.fase === faseId; });
   if (!reg) return;
 
@@ -5393,7 +5393,7 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
       }
     });
   } else {
-    var inocDate = _creInoculacionDate(formulaId, geneticaId);
+    var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
       var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
@@ -5407,7 +5407,7 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
     if (placasEl && placasEl.value !== '') reg.placasObservadas = parseInt(placasEl.value, 10);
   }
 
-  _creFasesWrite(formulaId, geneticaId, fases);
+  _creFasesWrite(formulaId, geneticaId, fases, _sp.frasco);
   var edited = fases.find(function(f) { return f.fase === faseId; });
   _creLogFase(formulaId, geneticaId, faseId, edited ? edited.dia : 0, edited ? edited.fecha : fechaStr, true, _sp.frasco);
 
@@ -5422,8 +5422,8 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
 
 function creFaseDeleteConfirm(formulaId, geneticaId, faseId) {
   if (!confirm('¿Eliminar esta fase? Esta acción no se puede deshacer.')) return;
-  var fases = _creFasesRead(formulaId, geneticaId).filter(function(f) { return f.fase !== faseId; });
-  _creFasesWrite(formulaId, geneticaId, fases);
+  var fases = _creFasesRead(formulaId, geneticaId, _sp.frasco).filter(function(f) { return f.fase !== faseId; });
+  _creFasesWrite(formulaId, geneticaId, fases, _sp.frasco);
   var notas = _creNotasRead(formulaId, geneticaId).filter(function(n) {
     return !(n.auto && n.logType === 'fase' && n.faseId === faseId);
   });
@@ -5435,7 +5435,7 @@ function creFaseDeleteConfirm(formulaId, geneticaId, faseId) {
 }
 
 function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, _sp.frasco);
   var reg = fases.find(function(f) { return f.fase === faseId; });
   if (!reg) return '';
   var def = _FASES_DEF.find(function(f) { return f.id === faseId; });
@@ -5472,14 +5472,14 @@ function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
 function _creFasesGridHTML(formulaId, geneticaId) {
   if (!geneticaId) return '<div style="padding:16px;color:var(--tx3);font-size:12px">Seleccioná una cepa.</div>';
 
-  _creAutoFillInoculacion(formulaId, geneticaId);
-  _creAutoFillColonizacion(formulaId, geneticaId);
-  _creAutoFillInferredFases(formulaId, geneticaId);
+  _creAutoFillInoculacion(formulaId, geneticaId, _sp.frasco);
+  _creAutoFillColonizacion(formulaId, geneticaId, _sp.frasco);
+  _creAutoFillInferredFases(formulaId, geneticaId, _sp.frasco);
 
-  var fases  = _creFasesRead(formulaId, geneticaId);
+  var fases  = _creFasesRead(formulaId, geneticaId, _sp.frasco);
   var regMap = {};
   fases.forEach(function(f) { regMap[f.fase] = f; });
-  var diasAct = _creDiasSinceInoc(formulaId, geneticaId);
+  var diasAct = _creDiasSinceInoc(formulaId, geneticaId, _sp.frasco);
   var fIdE = esc(formulaId);
   var gIdE = esc(geneticaId);
 
@@ -5526,7 +5526,7 @@ function _creFasesGridHTML(formulaId, geneticaId) {
 }
 
 function creFaseGridClick(formulaId, geneticaId, faseId) {
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, _sp.frasco);
   var reg = fases.find(function(f) { return f.fase === faseId; });
   if (!reg || reg.auto === 'inferred') {
     _sp.faseEditOpen = null;
@@ -5549,10 +5549,10 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
   _sp.selected.forEach(function(key) {
     var gId = key.split('|')[2];
     if (!gId) return;
-    var fases    = _creFasesRead(formulaId, gId);
+    var fases    = _creFasesRead(formulaId, gId, _sp.frasco);
     var already  = fases.find(function(f) { return f.fase === faseId; });
     if (already && already.auto !== 'inferred') return; // ya registrada — batch no sobreescribe (protege el ancla de inoculación y evita perder una fecha real ya cargada)
-    var inocDate = _creInoculacionDate(formulaId, gId);
+    var inocDate = _creInoculacionDate(formulaId, gId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
       var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
@@ -5568,7 +5568,7 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
     fases = fases.filter(function(f) { return f.fase !== faseId; });
     fases.push(entry);
     fases.sort(function(a, b) { return order.indexOf(a.fase) - order.indexOf(b.fase); });
-    _creFasesWrite(formulaId, gId, fases);
+    _creFasesWrite(formulaId, gId, fases, _sp.frasco);
     _creLogFase(formulaId, gId, faseId, dia, todayIso, false, _sp.frasco);
     if (faseId === 'colonizacion_completa') {
       _creSyncColonizacionToCI(formulaId, gId, todayIso);
