@@ -1147,7 +1147,7 @@ function _creExtrasBackfillV2() {
 }
 
 /**
- * Migración one-shot: recalcula colonizacionDias/colonizacionPenalty/scoreCompuesto
+ * Migración one-shot: recalcula colonizacionDias/colonizacionPenalty (SOLO estos dos campos)
  * en records de bl2_crec cerrados cuyo frasco propio tiene una fecha de colonización
  * real en bl2_seg distinta de la que quedó congelada (bug: se calculaba con la fecha
  * compartida entre frascos, ver docs/superpowers/specs/2026-07-23-fases-por-frasco-design.md).
@@ -1155,6 +1155,12 @@ function _creExtrasBackfillV2() {
  * resolución de fechas. Si no encuentra tanda de bl2_seg con inoculoTs+colonizacion reales
  * para ESE frasco, no toca el record (no inventa procedencia).
  * Solo sobreescribe si el valor recalculado difiere del congelado.
+ * NO recalcula scoreCompuesto a propósito: ese campo depende de qué versión de
+ * _creEffectivePenalty/_creCalcCompound estaba vigente cuando el record se cerró
+ * (ver commit c3049b2, política "penalización siempre aplica" del 2026-07-22/23) —
+ * recomputarlo acá mezclaría la corrección objetiva de fecha con un cambio de
+ * política retroactivo no decidido. Detalle completo:
+ * docs/superpowers/plans/2026-07-23-fases-por-frasco.md, Task 10.
  */
 function _creMigrarColonizacionDiasPorFrascoV1() {
   var arr = creRead();
@@ -1189,13 +1195,9 @@ function _creMigrarColonizacionDiasPorFrascoV1() {
       var correctPenalty = _creEffectivePenalty(
         Math.min(3, +(Math.max(0, correctDias - 15) * 0.25).toFixed(2)), rizoRatio
       );
-      var score = o.calidadScore != null ? o.calidadScore : o.scoreObservado;
-      var base  = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
-      var correctCompuesto = +Math.max(0, base - correctPenalty).toFixed(1);
 
       o.colonizacionDias    = correctDias;
       o.colonizacionPenalty = correctPenalty;
-      o.scoreCompuesto       = correctCompuesto;
       updated++;
     });
   });
