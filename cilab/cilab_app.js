@@ -7543,13 +7543,6 @@ function cilabUnload() {
     window.removeEventListener('storage', _storageHandler);
     _storageHandler = null;
   }
-  // Cancela un drag de fase-scrubber en curso (cilab_conocimiento.js) — si no se
-  // limpia acá, sus listeners pointermove/pointerup quedan colgados en document
-  // para siempre. Ver window._creScrubCleanup para el detalle del bug.
-  if (typeof window._creScrubCleanup === 'function') {
-    window._creScrubCleanup();
-  }
-
   // Retirar los nodos hoisteados al body. Si los dejamos, persisten al cambiar
   // de módulo y, peor, quedan sin estilos cuando el loader limpia cilab_styles.css
   // — el panel se haría visible sin transform.
