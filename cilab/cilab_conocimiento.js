@@ -89,6 +89,16 @@ const sortSignals      = window._cilab_sortSignals       || ((sigs) => sigs.slic
 const attributeSignal  = window._cilab_attributeSignal   || (() => []);
 /* eslint-enable no-unused-vars */
 
+// Fecha local (no UTC) en formato YYYY-MM-DD. `new Date().toISOString().slice(0,10)`
+// usa UTC — para un lab en Argentina (UTC-3), un click entre ~21:00 y 23:59 hora local
+// cae en el día siguiente en UTC, corriendo `fecha`/`dia` un día de más. Mismo patrón
+// que `hoyISO()` en fr/fr_app.js (allá sí es local; el de trace/trace_app.js NO lo es,
+// ojo si se copia de ahí).
+function _creHoyISO() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 // ── Wizard de observación guiada ─────────────────────────────────────────────
 // Estado vive solo en memoria — nada se persiste hasta que el usuario confirma.
 let _wiz = null; // { recordId, obsIndex, recordCreatedAt, formulaIngs, geneticaId, routeStates, sorted, signals, step }
@@ -5973,7 +5983,7 @@ function creEditFaseCancel(faseId) {
 function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
   _creLiftCleared(formulaId);
   var fases    = _creFasesRead(formulaId, geneticaId);
-  var todayIso = new Date().toISOString().slice(0, 10);
+  var todayIso = _creHoyISO();
   var tsNow    = now();
 
   var entry;
