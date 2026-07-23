@@ -4108,8 +4108,12 @@ function _creFaseTimelineHTML(fases) {
 function creBatchFaseConfirm(formulaId) {
   var sf = _sp.batchStagedFase;
   if (!sf) return;
+  var fechaEl = document.getElementById('cre-batch-fase-fecha-' + formulaId);
+  var horaEl  = document.getElementById('cre-batch-fase-hora-' + formulaId);
+  var fechaStr = (fechaEl && fechaEl.value) ? fechaEl.value : null;
+  var horaStr  = (horaEl && horaEl.value) ? horaEl.value : null;
   _sp.batchStagedFase = null;
-  _creBatchFaseRegisterNow(formulaId, sf.faseId);
+  _creBatchFaseRegisterNow(formulaId, sf.faseId, fechaStr, horaStr);
 }
 
 function creBatchFaseCancel(formulaId) {
@@ -4445,8 +4449,16 @@ function _creBatchControlsHTML(formulaId) {
     var _sfDef = _FASES_DEF.find(function(f) { return f.id === _sf.faseId; });
     var _sfCol = _sfDef ? _sfDef.color : '#FFD700';
     var _sfLbl = _sfDef ? _sfDef.label : _sf.faseId;
+    // Pedido del usuario (2026-07-23): el batch solo dejaba registrar "ahora", sin
+    // poder cargar una fecha/hora distinta para las N cepas a la vez. Default = ahora,
+    // editable antes de confirmar.
+    var _sfNow = new Date();
+    var _sfDefFecha = _creHoyISO();
+    var _sfDefHora  = String(_sfNow.getHours()).padStart(2, '0') + ':' + String(_sfNow.getMinutes()).padStart(2, '0');
     html += '<div class="cre-batch-fase-confirm">'
-      + '<span style="color:' + _sfCol + ';font-weight:700">' + esc(_sfLbl) + ' · ahora</span>'
+      + '<span style="color:' + _sfCol + ';font-weight:700">' + esc(_sfLbl) + '</span>'
+      + '<input type="date" id="cre-batch-fase-fecha-' + fIdE + '" class="cre-incidence-input" style="width:120px;font-size:11px" value="' + _sfDefFecha + '">'
+      + '<input type="time" id="cre-batch-fase-hora-' + fIdE + '" class="cre-incidence-input" style="width:80px;font-size:11px" value="' + _sfDefHora + '">'
       + '<span style="color:var(--tx3);margin:0 6px">→ ' + _sp.selected.size + ' cep' + (_sp.selected.size > 1 ? 'as' : 'a') + '</span>'
       + '<button class="clab-btn clab-btn--xs" style="background:' + _sfCol + '22;border-color:' + _sfCol + ';color:' + _sfCol + ';font-weight:700"'
       + ' onclick="creBatchFaseConfirm(\'' + fIdE + '\')">✓ Guardar</button>'
@@ -5492,10 +5504,12 @@ function creFaseGridClick(formulaId, geneticaId, faseId) {
   }
 }
 
-function _creBatchFaseRegisterNow(formulaId, faseId) {
+function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride) {
   var order    = _FASES_DEF.map(function(f) { return f.id; });
-  var todayIso = _creHoyISO();
-  var tsNow    = now();
+  // fechaOverride/horaOverride: cargados desde los inputs del confirm bar (pedido del
+  // usuario, 2026-07-23) — si vienen vacíos, se comporta como antes ("ahora").
+  var todayIso = fechaOverride || _creHoyISO();
+  var tsNow    = horaOverride ? new Date(todayIso + 'T' + horaOverride + ':00').toISOString() : now();
   var saved    = 0;
   var colonizGIds = []; // cepas que efectivamente registraron colonizacion_completa en esta llamada (no las salteadas)
 
