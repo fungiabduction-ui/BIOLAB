@@ -3338,7 +3338,7 @@ function _creGetInoculacionDate(formulaId, geneticaId) {
 }
 
 /** Obtiene la fecha de colonización desde bl2_seg, validando que sea posterior a la inoculación. */
-function _creGetColonizacionDate(formulaId, geneticaId) {
+function _creGetColonizacionDate(formulaId, geneticaId, frascoCtx) {
   if (!formulaId || !geneticaId) return null;
   try {
     var inocDate = _creGetInoculacionDate(formulaId, geneticaId);
@@ -3348,6 +3348,9 @@ function _creGetColonizacionDate(formulaId, geneticaId) {
         if (s.formula_id !== formulaId || s.genetica !== geneticaId || !s.colonizacion) return false;
         // Only accept colonización that is after the formula's inoculación date
         if (inocDate && s.colonizacion < inocDate) return false;
+        if (frascoCtx && frascoCtx.expId) {
+          if (s.experimentoId !== frascoCtx.expId || s.experimentoFrascoId !== frascoCtx.frascoLabel) return false;
+        }
         return true;
       })
       .map(function(s) { return s.colonizacion; })
@@ -3720,19 +3723,23 @@ function _creFasesWrite(formulaId, geneticaId, arr, frascoCtx) {
   } catch(e) { console.warn('[CREC_FASES] write failed', e); }
 }
 
-function _creInoculacionDate(formulaId, geneticaId) {
-  // 1. Fase inoculación registrada manualmente en CRE — fuente de verdad
-  var fases = _creFasesRead(formulaId, geneticaId);
+function _creInoculacionDate(formulaId, geneticaId, frascoCtx) {
+  // 1. Fase inoculación registrada manualmente en CRE — fuente de verdad (por frasco si aplica)
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   var fi = fases.find(function(f) { return f.fase === 'inoculacion'; });
   if (fi && fi.fecha) return fi.fecha;
-  // 2. bl2_forms.fecha (fecha global de la fórmula)
+  // 2. bl2_forms.fecha (fecha global de la fórmula — no tiene noción de frasco, se deja igual)
   var d = _creGetInoculacionDate(formulaId, geneticaId);
   if (d) return d;
   // 3. bl2_seg.inoculoTs — timestamp por tanda en CI (campo real del módulo CI)
   try {
     var segs = JSON.parse(localStorage.getItem('bl2_seg')) || [];
     var matching = segs.filter(function(s) {
-      return s.formula_id === formulaId && s.genetica === geneticaId && s.inoculoTs;
+      if (s.formula_id !== formulaId || s.genetica !== geneticaId || !s.inoculoTs) return false;
+      if (frascoCtx && frascoCtx.expId) {
+        if (s.experimentoId !== frascoCtx.expId || s.experimentoFrascoId !== frascoCtx.frascoLabel) return false;
+      }
+      return true;
     });
     if (matching.length > 0) {
       var earliest = matching.reduce(function(min, s) {
@@ -3743,7 +3750,13 @@ function _creInoculacionDate(formulaId, geneticaId) {
   } catch(e) {}
   // 4. CRERecord.inoculationDate (legacy — para records existentes pre-borrado)
   var recs = gArr('bl2_crec');
-  var rec = recs.find(function(r) { return r.formulaId === formulaId && r.geneticaId === geneticaId && r.inoculationDate; });
+  var rec = recs.find(function(r) {
+    if (r.formulaId !== formulaId || r.geneticaId !== geneticaId || !r.inoculationDate) return false;
+    if (frascoCtx && frascoCtx.expId) {
+      if (r.experimentoId !== frascoCtx.expId || r.frascoId !== frascoCtx.frascoLabel) return false;
+    }
+    return true;
+  });
   return rec ? rec.inoculationDate : null;
 }
 
