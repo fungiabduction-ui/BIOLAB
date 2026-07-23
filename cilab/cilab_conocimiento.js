@@ -6159,6 +6159,46 @@ function creFaseGridClick(formulaId, geneticaId, faseId) {
   }
 }
 
+function _creBatchFaseRegisterNow(formulaId, faseId) {
+  var order    = _FASES_DEF.map(function(f) { return f.id; });
+  var todayIso = _creHoyISO();
+  var tsNow    = now();
+  var saved    = 0;
+
+  _sp.selected.forEach(function(key) {
+    var gId = key.split('|')[2];
+    if (!gId) return;
+    var fases    = _creFasesRead(formulaId, gId);
+    var inocDate = _creInoculacionDate(formulaId, gId);
+    var dia = 0;
+    if (inocDate) {
+      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = new Date(todayIso); d1.setHours(0, 0, 0, 0);
+      dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
+    }
+    var entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
+    if (faseId !== 'inoculacion' && faseId !== 'colonizacion_completa') {
+      var _fCtxB = _sp.frasco;
+      entry.placasObservadas = null;
+      entry.totalPlacas = _creGetPlacasFromCI(formulaId, gId, _fCtxB ? _fCtxB.expId : null, _fCtxB ? _fCtxB.frascoLabel : null);
+    }
+    fases = fases.filter(function(f) { return f.fase !== faseId; });
+    fases.push(entry);
+    fases.sort(function(a, b) { return order.indexOf(a.fase) - order.indexOf(b.fase); });
+    _creFasesWrite(formulaId, gId, fases);
+    _creLogFase(formulaId, gId, faseId, dia, todayIso, false, _sp.frasco);
+    if (faseId === 'colonizacion_completa') {
+      _creSyncColonizacionToCI(formulaId, gId, todayIso);
+    }
+    saved++;
+  });
+
+  _sp.batchFasePos[faseId] = true;
+  notif('Fase registrada en ' + saved + ' cepas', 'info');
+  _creRenderCepasSection(formulaId);
+  if (_sp.formulaId) _creRenderLogSection(_sp.formulaId);
+}
+
 // ── Prompt de cierre de ciclo tras colonización ──────────────────────────────
 
 function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
