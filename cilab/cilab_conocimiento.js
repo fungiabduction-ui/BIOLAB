@@ -4033,6 +4033,7 @@ var _sp = {
   frasco:         null,         // null = Base | { expId, frascoId, frascoLabel, extras, expNombre }
   selected:       new Set(),    // keys: expId|frascoLabel|geneticaId — batch cepas
   expandedCepaId: null,         // cepa individually expanded (not in batch)
+  faseEditOpen:   null,         // faseId cuya franja de edición está abierta (grid de fases)
   batchScore:     null,         // score for batch controls section
   batchTipo:      null,         // tipo for batch controls section
   batchStagedFase: null,        // { faseId, dia } — pendiente de confirmar antes de guardar en batch
@@ -4051,6 +4052,7 @@ function _spReset(formulaId) {
   _sp.frasco         = null;
   _sp.selected       = new Set();
   _sp.expandedCepaId = null;
+  _sp.faseEditOpen   = null;
   _sp.batchScore      = null;
   _sp.batchTipo       = null;
   _sp.batchFasePos    = {};
@@ -4131,6 +4133,7 @@ function creSetScoringFrasco(formulaId, frascoKey) {
   _sp.batchScore     = null;
   _sp.batchTipo      = null;
   _sp.expandedCepaId = null;
+  _sp.faseEditOpen   = null;
   _sp.selected       = new Set();
 
   var ftabs = document.getElementById('cre-sp-ftabs-' + formulaId);
@@ -4615,7 +4618,7 @@ function _creCepaCardHTML(formulaId, cepa, fRecs, allFases) {
 
   if (isExpanded) {
     html += '<div class="cre-cepa-card-body">';
-    html += _creFasesScrubberHTML(formulaId, cepa.id);
+    html += _creFasesGridHTML(formulaId, cepa.id);
     html += _creScoringFormHTML(formulaId, cepa.id, fRecs);
     html += '</div>';
   }
@@ -4690,6 +4693,7 @@ function _creRenderCepasSection(formulaId) {
 
 // ── Toggle individual expand ─────────────────────────────────────────────────
 function creToggleCepaExpand(formulaId, geneticaId) {
+  _sp.faseEditOpen = null;
   var expId       = _sp.frasco ? _sp.frasco.expId       : null;
   var frascoLabel = _sp.frasco ? _sp.frasco.frascoLabel : null;
   var selKey      = _creSPSelKey(expId, frascoLabel, geneticaId);
@@ -5163,30 +5167,12 @@ function _creScoringScoreTabHTML(formulaId, geneticaId, fRecs) {
 }
 
 function _creScoringFormHTML(formulaId, geneticaId, fRecs) {
-  // Auto-fill before reading count so Inoculación/Colonización/inferred are counted
-  if (geneticaId) {
-    _creAutoFillInoculacion(formulaId, geneticaId);
-    _creAutoFillColonizacion(formulaId, geneticaId);
-    _creAutoFillInferredFases(formulaId, geneticaId);
-  }
-  var fases   = geneticaId ? _creFasesRead(formulaId, geneticaId) : [];
-  var doneCnt = fases.length;
-
   var html = '';
 
-  // ── SCORE izquierda | FASES derecha ─────────────────────────────────────
-  html += '<div class="cre-2col-layout">';
-
-  html += '<div class="cre-2col-section">';
+  // ── Score (Fases se renderiza arriba, en la card — ver _creFasesGridHTML) ──
+  html += '<div class="cre-2col-section" style="width:100%">';
   html += '<div class="cre-3col-title">Score</div>';
   html += _creScoringScoreTabHTML(formulaId, geneticaId, fRecs);
-  html += '</div>';
-
-  html += '<div class="cre-2col-section">';
-  html += '<div class="cre-3col-title">Fases <span class="cre-3col-count">' + doneCnt + '/' + _FASES_DEF.length + '</span></div>';
-  html += _creMetabolicFasesHTML(formulaId, geneticaId);
-  html += '</div>';
-
   html += '</div>';
 
   // ── Fila inferior: NOTAS (ancho completo) ────────────────────────────────
