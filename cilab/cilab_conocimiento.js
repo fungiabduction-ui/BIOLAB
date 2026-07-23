@@ -4834,11 +4834,26 @@ function creOpenScoringPanel(formulaId) {
   _spReset(formulaId);
   // Importar fases de CI → bl2_crec_fases para todas las cepas de esta fórmula.
   // Operación idempotente: solo escribe si el dato no existe ya. CILAB queda autónomo.
-  var _allCepasForImport = _creGetCepasForFormula(formulaId);
-  _allCepasForImport.forEach(function(c) {
-    _creAutoFillInoculacion(formulaId, c.id);
-    _creAutoFillColonizacion(formulaId, c.id);
-  });
+  // Si la fórmula tiene experimentos multi-frasco, se importa POR FRASCO (cada uno
+  // con su propia key vía frascoCtx) — antes de este fix se importaba una sola vez
+  // sin frasco, sembrando la key compartida que contaminaba todos los frascos por igual.
+  var _frsForImport = _creGetFrascosForFormula(formulaId);
+  if (_frsForImport.length > 0) {
+    _frsForImport.forEach(function(fr) {
+      var frCtxImport = { expId: fr.expId, frascoLabel: fr.frascoLabel };
+      var cepasFr = _creGetCepasForFrasco(formulaId, fr.expId, fr.frascoLabel);
+      cepasFr.forEach(function(c) {
+        _creAutoFillInoculacion(formulaId, c.id, frCtxImport);
+        _creAutoFillColonizacion(formulaId, c.id, frCtxImport);
+      });
+    });
+  } else {
+    var _allCepasForImport = _creGetCepasForFormula(formulaId);
+    _allCepasForImport.forEach(function(c) {
+      _creAutoFillInoculacion(formulaId, c.id);
+      _creAutoFillColonizacion(formulaId, c.id);
+    });
+  }
 
   // Cuando hay frascos de experimento, arrancar siempre en el primero (preferir el con más actividad).
   // Base no se puntúa — el panel siempre arranca en un frasco de experimento.
