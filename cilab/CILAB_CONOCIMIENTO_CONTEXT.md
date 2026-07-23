@@ -212,12 +212,13 @@ creOpenScoringPanel(formulaId)
   ├── _creFrascoTabsHTML()        — tabs de frascos de experimento (sin BASE, sin Control oculto)
   ├── _creScoringPanelHTML()      — cepa cards + batch controls + log
   │     ├── cepa cards (expandibles)
-  │     │     ├── _creFasesScrubberHTML()  — scrubber con dot Hoy (amarillo pulsante)
-  │     │     ├── _creScoringScoreTabHTML() — score + incidencia
+  │     │     ├── _creFasesGridHTML()      — grid de chips (2026-07-23, reemplaza al scrubber viejo)
+  │     │     ├── _creScoringFormHTML()    — Score (full width) + Notas
+  │     │     │     └── _creScoringScoreTabHTML() — score + incidencia
   │     │     └── notas
   │     ├── Batch controls (cuando hay cepas seleccionadas)
-  │     │     ├── _creBatchFasesScrubberHTML() — scrubber batch con stage+confirm
-  │     │     ├── Confirmación fase staged (amarillo pulsante → [✓ Guardar] [✕])
+  │     │     ├── _creBatchFasesGridHTML() — grid batch, stage+confirm (2026-07-23)
+  │     │     ├── Confirmación fase staged (" · ahora" → [✓ Guardar] [✕])
   │     │     ├── Score grid, Tipo cordón, Incidencia
   │     │     └── Score compuesto batch
   │     └── Log section (◉ Log · Frasco X | ◉ Log · Base | ◉ Log)
@@ -230,21 +231,34 @@ creOpenScoringPanel(formulaId)
 - **Auto-selección**: `creOpenScoringPanel` siempre selecciona el frasco con más actividad (o el primero) cuando hay experimentos.
 - **Aislamiento defensivo**: Cada frasco tiene sus propios registros de score, incidencia y logs. Los logs de fases también quedan aislados por frasco desde mayo 2026.
 
-### Scrubber de fases — comportamiento
+### Grid de fases — comportamiento (2026-07-23, reemplaza al scrubber de arrastre)
+
+El scrubber de arrastre (drag de dots sobre un eje de días) y la lista vertical con formularios inline fueron eliminados por completo — el usuario los encontraba incómodos de usar. Reemplazados por un grid de 6 chips (mismo lenguaje visual que los botones de Score 1-10), sin eje ni posicionamiento.
 
 ```
 Individual (por cepa):
-  · Drag de dot → creScrubStart → guarda inmediatamente en pointerup
-  · Dblclick en dot registrado (excepto inoculación) → creDeleteFaseFromScrubber
-    → borra la fase Y su entrada de log para ese frasco
-  · Dot amarillo pulsante "Hoy" = días desde inoculación, no interactivo
+  · Click en chip pendiente → creFaseGridClick → _creFaseRegisterNow
+    → guarda YA, fecha=hoy (local, _creHoyISO(), NO new Date().toISOString().slice(0,10) que es UTC)
+      + hora real del click (ya vivía en el campo `ts` de siempre, ahora se muestra)
+  · Click en chip ya registrado → abre franja de edición inline (_creFaseEditStripHTML)
+    debajo del grid — fecha/hora editables, "placas observadas" opcional (fases intermedias)
+  · Botón "🗑 Eliminar" dentro de la franja de edición (creFaseDeleteConfirm, con confirm())
+    → borra la fase Y su entrada de log para ese frasco — NO disponible para "inoculación"
+    (es el ancla de día-0 del resto de las fases)
+  · Fases auto (inoculación/colonización, vía CI) se auto-completan igual que siempre
+    al renderizar — el chip nace "hecho" con tag "CI", pero sigue siendo clickeable
 
 Batch (cuando hay cepas seleccionadas):
-  · Drag de dot → creBatchScrubStart → STAGEA (no guarda todavía)
-  · Dot staged aparece en amarillo pulsante + panel de confirmación
-  · creBatchFaseConfirm → guarda en TODAS las cepas seleccionadas + logs con contexto de frasco
+  · "Inoculación" NO aparece como chip batch — es por-cepa/CI, no tiene sentido "marcar ahora"
+    para todas a la vez
+  · Click en chip pendiente → creFaseGridBatchClick → STAGEA (no guarda todavía)
+  · Barra de confirmación (" · ahora" — ya no hay día que elegir, siempre es hoy)
+  · creBatchFaseConfirm → _creBatchFaseRegisterNow: guarda en TODAS las cepas seleccionadas,
+    misma fecha (hoy) para todas, día calculado POR CEPA desde su propia fecha de inoculación
+  · **Invariante crítico:** si una cepa YA tiene esa fase registrada (no `auto:'inferred'`),
+    el batch la SALTEA sin tocarla — nunca sobreescribe (protege el ancla de inoculación de
+    corromperse si se batch-registra por error una fase ya cargada)
   · creBatchFaseCancel → descarta sin guardar
-  · Dot amarillo "Hoy" = fecha de la primera cepa seleccionada
 ```
 
 ### Log — aislamiento por frasco
@@ -276,10 +290,11 @@ _sp = {
   frasco:          null | { expId, frascoId, frascoLabel, extras, expNombre },
   selected:        Set<string>,       // keys: expId|frascoLabel|geneticaId
   expandedCepaId:  string | null,
+  faseEditOpen:    string | null,     // faseId cuya franja de edición está abierta (grid individual, 2026-07-23)
   batchScore:      number | null,
   batchTipo:       string | null,
-  batchFasePos:    { faseId: dia },   // posiciones guardadas en batch scrubber (resetea al cerrar panel)
-  batchStagedFase: { faseId, dia } | null,  // fase pendiente de confirmar en batch
+  batchFasePos:    { faseId: true },  // fases confirmadas en esta sesión de batch (resetea al cerrar panel o cambiar de frasco)
+  batchStagedFase: { faseId } | null,  // fase pendiente de confirmar en batch — ya NO tiene `dia` (2026-07-23, siempre es "hoy")
 }
 ```
 
@@ -318,16 +333,12 @@ creUpdateBatchCompound(formulaId)
 creBatchFaseConfirm(formulaId)    — confirma fase staged → guarda en todas las cepas seleccionadas
 creBatchFaseCancel(formulaId)     — descarta fase staged
 
-// Scrubber
-creScrubStart(evt, formulaId, geneticaId, faseId)   — drag individual
-creBatchScrubStart(evt, formulaId, faseId)           — drag batch (NUEVO)
-creFaseScrubSave(formulaId, geneticaId, faseId, dia)
-creDeleteFaseFromScrubber(evt, formulaId, geneticaId, faseId)  — NUEVO: dblclick elimina fase + log
-
-// Fases (registro modal)
-creRegisterFase(formulaId, geneticaId, faseId)
-creRegisterFaseConfirm(...)
-creEditFase(formulaId, geneticaId, faseId)
+// Fases — grid de un click (2026-07-23, reemplaza scrubber + registro modal, ver sección arriba)
+creFaseGridClick(formulaId, geneticaId, faseId)      — click en chip: registra ahora, o togglea la franja de edición
+creFaseEditSave(formulaId, geneticaId, faseId)       — guarda fecha/hora/placas editadas
+creFaseEditCancel(formulaId, geneticaId)             — cierra la franja de edición sin guardar
+creFaseDeleteConfirm(formulaId, geneticaId, faseId)  — borra una fase puntual (con confirm()), no disponible para inoculación
+creFaseGridBatchClick(formulaId, faseId)             — stagea una fase para confirmar en batch
 creColonizacionCierrePrompt(formulaId, geneticaId, dias)
 
 // Notas
@@ -374,13 +385,14 @@ creBackfillLogs()
    → auto-selecciona el frasco con más actividad
 
 3. Usuario selecciona frasco, expande cepa
-   → scrubber muestra fases + dot Hoy (amarillo pulsante)
-   → drag de dot → creFaseScrubSave → log taggeado con experimentoId+frascoId
+   → grid de chips muestra las 6 fases + "Día N" desde inóculo (texto, no gráfico)
+   → click en chip pendiente → _creFaseRegisterNow → log taggeado con experimentoId+frascoId
 
 4. Con múltiples cepas en batch:
-   → drag en batch scrubber → staged (dot amarillo pulsante)
-   → panel de confirmación: "[Fase X · Día N → 4 cepas] [✓ Guardar] [✕]"
-   → creBatchFaseConfirm → guarda en todas + logs con contexto de frasco
+   → click en chip del grid batch → creFaseGridBatchClick → staged
+   → panel de confirmación: "[Fase X · ahora → 4 cepas] [✓ Guardar] [✕]"
+   → creBatchFaseConfirm → _creBatchFaseRegisterNow: guarda en todas (salvo las que ya
+     tenían esa fase — no se sobreescribe) + logs con contexto de frasco
 
 5. Score + Incidencia se registran por frasco → CRE record con experimentoId+frascoId
 
