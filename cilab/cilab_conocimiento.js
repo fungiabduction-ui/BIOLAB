@@ -1146,6 +1146,68 @@ function _creExtrasBackfillV2() {
   return n;
 }
 
+/**
+ * Migración one-shot: recalcula colonizacionDias/colonizacionPenalty/scoreCompuesto
+ * en records de bl2_crec cerrados cuyo frasco propio tiene una fecha de colonización
+ * real en bl2_seg distinta de la que quedó congelada (bug: se calculaba con la fecha
+ * compartida entre frascos, ver docs/superpowers/specs/2026-07-23-fases-por-frasco-design.md).
+ * Reusa _creInoculacionDate/_creGetColonizacionDate (ya frasco-aware) — no reimplementa
+ * resolución de fechas. Si no encuentra tanda de bl2_seg con inoculoTs+colonizacion reales
+ * para ESE frasco, no toca el record (no inventa procedencia).
+ * Solo sobreescribe si el valor recalculado difiere del congelado.
+ */
+function _creMigrarColonizacionDiasPorFrascoV1() {
+  var arr = creRead();
+  var updated = 0;
+
+  // Fechas 'YYYY-MM-DD' (sin hora) las parsea el motor JS como medianoche UTC —
+  // en un huso horario negativo (ej. Argentina, UTC-3) eso cae en el día calendario
+  // anterior. Mismo gotcha ya documentado en FR/genFrId (CLAUDE.md): forzar
+  // T00:00:00 local en vez de new Date(str) a secas cuando no trae hora.
+  function _localDate(str) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+  }
+
+  arr.forEach(function(rec) {
+    if (rec.status !== 'cerrado' || !rec.experimentoId || !rec.frascoId || !rec.geneticaId) return;
+    var frCtx = { expId: rec.experimentoId, frascoLabel: rec.frascoId };
+
+    var inocDate = _creInoculacionDate(rec.formulaId, rec.geneticaId, frCtx);
+    var colonDate = _creGetColonizacionDate(rec.formulaId, rec.geneticaId, frCtx);
+    if (!inocDate || !colonDate) return; // sin dato real de ESTE frasco — no tocar
+
+    var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+    var d1 = _localDate(colonDate); d1.setHours(0, 0, 0, 0);
+    var correctDias = Math.floor((d1 - d0) / 86400000);
+    if (correctDias < 0) return; // dato inconsistente — no tocar
+
+    (rec.observaciones || []).forEach(function(o) {
+      if (o.colonizacionDias == null || o.colonizacionDias === correctDias) return;
+
+      var rizoRatio = (o.rizoPozitivas != null && o.totalPlacas != null && o.totalPlacas > 0)
+        ? (o.rizoPozitivas / o.totalPlacas) : null;
+      var correctPenalty = _creEffectivePenalty(
+        Math.min(3, +(Math.max(0, correctDias - 15) * 0.25).toFixed(2)), rizoRatio
+      );
+      var score = o.calidadScore != null ? o.calidadScore : o.scoreObservado;
+      var base  = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
+      var correctCompuesto = +Math.max(0, base - correctPenalty).toFixed(1);
+
+      o.colonizacionDias    = correctDias;
+      o.colonizacionPenalty = correctPenalty;
+      o.scoreCompuesto       = correctCompuesto;
+      updated++;
+    });
+  });
+
+  if (updated > 0) {
+    creWrite(arr);
+    try { localStorage.removeItem('bl2_inteligencia_model'); } catch(e) {}
+    try { localStorage.removeItem('bl2_formula_intel'); } catch(e) {}
+  }
+  return { updated: updated };
+}
+
 function _creRegenScoreLogs() {
   var exps    = [];
   try { exps = JSON.parse(localStorage.getItem('bl2_experimentos')) || []; } catch(e) {}
@@ -4842,6 +4904,16 @@ function creOpenScoringPanel(formulaId) {
   _creFrascoBackfill();    // migración idempotente: asigna frascoId a records legacy si es posible
   _creExtrasBackfill();    // migración idempotente: mergea extras (records sin backfill)
   _creExtrasBackfillV2();  // corrección V2: re-normaliza extras en records sellados con V1 buggy
+  // Corrección one-shot: colonizacionDias/penalty calculados con el frasco equivocado
+  // (bug de bl2_crec_fases compartido entre frascos, ver spec 2026-07-23-fases-por-frasco).
+  // Flag escrito recién después de confirmar el persist (patrón _creExtrasBackfillV2/CLAUDE.md).
+  try {
+    if (!localStorage.getItem('biolab_migracion_crec_colonizacion_frasco_v1')) {
+      var _colFrascoResult = _creMigrarColonizacionDiasPorFrascoV1();
+      if (_colFrascoResult.updated > 0) console.info('[CRE] colonizacionDias corregidos por frasco:', _colFrascoResult.updated, 'obs');
+      localStorage.setItem('biolab_migracion_crec_colonizacion_frasco_v1', '1');
+    }
+  } catch(e) { console.warn('[CRE] migracion colonizacionDias por frasco fallo', e); }
   _spReset(formulaId);
   // Importar fases de CI → bl2_crec_fases para todas las cepas de esta fórmula.
   // Operación idempotente: solo escribe si el dato no existe ya. CILAB queda autónomo.
