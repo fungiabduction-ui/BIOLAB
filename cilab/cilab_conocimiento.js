@@ -439,7 +439,10 @@ function creAddObs(creId, obs) {
     const rec = arr[idx];
     const missingPlacas  = rec.totalPlacas   == null || rec.totalPlacas <= 0;
     const missingRizo    = rec.rizoPozitivas == null;
-    const fases          = _creFasesRead(rec.formulaId, rec.geneticaId);
+    const _frCtxObs = (rec.experimentoId && rec.frascoId)
+      ? { expId: rec.experimentoId, frascoLabel: rec.frascoId }
+      : null;
+    const fases          = _creFasesRead(rec.formulaId, rec.geneticaId, _frCtxObs);
     const colF           = fases.find(function(f) { return f.fase === 'colonizacion_completa'; });
     const missingColDia  = !colF || colF.auto === 'inferred' || colF.dia == null;
     const gaps = [];
@@ -864,10 +867,13 @@ function _creBackfillAutoLogs() {
     var formulaId  = rec.formulaId;
     var geneticaId = rec.geneticaId;
     if (!formulaId || !geneticaId) return;
+    var frCtx = (rec.experimentoId && rec.frascoId)
+      ? { expId: rec.experimentoId, frascoLabel: rec.frascoId }
+      : null;
 
     // Sincronizar fases desde CI antes de leer — idempotente
-    _creAutoFillInoculacion(formulaId, geneticaId);
-    _creAutoFillColonizacion(formulaId, geneticaId);
+    _creAutoFillInoculacion(formulaId, geneticaId, frCtx);
+    _creAutoFillColonizacion(formulaId, geneticaId, frCtx);
 
     var notas   = _creNotasRead(formulaId, geneticaId);
     var changed = false;
@@ -901,7 +907,7 @@ function _creBackfillAutoLogs() {
           parts.push('Difuso / tormentoso');
         }
 
-        var fases = _creFasesRead(formulaId, geneticaId);
+        var fases = _creFasesRead(formulaId, geneticaId, frCtx);
         var fp    = [];
         var colF  = fases.find(function(f) { return f.fase === 'colonizacion_completa'; });
         var fruF  = fases.find(function(f) { return f.fase === 'fructificacion'; });
@@ -929,7 +935,7 @@ function _creBackfillAutoLogs() {
     }
 
     // ── Fases backfill ──────────────────────────────────────────────────
-    var fases = _creFasesRead(formulaId, geneticaId);
+    var fases = _creFasesRead(formulaId, geneticaId, frCtx);
     fases.forEach(function(fc) {
       var already = notas.some(function(n) { return n.auto && n.logType === 'fase' && n.faseId === fc.fase; });
       if (already) return;
@@ -1164,7 +1170,9 @@ function _creRegenScoreLogs() {
     if (o.calidadScore == null) return;
 
     var frascoStr = null;
+    var _frCtxRegen = null;
     if (rec.frascoId && rec.experimentoId) {
+      _frCtxRegen = { expId: rec.experimentoId, frascoLabel: rec.frascoId };
       var exp = exps.find(function(e) { return e.id === rec.experimentoId; });
       if (exp) {
         var fr = (exp.frascos || []).find(function(f) { return f.label === rec.frascoId; });
@@ -1194,7 +1202,7 @@ function _creRegenScoreLogs() {
       parts.push('Difuso / tormentoso');
     }
 
-    var fases = _creFasesRead(rec.formulaId, rec.geneticaId);
+    var fases = _creFasesRead(rec.formulaId, rec.geneticaId, _frCtxRegen);
     var fp    = [];
     [['colonizacion_completa','Col'],['fructificacion','Fruct'],['fin_ciclo','Fin']].forEach(function(p) {
       var f = fases.find(function(f) { return f.fase === p[0]; });
@@ -3519,8 +3527,11 @@ function _creLogScore(formulaId, targets, score, compScore, rizoApplies, obsTota
   }
   var writeGId = targets.length > 1 ? null : targets[0].gId;
   // Fases temporal summary per cepa
+  var _fasesFrCtx = (frascoCtx && frascoCtx.experimentoId)
+    ? { expId: frascoCtx.experimentoId, frascoLabel: frascoCtx.frascoId }
+    : null;
   var fasesLines = targets.map(function(t) {
-    var fases = _creFasesRead(formulaId, t.gId);
+    var fases = _creFasesRead(formulaId, t.gId, _fasesFrCtx);
     var fp = [];
     var colF  = fases.find(function(f) { return f.fase === 'colonizacion_completa'; });
     var fruF  = fases.find(function(f) { return f.fase === 'fructificacion'; });
