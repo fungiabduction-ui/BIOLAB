@@ -1560,7 +1560,161 @@ Since `bl2_inteligencia_model` was invalidated, opening Inteligencia should trig
 
 ---
 
+### Task 13: Fix pre-existing timezone bug in live day-diff arithmetic (added 2026-07-23, found by Task 11's e2e run)
+
+**Files:**
+- Modify: `cilab/cilab_conocimiento.js` — add shared `_localDate` helper near `_creHoyISO` (line ~97)
+- Modify: `_creAutoFillColonizacion`, `_creDiasSinceInoc`, `_creFaseRegisterNow`, `creFaseEditSave`, `_creBatchFaseRegisterNow` — 8 call sites across these 5 functions
+- Modify: `_creMigrarColonizacionDiasPorFrascoV1` — remove its locally-scoped duplicate `_localDate`, use the shared one
+- Test: scratchpad `task13_localdate.test.js`
+
+**Context:** Task 11's end-to-end run against real production data found that `_creAutoFillColonizacion` (and, by the same code pattern, `_creDiasSinceInoc`, `_creFaseRegisterNow`, `creFaseEditSave`, `_creBatchFaseRegisterNow`) compute day-diffs off by +1 in Argentina's UTC-3 timezone: bare `'YYYY-MM-DD'` date strings (`inocDate`, `fechaStr`, `todayIso` from `_creHoyISO()`) parse as UTC midnight in JS, which lands on the previous calendar day once `.setHours(0,0,0,0)` re-zeros LOCAL time — an anchor date one full day too early. This is the exact bug Task 10 already found and fixed with a local `_localDate()` helper scoped inside the new migration function — but that fix was never propagated to the LIVE functions that do the same day-math for new/edited fase registrations. Confirmed pre-existing (not a regression from Tasks 1-9 — byte-identical `new Date(...)` calls existed before this whole plan started), and confirmed it still produces wrong `dia` values going forward for any newly-autofilled or manually-registered `colonizacion_completa`/other fase.
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// task13_localdate.test.js
+console.log('TZ offset (Argentina expected 180):', new Date().getTimezoneOffset());
+
+// OLD (buggy) pattern — paste directly, no helper
+function daysBetween_old(a, b) {
+  var d0 = new Date(a); d0.setHours(0,0,0,0);
+  var d1 = new Date(b); d1.setHours(0,0,0,0);
+  return Math.floor((d1 - d0) / 86400000);
+}
+console.log('old pattern (buggy) gives 18, not 17:', daysBetween_old('2026-05-08', '2026-05-25T21:21') === 18);
+
+// PASTE the shared _localDate helper here (from your Step 2 fix, read from the real file)
+function daysBetween_new(a, b) {
+  var d0 = _localDate(a); d0.setHours(0,0,0,0);
+  var d1 = _localDate(b); d1.setHours(0,0,0,0);
+  return Math.floor((d1 - d0) / 86400000);
+}
+console.log('new pattern (fixed) gives 17:', daysBetween_new('2026-05-08', '2026-05-25T21:21') === 17);
+console.log('datetime-only strings unaffected (no Z, no fix needed):', _localDate('2026-05-25T21:21').getHours() === 21);
+console.log('bare date correctly becomes local midnight:', _localDate('2026-05-08').getDate() === 8 && _localDate('2026-05-08').getHours() === 0);
+```
+
+- [ ] **Step 2: Run test to verify it fails, then implement**
+
+Run: `node task13_localdate.test.js` — expect `new pattern (fixed) gives 17` to fail (function doesn't exist yet).
+
+Add this shared helper in `cilab/cilab_conocimiento.js` immediately after `_creHoyISO()` (line ~100, right before the "Wizard de observación guiada" comment):
+
+```js
+// Mismo gotcha que _creHoyISO de arriba, aplicado a diffs de fecha: 'YYYY-MM-DD' sin hora
+// lo parsea JS como medianoche UTC, que en un huso horario negativo (Argentina, UTC-3)
+// cae en el día calendario anterior una vez que .setHours(0,0,0,0) re-zonifica a local.
+// Usar SIEMPRE en vez de `new Date(str)` a secas cuando `str` puede venir sin hora
+// (fechas de fases, inputs type="date", _creHoyISO()). Strings con hora explícita
+// (datetime, sin 'Z') ya parsean como local por spec — no necesitan ajuste.
+function _localDate(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+}
+```
+
+- [ ] **Step 3: Apply at all 8 call sites**
+
+In `_creAutoFillColonizacion`, replace:
+```js
+    var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
+    var d1 = new Date(colonDate); d1.setHours(0,0,0,0);
+```
+with:
+```js
+    var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
+    var d1 = _localDate(colonDate); d1.setHours(0,0,0,0);
+```
+
+In `_creDiasSinceInoc`, replace:
+```js
+  var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
+  var d1 = new Date();         d1.setHours(0,0,0,0);
+```
+with:
+```js
+  var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
+  var d1 = new Date();           d1.setHours(0,0,0,0);
+```
+(`d1 = new Date()` stays as-is — it's already a real Date object, not a parsed string, no bug there.)
+
+In `_creFaseRegisterNow`, replace:
+```js
+      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = new Date(todayIso); d1.setHours(0, 0, 0, 0);
+```
+with:
+```js
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
+```
+
+In `creFaseEditSave`, replace (inoculación branch):
+```js
+    var d0new = new Date(fechaStr); d0new.setHours(0, 0, 0, 0);
+```
+with:
+```js
+    var d0new = _localDate(fechaStr); d0new.setHours(0, 0, 0, 0);
+```
+and replace (non-inoculación branch):
+```js
+      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = new Date(fechaStr); d1.setHours(0, 0, 0, 0);
+```
+with:
+```js
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(fechaStr); d1.setHours(0, 0, 0, 0);
+```
+
+In `_creBatchFaseRegisterNow`, replace:
+```js
+      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = new Date(todayIso); d1.setHours(0, 0, 0, 0);
+```
+with:
+```js
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
+```
+
+Grep for `new Date(inocDate)\|new Date(fechaStr)\|new Date(todayIso)\|new Date(colonDate)` across the whole file first, to confirm exactly these 8 occurrences and no others were missed (line numbers will have shifted from Tasks 1-10's edits — search by these literal patterns, not line numbers).
+
+- [ ] **Step 4: De-duplicate `_creMigrarColonizacionDiasPorFrascoV1`'s local copy**
+
+In `_creMigrarColonizacionDiasPorFrascoV1` (added in Task 10), remove the locally-scoped duplicate:
+```js
+  // Fechas 'YYYY-MM-DD' (sin hora) las parsea el motor JS como medianoche UTC —
+  // en un huso horario negativo (ej. Argentina, UTC-3) eso cae en el día calendario
+  // anterior. Mismo gotcha ya documentado en FR/genFrId (CLAUDE.md): forzar
+  // T00:00:00 local en vez de new Date(str) a secas cuando no trae hora.
+  function _localDate(str) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+  }
+
+```
+(the function body's own `_localDate(inocDate)`/`_localDate(colonDate)` calls stay exactly as they are — they'll now resolve to the shared module-level `_localDate` instead of the local one, same behavior, zero duplication).
+
+- [ ] **Step 5: Verify**
+
+Run: `node --check cilab/cilab_conocimiento.js`.
+Run: `grep -n "function _localDate" cilab/cilab_conocimiento.js` — expect exactly 1 match (the new shared one near `_creHoyISO`).
+Run: `node task13_localdate.test.js` — expect all 4 lines `true`.
+Re-run Task 11's `task11_e2e.test.js` script (still in the scratchpad from Task 11) with its 2 failing assertions updated to call the now-fixed `_creAutoFillColonizacion` — `faseColA.dia === 17`/`faseColB.dia === 22` should now both print `true`, closing the gap Task 11 found.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add cilab/cilab_conocimiento.js
+git commit -m "fix(cilab): fechas sin hora (fases, _creHoyISO, inputs date) parseaban como UTC en vez de local"
+```
+
+---
+
 ## Self-review notes
+
+- **Task 13 added mid-execution, not in the original design:** Task 11's end-to-end run against real production data surfaced this — a pre-existing bug (not introduced by Tasks 1-10) in the live day-diff arithmetic, structurally identical to the one Task 10 already found and fixed inside its own migration function but never propagated to the 5 live functions doing the same math. Confirmed via git-blame-equivalent reasoning (byte-identical `new Date(...)` calls existed before this plan started) and via Task 11's isolated reproduction (off-by-one-day in Argentina's UTC-3, matching the exact numbers 18/23 vs the correct 17/22).
 
 - **Spec coverage:** all 6 numbered design points from the spec have a task — key compuesta (Task 1), threading (Tasks 4-9), fuentes CI (Task 2), datos históricos / sin migración (confirmed as a no-op by design, verified in Task 11 step 3), corrección retroactiva (Task 10), backup (Task 12 step 1).
 - **New finding during planning, not in the original spec:** `creOpenScoringPanel`'s pre-fill loop (Task 5) is the actual root seeding point of the 18 contaminated combinations — the spec's point 2 mentioned threading generically but didn't call this specific call site out. Added as its own task since it's the highest-impact single fix.
