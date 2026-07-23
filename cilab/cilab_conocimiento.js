@@ -5489,6 +5489,7 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
   var todayIso = _creHoyISO();
   var tsNow    = now();
   var saved    = 0;
+  var colonizGIds = []; // cepas que efectivamente registraron colonizacion_completa en esta llamada (no las salteadas)
 
   _sp.selected.forEach(function(key) {
     var gId = key.split('|')[2];
@@ -5516,6 +5517,7 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
     _creLogFase(formulaId, gId, faseId, dia, todayIso, false, _sp.frasco);
     if (faseId === 'colonizacion_completa') {
       _creSyncColonizacionToCI(formulaId, gId, todayIso);
+      colonizGIds.push(gId);
     }
     saved++;
   });
@@ -5524,6 +5526,11 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
   notif('Fase registrada en ' + saved + ' cepas', 'info');
   _creRenderCepasSection(formulaId);
   if (_sp.formulaId) _creRenderLogSection(_sp.formulaId);
+  // Bug encontrado en revisión final (2026-07-23): el sync a CI ya funcionaba en batch,
+  // pero nunca se ofrecía "cerrar ciclo → GR" — solo el flujo individual llamaba al prompt.
+  if (colonizGIds.length > 0) {
+    setTimeout(function() { creColonizacionCierrePromptBatch(formulaId, colonizGIds); }, 80);
+  }
 }
 
 function _creBatchControlsRerender(formulaId) {
@@ -5605,6 +5612,60 @@ function creColonizacionCerrarCiclo(formulaId, geneticaId) {
   }
 
   notif('✅ Ciclo cerrado — se activa en GR', 'ok');
+}
+
+// ── Prompt de cierre de ciclo — batch (2026-07-23) ───────────────────────────
+// El flujo individual (arriba) ya sincronizaba a CI pero nunca ofrecía "cerrar
+// ciclo" en modo batch (varias cepas a la vez) — encontrado en la revisión
+// final del plan del grid de fases. `_creBatchColonizPending` es estado
+// transitorio (no forma parte de `_sp`, se limpia apenas se usa) porque el
+// botón del prompt no puede llevar un array completo de geneticaIds en el
+// atributo onclick.
+var _creBatchColonizPending = null; // { formulaId, geneticaIds } | null
+
+function creColonizacionCierrePromptBatch(formulaId, geneticaIds) {
+  var cardsWrap = document.getElementById('cre-cepa-cards-' + formulaId);
+  if (!cardsWrap || !geneticaIds || !geneticaIds.length) return;
+  var old = document.querySelector('.cre-coloniz-prompt');
+  if (old) old.remove();
+  _creBatchColonizPending = { formulaId: formulaId, geneticaIds: geneticaIds.slice() };
+  var n = geneticaIds.length;
+  var div = document.createElement('div');
+  div.className = 'cre-coloniz-prompt';
+  div.innerHTML = '<div class="cre-coloniz-icon">🌿</div>'
+    + '<div>'
+    + '<div class="cre-coloniz-title">Colonización completa registrada</div>'
+    + '<div class="cre-coloniz-info"><strong style="color:var(--ac2)">' + n + ' cepa' + (n > 1 ? 's' : '') + '</strong> completaron colonización.</div>'
+    + '<div class="cre-coloniz-question">¿Cerrar el ciclo de expansión y pasar a GR?</div>'
+    + '</div>'
+    + '<div class="cre-coloniz-actions">'
+    + '<button class="clab-btn" onclick="creColonizacionCerrarCicloBatch()" style="background:var(--ac2);color:var(--bg);border-color:var(--ac2);font-weight:700">✓ Cerrar ciclo → GR</button>'
+    + '<button class="clab-btn clab-btn-sm" onclick="this.closest(\'.cre-coloniz-prompt\').remove();_creBatchColonizPending=null;" style="color:var(--tx3)">Mantener abierto</button>'
+    + '</div>';
+  cardsWrap.before(div);
+}
+
+function creColonizacionCerrarCicloBatch() {
+  var pending = _creBatchColonizPending;
+  _creBatchColonizPending = null;
+  if (!pending) return;
+  var prompt = document.querySelector('.cre-coloniz-prompt');
+  if (prompt) prompt.remove();
+
+  var formulaId = pending.formulaId;
+  var notaTxt = '✅ Ciclo cerrado -> Se activa en GR';
+  _creWriteAutoNota(formulaId, notaTxt, 'green', null);
+  pending.geneticaIds.forEach(function(gId) {
+    _creNotasWrite(formulaId, gId, _creNotasRead(formulaId, gId).concat([
+      { id: 'cciclo-' + Date.now() + '-' + gId, ts: (function(){ var d=new Date(); return d.getDate()+'/'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); })(), texto: notaTxt, auto: true }
+    ]));
+  });
+
+  if (typeof window._ciSyncCultivosFromSeg === 'function') {
+    try { window._ciSyncCultivosFromSeg(formulaId); } catch(e) {}
+  }
+
+  notif('✅ Ciclo cerrado en ' + pending.geneticaIds.length + ' cepas — se activa en GR', 'ok');
 }
 
 function creNotaEliminar(formulaId, geneticaId, notaId) {
@@ -5993,6 +6054,8 @@ Object.assign(window, {
   creFaseGridBatchClick,
   creColonizacionCierrePrompt,
   creColonizacionCerrarCiclo,
+  creColonizacionCierrePromptBatch,
+  creColonizacionCerrarCicloBatch,
   creNotaEliminar,
   creNotaEditarStart,
   creNotaEditarGuardar,
