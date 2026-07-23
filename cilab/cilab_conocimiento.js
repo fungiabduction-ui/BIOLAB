@@ -2414,7 +2414,7 @@ function _creFormulaCards(records, model) {
           : totalCepas === 0 ? '—'
           : expStats !== null
             ? (expStats.doneExps === expStats.totalExps
-                ? '✓ ' + expStats.totalExps + '/' + expStats.totalExps + ' experimentos · Score: ' + _creCompoundAvg(fRecs)
+                ? '✓ ' + expStats.totalExps + '/' + expStats.totalExps + ' experimentos · Score: ' + _creCompoundAvgByFrasco(fRecs, frascos)
                 : expStats.doneExps + '/' + expStats.totalExps + ' experimentos completados')
             : doneCount === totalCepas && totalCepas > 0
               ? '✓ Calibrada · Score compuesto: ' + _creCompoundAvg(fRecs)
@@ -2461,6 +2461,39 @@ function _creCompoundAvg(fRecs) {
     return a + (Math.round(r.scoreFinalNorm / 10) * (r.rizoPozitivas / r.totalPlacas));
   }, 0);
   return (sum / valid.length).toFixed(1);
+}
+
+// Score compuesto separado por frasco — decisión 2026-07-23: cada frasco de un
+// experimento es un ensayo independiente (base + extra vs. base), no se promedian
+// entre sí. Records con experimentoId pero sin frascoId (caso ambiguo que
+// _creFrascoBackfill no pudo resolver — ver bl2_crec_fases design doc) se muestran
+// aparte como "sin identificar" en vez de mezclarse en silencio con un frasco real.
+function _creCompoundAvgByFrasco(fRecs, frascos) {
+  if (!frascos || frascos.length < 2) return _creCompoundAvg(fRecs);
+
+  var groups = {};
+  var unidentified = [];
+  fRecs.forEach(function(r) {
+    if (r.experimentoId && r.frascoId) {
+      var key = r.experimentoId + '|' + r.frascoId;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    } else if (r.experimentoId) {
+      unidentified.push(r);
+    }
+  });
+
+  var parts = [];
+  frascos.forEach(function(fr) {
+    var recs = groups[fr.expId + '|' + fr.frascoLabel];
+    if (recs && recs.length) {
+      parts.push('🔬 ' + esc(fr.frascoLabel) + ': ' + _creCompoundAvg(recs));
+    }
+  });
+  if (unidentified.length) {
+    parts.push('⚠ sin identificar (' + unidentified.length + '): ' + _creCompoundAvg(unidentified));
+  }
+  return parts.length ? parts.join(' · ') : '—';
 }
 
 function _creRenderGrid() {
