@@ -6078,6 +6078,101 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
   _creRenderCepasSection(formulaId);
 }
 
+function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
+  var fases = _creFasesRead(formulaId, geneticaId);
+  var reg = fases.find(function(f) { return f.fase === faseId; });
+  if (!reg) return '';
+  var def = _FASES_DEF.find(function(f) { return f.id === faseId; });
+  var faseIdE = esc(faseId);
+
+  var fechaVal = reg.fecha || _creHoyISO();
+  var horaVal  = '00:00';
+  if (reg.ts) {
+    var dt = new Date(reg.ts);
+    horaVal = String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  }
+  var showPlacas = faseId !== 'inoculacion' && faseId !== 'colonizacion_completa';
+
+  var html = '<div class="cre-fase-edit-strip">';
+  html += '<div class="cre-fase-edit-title">✎ ' + esc(def ? def.label : faseId) + '</div>';
+  html += '<div class="cre-fase-edit-row"><label>Fecha</label><input type="date" id="cre-fase-edit-fecha-' + faseIdE + '" value="' + fechaVal + '"></div>';
+  html += '<div class="cre-fase-edit-row"><label>Hora</label><input type="time" id="cre-fase-edit-hora-' + faseIdE + '" value="' + horaVal + '"></div>';
+  if (showPlacas) {
+    html += '<div class="cre-fase-edit-row"><label>Placas obs. (opcional)</label>'
+      + '<input type="number" min="0" max="999" id="cre-fase-edit-placas-' + faseIdE + '" value="' + (reg.placasObservadas != null ? reg.placasObservadas : '') + '" placeholder="—"></div>';
+  }
+  html += '<div class="cre-fase-edit-actions">'
+    + '<button class="clab-btn clab-btn-sm" style="background:var(--ac2);color:var(--bg);border-color:var(--ac2)" onclick="creFaseEditSave(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\',\'' + faseIdE + '\')">Guardar</button>'
+    + '<button class="clab-btn clab-btn-sm" onclick="creFaseEditCancel(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\')">Cancelar</button>'
+    + '</div></div>';
+  return html;
+}
+
+function _creFasesGridHTML(formulaId, geneticaId) {
+  if (!geneticaId) return '<div style="padding:16px;color:var(--tx3);font-size:12px">Seleccioná una cepa.</div>';
+
+  _creAutoFillInoculacion(formulaId, geneticaId);
+  _creAutoFillColonizacion(formulaId, geneticaId);
+  _creAutoFillInferredFases(formulaId, geneticaId);
+
+  var fases  = _creFasesRead(formulaId, geneticaId);
+  var regMap = {};
+  fases.forEach(function(f) { regMap[f.fase] = f; });
+  var diasAct = _creDiasSinceInoc(formulaId, geneticaId);
+  var fIdE = esc(formulaId);
+  var gIdE = esc(geneticaId);
+
+  var html = '<div class="cre-fase-grid-wrap">';
+  html += '<div class="cre-3col-title">Fases <span class="cre-3col-count">' + fases.length + '/' + _FASES_DEF.length + '</span>'
+    + (diasAct != null ? '<span class="cre-fase-hoy">Día ' + diasAct + '</span>' : '') + '</div>';
+
+  html += '<div class="cre-fase-grid">';
+  _FASES_DEF.forEach(function(def) {
+    var reg = regMap[def.id];
+    var isDone     = !!reg && reg.auto !== 'inferred';
+    var isInferred = !!reg && reg.auto === 'inferred';
+    var faseIdE = esc(def.id);
+    var cls = 'cre-fase-chip' + (isDone ? ' cre-fase-chip--done' : isInferred ? ' cre-fase-chip--inferred' : ' cre-fase-chip--pending');
+    var style = isDone ? 'background:' + def.color + '22;border-color:' + def.color + ';color:' + def.color + ';' : '';
+    var horaStr = '';
+    if (isDone && reg.ts) {
+      var dt = new Date(reg.ts);
+      horaStr = String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+    }
+    var fechaFmt = '';
+    if (isDone && reg.fecha) {
+      var dd = reg.fecha.split('-');
+      fechaFmt = dd[2] + '/' + dd[1];
+    }
+    html += '<div class="' + cls + '" style="' + style + '" onclick="creFaseGridClick(\'' + fIdE + '\',\'' + gIdE + '\',\'' + faseIdE + '\')">'
+      + '<div class="cre-fase-chip-name">' + esc(def.label) + (isDone && reg.auto === true ? '<span class="cre-fase-chip-auto">CI</span>' : '') + '</div>'
+      + (isDone
+          ? '<div class="cre-fase-chip-meta">Día ' + reg.dia + ' · ' + fechaFmt + (horaStr ? ' ' + horaStr : '') + '</div>'
+          : '<div class="cre-fase-chip-meta cre-fase-chip-meta--pending">' + (isInferred ? '~día ' + reg.dia : 'típ. día ' + def.typicalDay) + '</div>')
+      + '</div>';
+  });
+  html += '</div>';
+
+  if (_sp.faseEditOpen) {
+    html += _creFaseEditStripHTML(formulaId, geneticaId, _sp.faseEditOpen);
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function creFaseGridClick(formulaId, geneticaId, faseId) {
+  var fases = _creFasesRead(formulaId, geneticaId);
+  var reg = fases.find(function(f) { return f.fase === faseId; });
+  if (!reg || reg.auto === 'inferred') {
+    _sp.faseEditOpen = null;
+    _creFaseRegisterNow(formulaId, geneticaId, faseId); // re-renderiza internamente
+  } else {
+    _sp.faseEditOpen = (_sp.faseEditOpen === faseId) ? null : faseId;
+    _creRenderCepasSection(formulaId);
+  }
+}
+
 // ── Prompt de cierre de ciclo tras colonización ──────────────────────────────
 
 function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
@@ -6510,6 +6605,9 @@ Object.assign(window, {
   creEditFase,
   creEditFaseConfirm,
   creEditFaseCancel,
+  creFaseEditSave,
+  creFaseEditCancel,
+  creFaseGridClick,
   creColonizacionCierrePrompt,
   creColonizacionCerrarCiclo,
   creNotaEliminar,
