@@ -4232,7 +4232,6 @@ function _creCepaCardHTML(formulaId, cepa, fRecs, allFases) {
   var fIdE  = esc(formulaId);
   var gIdE  = esc(cepa.id);
   var color = _creChipColor(cepa.id);
-  var fases = allFases[cepa.id] || [];
 
   var expId       = _sp.frasco ? _sp.frasco.expId       : null;
   var frascoLabel = _sp.frasco ? _sp.frasco.frascoLabel : null;
@@ -4251,15 +4250,6 @@ function _creCepaCardHTML(formulaId, cepa, fRecs, allFases) {
     ? rec.observaciones[rec.observaciones.length - 1] : null;
   var recScore = lastObs && lastObs.calidadScore != null ? lastObs.calidadScore : null;
 
-  var lastFase = null;
-  for (var i = _FASES_DEF.length - 1; i >= 0; i--) {
-    var match = fases.find(function(f) { return f.fase === _FASES_DEF[i].id; });
-    if (match) { lastFase = { def: _FASES_DEF[i], dia: match.dia }; break; }
-  }
-  var faseLabel = lastFase
-    ? esc(lastFase.def.label.split(' ')[0]) + ' Día ' + (lastFase.dia != null ? lastFase.dia : '?')
-    : 'Sin fases';
-
   var cardCls = 'cre-cepa-card'
     + (isExpanded ? ' cre-cepa-card--expanded' : '')
     + (isBatch    ? ' cre-cepa-card--batch'    : '');
@@ -4276,10 +4266,6 @@ function _creCepaCardHTML(formulaId, cepa, fRecs, allFases) {
 
   html += '<span class="cre-cepa-chip" style="background:' + color + '1a;border:1px solid ' + color + ';color:' + color + '">'
     + esc(_creDispLabel(cepa.label)) + '</span>';
-
-  html += _creFaseTimelineHTML(fases);
-
-  html += '<span class="cre-cepa-phase-badge">' + faseLabel + '</span>';
 
   if (recScore != null) {
     var scMeta = _SCORE_META[Math.round(recScore)];
