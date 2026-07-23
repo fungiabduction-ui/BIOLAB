@@ -3527,7 +3527,7 @@ function _creLogScore(formulaId, targets, score, compScore, rizoApplies, obsTota
   }
   var writeGId = targets.length > 1 ? null : targets[0].gId;
   // Fases temporal summary per cepa
-  var _fasesFrCtx = (frascoCtx && frascoCtx.experimentoId)
+  var _fasesFrCtx = (frascoCtx && frascoCtx.experimentoId && frascoCtx.frascoId)
     ? { expId: frascoCtx.experimentoId, frascoLabel: frascoCtx.frascoId }
     : null;
   var fasesLines = targets.map(function(t) {
