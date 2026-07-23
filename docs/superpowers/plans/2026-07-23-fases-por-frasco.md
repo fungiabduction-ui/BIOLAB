@@ -1564,7 +1564,7 @@ Since `bl2_inteligencia_model` was invalidated, opening Inteligencia should trig
 
 **Files:**
 - Modify: `cilab/cilab_conocimiento.js` — add shared `_localDate` helper near `_creHoyISO` (line ~97)
-- Modify: `_creAutoFillColonizacion`, `_creDiasSinceInoc`, `_creFaseRegisterNow`, `creFaseEditSave`, `_creBatchFaseRegisterNow` — 8 call sites across these 5 functions
+- Modify: `_creAutoFillColonizacion`, `_creDiasSinceInoc`, `_creFaseRegisterNow`, `creFaseEditSave`, `_creBatchFaseRegisterNow` — 11 call sites across these 5 functions (`creFaseEditSave` alone has 4 — `d0new`, plus a `df` inside its inoculación-edit reflow loop that the original grep pattern below doesn't catch, found and fixed as a same-day follow-up commit `dec5679`; see Self-review notes)
 - Modify: `_creMigrarColonizacionDiasPorFrascoV1` — remove its locally-scoped duplicate `_localDate`, use the shared one
 - Test: scratchpad `task13_localdate.test.js`
 
@@ -1715,6 +1715,7 @@ git commit -m "fix(cilab): fechas sin hora (fases, _creHoyISO, inputs date) pars
 ## Self-review notes
 
 - **Task 13 added mid-execution, not in the original design:** Task 11's end-to-end run against real production data surfaced this — a pre-existing bug (not introduced by Tasks 1-10) in the live day-diff arithmetic, structurally identical to the one Task 10 already found and fixed inside its own migration function but never propagated to the 5 live functions doing the same math. Confirmed via git-blame-equivalent reasoning (byte-identical `new Date(...)` calls existed before this plan started) and via Task 11's isolated reproduction (off-by-one-day in Argentina's UTC-3, matching the exact numbers 18/23 vs the correct 17/22).
+- **Task 13's own Step 3 grep pattern was itself incomplete:** it missed a 9th/10th-counted occurrence (`var df = new Date(f.fecha)` inside `creFaseEditSave`'s inoculación-edit reflow loop, which recalculates every other fase's `dia` relative to the newly-edited anchor) because the pattern only searched for `new Date(inocDate|fechaStr|todayIso|colonDate)`, not the more generic `new Date(f.fecha)`. Found by the implementer while working the task, confirmed in-scope (identical bug, same function already being edited) and fixed in a same-day follow-up commit (`dec5679`) rather than a new task. Final code-quality review confirmed a full-file sweep found no further missed sites.
 
 - **Spec coverage:** all 6 numbered design points from the spec have a task — key compuesta (Task 1), threading (Tasks 4-9), fuentes CI (Task 2), datos históricos / sin migración (confirmed as a no-op by design, verified in Task 11 step 3), corrección retroactiva (Task 10), backup (Task 12 step 1).
 - **New finding during planning, not in the original spec:** `creOpenScoringPanel`'s pre-fill loop (Task 5) is the actual root seeding point of the 18 contaminated combinations — the spec's point 2 mentioned threading generically but didn't call this specific call site out. Added as its own task since it's the highest-impact single fix.
