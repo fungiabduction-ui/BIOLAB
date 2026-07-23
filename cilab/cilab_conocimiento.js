@@ -5393,7 +5393,9 @@ function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
   var def = _FASES_DEF.find(function(f) { return f.id === faseId; });
   var faseIdE = esc(faseId);
 
-  var fechaVal = reg.fecha || _creHoyISO();
+  // .slice(0,10): mismo motivo que en _creFasesGridHTML — registros viejos pueden tener
+  // "YYYY-MM-DDTHH:MM" en vez de "YYYY-MM-DD"; un <input type="date"> con eso queda vacío.
+  var fechaVal = (reg.fecha ? reg.fecha.slice(0, 10) : null) || _creHoyISO();
   var horaVal  = '00:00';
   if (reg.ts) {
     var dt = new Date(reg.ts);
@@ -5452,8 +5454,11 @@ function _creFasesGridHTML(formulaId, geneticaId) {
     }
     var fechaFmt = '';
     if (isDone && reg.fecha) {
-      var dd = reg.fecha.split('-');
-      fechaFmt = dd[2] + '/' + dd[1];
+      // .slice(0,10) primero: algunos registros viejos (form datetime-local ya eliminado)
+      // quedaron con fecha tipo "2026-07-08T00:59" en vez de "2026-07-08" — sin este corte
+      // el split('-') rompe el día ("08T00:59"). Formato pedido: DD/MM/YYYY.
+      var dd = reg.fecha.slice(0, 10).split('-');
+      fechaFmt = dd[2] + '/' + dd[1] + '/' + dd[0];
     }
     html += '<div class="' + cls + '" style="' + style + '" onclick="creFaseGridClick(\'' + fIdE + '\',\'' + gIdE + '\',\'' + faseIdE + '\')">'
       + '<div class="cre-fase-chip-name">' + esc(def.label) + (isDone && reg.auto === true ? '<span class="cre-fase-chip-auto">CI</span>' : '') + '</div>'
