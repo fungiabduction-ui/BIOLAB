@@ -1184,9 +1184,12 @@ function _creMigrarColonizacionDiasPorFrascoV1() {
     var colonDate = _creGetColonizacionDate(rec.formulaId, rec.geneticaId, frCtx);
     if (!inocDate || !colonDate) return; // sin dato real de ESTE frasco — no tocar
 
-    var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
-    var d1 = _localDate(colonDate); d1.setHours(0, 0, 0, 0);
-    var correctDias = Math.floor((d1 - d0) / 86400000);
+    // Sin truncar a medianoche + Math.round (no floor): mismo algoritmo que CI (_segFmtDias)
+    // sobre timestamp exacto — decisión 2026-07-23, para que "Día X" signifique lo mismo
+    // en CI y en CILAB.
+    var d0 = _localDate(inocDate);
+    var d1 = _localDate(colonDate);
+    var correctDias = Math.round((d1 - d0) / 86400000);
     if (correctDias < 0) return; // dato inconsistente — no tocar
 
     (rec.observaciones || []).forEach(function(o) {
@@ -3805,14 +3808,15 @@ function _creInoculacionDate(formulaId, geneticaId, frascoCtx) {
   var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   var fi = fases.find(function(f) { return f.fase === 'inoculacion'; });
   if (fi && fi.fecha) return fi.fecha;
-  // 2. bl2_forms.fecha (fecha global de la fórmula — no tiene noción de frasco, se deja igual)
-  var d = _creGetInoculacionDate(formulaId, geneticaId);
-  if (d) return d;
-  // 3. bl2_seg.inoculoTs — timestamp por tanda en CI (campo real del módulo CI)
+  // 2. bl2_seg.inoculoFecha — fuente de verdad real de CI (decisión 2026-07-23): es el dato
+  // manual editable que el usuario carga/corrige en la columna "Inoculación" del Seguimiento,
+  // y de donde CI calcula su propio D+. inoculoTs (timestamp automático) queda deprecado para
+  // este cálculo — ya no se usa. Se devuelve el datetime completo ('YYYY-MM-DDTHH:MM'), sin
+  // truncar, para que el diff de días pueda usar timestamp exacto igual que CI (_segFmtDias).
   try {
     var segs = JSON.parse(localStorage.getItem('bl2_seg')) || [];
     var matching = segs.filter(function(s) {
-      if (s.formula_id !== formulaId || s.genetica !== geneticaId || !s.inoculoTs) return false;
+      if (s.formula_id !== formulaId || s.genetica !== geneticaId || !s.inoculoFecha) return false;
       if (frascoCtx && frascoCtx.expId) {
         if (s.experimentoId !== frascoCtx.expId || s.experimentoFrascoId !== frascoCtx.frascoLabel) return false;
       }
@@ -3820,11 +3824,14 @@ function _creInoculacionDate(formulaId, geneticaId, frascoCtx) {
     });
     if (matching.length > 0) {
       var earliest = matching.reduce(function(min, s) {
-        return s.inoculoTs < min ? s.inoculoTs : min;
-      }, matching[0].inoculoTs);
-      return new Date(earliest).toISOString().slice(0, 10);
+        return s.inoculoFecha < min ? s.inoculoFecha : min;
+      }, matching[0].inoculoFecha);
+      return earliest;
     }
   } catch(e) {}
+  // 3. bl2_forms.fecha (fallback final — solo si ninguna tanda tiene inoculoFecha cargado)
+  var d = _creGetInoculacionDate(formulaId, geneticaId);
+  if (d) return d;
   // 4. CRERecord.inoculationDate (legacy — para records existentes pre-borrado)
   var recs = gArr('bl2_crec');
   var rec = recs.find(function(r) {
@@ -3869,9 +3876,11 @@ function _creAutoFillColonizacion(formulaId, geneticaId, frascoCtx) {
   var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   var dia = null;
   if (inocDate) {
-    var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
-    var d1 = _localDate(colonDate); d1.setHours(0,0,0,0);
-    var rawDia = Math.floor((d1 - d0) / 86400000);
+    // Sin truncar a medianoche + Math.round: mismo algoritmo que CI (_segFmtDias) sobre
+    // timestamp exacto — decisión 2026-07-23, para que "Día X" coincida entre módulos.
+    var d0 = _localDate(inocDate);
+    var d1 = _localDate(colonDate);
+    var rawDia = Math.round((d1 - d0) / 86400000);
     if (rawDia < 0) return; // CI date precedes CRE inoculación — skip, data inconsistent
     dia = rawDia;
   }
@@ -3907,8 +3916,10 @@ function _creAutoFillInferredFases(formulaId, geneticaId, frascoCtx) {
 function _creDiasSinceInoc(formulaId, geneticaId, frascoCtx) {
   var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   if (!inocDate) return null;
-  var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
-  var d1 = new Date();           d1.setHours(0,0,0,0);
+  // Sin truncar a medianoche: contador en vivo (todavía sin colonización), igual que el
+  // Math.floor(Date.now()-inoDate) de CI (_segFmtDias) para el mismo caso — decisión 2026-07-23.
+  var d0 = _localDate(inocDate);
+  var d1 = new Date();
   return Math.max(0, Math.floor((d1 - d0) / 86400000));
 }
 // Returns the fase definition that matches the current temporal position.
@@ -5409,9 +5420,10 @@ function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
     var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
-      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
-      dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
+      // Sin truncar a medianoche + Math.round: mismo algoritmo que CI — decisión 2026-07-23.
+      var d0 = _localDate(inocDate);
+      var d1 = _localDate(todayIso);
+      dia = Math.max(0, Math.round((d1 - d0) / 86400000));
     }
     entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
     if (faseId !== 'colonizacion_completa') {
@@ -5456,23 +5468,24 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
   var reg = fases.find(function(f) { return f.fase === faseId; });
   if (!reg) return;
 
+  // Sin truncar a medianoche + Math.round: mismo algoritmo que CI — decisión 2026-07-23.
   if (faseId === 'inoculacion') {
-    var d0new = _localDate(fechaStr); d0new.setHours(0, 0, 0, 0);
+    var d0new = _localDate(fechaStr);
     fases.forEach(function(f) {
       if (f.fase === 'inoculacion') {
         f.fecha = fechaStr; f.ts = tsNew; f.dia = 0; delete f.auto;
       } else if (f.fecha) {
-        var df = _localDate(f.fecha); df.setHours(0, 0, 0, 0);
-        f.dia = Math.max(0, Math.floor((df - d0new) / 86400000));
+        var df = _localDate(f.fecha);
+        f.dia = Math.max(0, Math.round((df - d0new) / 86400000));
       }
     });
   } else {
     var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
-      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = _localDate(fechaStr); d1.setHours(0, 0, 0, 0);
-      dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
+      var d0 = _localDate(inocDate);
+      var d1 = _localDate(fechaStr);
+      dia = Math.max(0, Math.round((d1 - d0) / 86400000));
     }
     reg.fecha = fechaStr;
     reg.ts    = tsNew;
@@ -5637,9 +5650,10 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
     var inocDate = _creInoculacionDate(formulaId, gId, frCtx);
     var dia = 0;
     if (inocDate) {
-      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
-      dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
+      // Sin truncar a medianoche + Math.round: mismo algoritmo que CI — decisión 2026-07-23.
+      var d0 = _localDate(inocDate);
+      var d1 = _localDate(todayIso);
+      dia = Math.max(0, Math.round((d1 - d0) / 86400000));
     }
     var entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
     if (faseId !== 'inoculacion' && faseId !== 'colonizacion_completa') {
