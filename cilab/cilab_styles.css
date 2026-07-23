@@ -4775,6 +4775,13 @@ tr.seg-note-drawer:hover {
   padding-left: 14px;
 }
 
+.cre-score-fullwidth {
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+
 .cre-notas-row {
   padding: 14px;
   border: 1px solid rgba(255,255,255,0.075);

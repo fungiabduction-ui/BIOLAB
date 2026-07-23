@@ -5170,7 +5170,7 @@ function _creScoringFormHTML(formulaId, geneticaId, fRecs) {
   var html = '';
 
   // ── Score (Fases se renderiza arriba, en la card — ver _creFasesGridHTML) ──
-  html += '<div class="cre-2col-section" style="width:100%">';
+  html += '<div class="cre-score-fullwidth">';
   html += '<div class="cre-3col-title">Score</div>';
   html += _creScoringScoreTabHTML(formulaId, geneticaId, fRecs);
   html += '</div>';
