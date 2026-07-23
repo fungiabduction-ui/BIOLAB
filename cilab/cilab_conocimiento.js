@@ -4447,13 +4447,12 @@ function creBatchFaseConfirm(formulaId) {
   var sf = _sp.batchStagedFase;
   if (!sf) return;
   _sp.batchStagedFase = null;
-  _creBatchFaseScrubSave(formulaId, sf.faseId, sf.dia);
+  _creBatchFaseRegisterNow(formulaId, sf.faseId);
 }
 
 function creBatchFaseCancel(formulaId) {
   _sp.batchStagedFase = null;
-  var bw = document.getElementById('cre-batch-controls-' + esc(formulaId));
-  if (bw) bw.innerHTML = _creBatchControlsHTML(formulaId);
+  _creBatchControlsRerender(formulaId);
 }
 
 function creWipeFormulaFases(formulaId) {
@@ -4856,7 +4855,7 @@ function _creBatchControlsHTML(formulaId) {
   html += '<div class="cre-batch-hdr"><span class="cre-batch-hdr-lbl">'
     + _sp.selected.size + ' cepa' + (_sp.selected.size > 1 ? 's' : '') + ' en batch</span>' + chips + '</div>';
 
-  html += _creBatchFasesScrubberHTML(formulaId);
+  html += _creBatchFasesGridHTML(formulaId);
 
   // Confirmación de fase staged — aparece solo cuando hay un dot arrastrado pendiente
   if (_sp.batchStagedFase) {
@@ -4865,7 +4864,7 @@ function _creBatchControlsHTML(formulaId) {
     var _sfCol = _sfDef ? _sfDef.color : '#FFD700';
     var _sfLbl = _sfDef ? _sfDef.label : _sf.faseId;
     html += '<div class="cre-batch-fase-confirm">'
-      + '<span style="color:' + _sfCol + ';font-weight:700">' + esc(_sfLbl) + ' · D' + _sf.dia + '</span>'
+      + '<span style="color:' + _sfCol + ';font-weight:700">' + esc(_sfLbl) + ' · ahora</span>'
       + '<span style="color:var(--tx3);margin:0 6px">→ ' + _sp.selected.size + ' cep' + (_sp.selected.size > 1 ? 'as' : 'a') + '</span>'
       + '<button class="clab-btn clab-btn--xs" style="background:' + _sfCol + '22;border-color:' + _sfCol + ';color:' + _sfCol + ';font-weight:700"'
       + ' onclick="creBatchFaseConfirm(\'' + fIdE + '\')">✓ Guardar</button>'
@@ -6202,6 +6201,39 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
   if (_sp.formulaId) _creRenderLogSection(_sp.formulaId);
 }
 
+function _creBatchControlsRerender(formulaId) {
+  var bw = document.getElementById('cre-batch-ctrl-' + esc(formulaId));
+  if (bw) bw.innerHTML = _creBatchControlsHTML(formulaId);
+}
+
+function _creBatchFasesGridHTML(formulaId) {
+  var fIdE     = esc(formulaId);
+  var savedPos = _sp.batchFasePos || {};
+  var html = '<div class="cre-fase-grid-wrap" style="margin-top:10px">';
+  html += '<div class="cre-3col-title">Registrar fase en batch <span class="cre-3col-count">' + _sp.selected.size + ' cepas</span></div>';
+  html += '<div class="cre-fase-grid">';
+  _FASES_DEF.forEach(function(def) {
+    if (def.id === 'inoculacion') return; // ver nota Task 7: inoculación no se batch-registra, es por-cepa / CI
+    var faseIdE  = esc(def.id);
+    var isStaged = _sp.batchStagedFase && _sp.batchStagedFase.faseId === def.id;
+    var isDone   = !!savedPos[def.id];
+    var cls   = 'cre-fase-chip' + (isDone ? ' cre-fase-chip--done' : isStaged ? ' cre-fase-chip--staged' : ' cre-fase-chip--pending');
+    var style = isDone ? 'background:' + def.color + '22;border-color:' + def.color + ';color:' + def.color + ';' : '';
+    html += '<div class="' + cls + '" style="' + style + '" onclick="creFaseGridBatchClick(\'' + fIdE + '\',\'' + faseIdE + '\')">'
+      + '<div class="cre-fase-chip-name">' + esc(def.label) + '</div>'
+      + '<div class="cre-fase-chip-meta' + (isDone ? '' : ' cre-fase-chip-meta--pending') + '">'
+      + (isDone ? 'registrada ahora' : isStaged ? 'pendiente de confirmar' : 'click = marcar ahora')
+      + '</div></div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function creFaseGridBatchClick(formulaId, faseId) {
+  _sp.batchStagedFase = { faseId: faseId };
+  _creBatchControlsRerender(formulaId);
+}
+
 // ── Prompt de cierre de ciclo tras colonización ──────────────────────────────
 
 function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
@@ -6637,6 +6669,7 @@ Object.assign(window, {
   creFaseEditSave,
   creFaseEditCancel,
   creFaseGridClick,
+  creFaseGridBatchClick,
   creColonizacionCierrePrompt,
   creColonizacionCerrarCiclo,
   creNotaEliminar,
