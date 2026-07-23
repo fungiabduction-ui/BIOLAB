@@ -99,6 +99,16 @@ function _creHoyISO() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+// Mismo gotcha que _creHoyISO de arriba, aplicado a diffs de fecha: 'YYYY-MM-DD' sin hora
+// lo parsea JS como medianoche UTC, que en un huso horario negativo (Argentina, UTC-3)
+// cae en el día calendario anterior una vez que .setHours(0,0,0,0) re-zonifica a local.
+// Usar SIEMPRE en vez de `new Date(str)` a secas cuando `str` puede venir sin hora
+// (fechas de fases, inputs type="date", _creHoyISO()). Strings con hora explícita
+// (datetime, sin 'Z') ya parsean como local por spec — no necesitan ajuste.
+function _localDate(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+}
+
 // ── Wizard de observación guiada ─────────────────────────────────────────────
 // Estado vive solo en memoria — nada se persiste hasta que el usuario confirma.
 let _wiz = null; // { recordId, obsIndex, recordCreatedAt, formulaIngs, geneticaId, routeStates, sorted, signals, step }
@@ -1165,14 +1175,6 @@ function _creExtrasBackfillV2() {
 function _creMigrarColonizacionDiasPorFrascoV1() {
   var arr = creRead();
   var updated = 0;
-
-  // Fechas 'YYYY-MM-DD' (sin hora) las parsea el motor JS como medianoche UTC —
-  // en un huso horario negativo (ej. Argentina, UTC-3) eso cae en el día calendario
-  // anterior. Mismo gotcha ya documentado en FR/genFrId (CLAUDE.md): forzar
-  // T00:00:00 local en vez de new Date(str) a secas cuando no trae hora.
-  function _localDate(str) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
-  }
 
   arr.forEach(function(rec) {
     if (rec.status !== 'cerrado' || !rec.experimentoId || !rec.frascoId || !rec.geneticaId) return;
@@ -3867,8 +3869,8 @@ function _creAutoFillColonizacion(formulaId, geneticaId, frascoCtx) {
   var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   var dia = null;
   if (inocDate) {
-    var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
-    var d1 = new Date(colonDate); d1.setHours(0,0,0,0);
+    var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
+    var d1 = _localDate(colonDate); d1.setHours(0,0,0,0);
     var rawDia = Math.floor((d1 - d0) / 86400000);
     if (rawDia < 0) return; // CI date precedes CRE inoculación — skip, data inconsistent
     dia = rawDia;
@@ -3905,8 +3907,8 @@ function _creAutoFillInferredFases(formulaId, geneticaId, frascoCtx) {
 function _creDiasSinceInoc(formulaId, geneticaId, frascoCtx) {
   var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   if (!inocDate) return null;
-  var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
-  var d1 = new Date();         d1.setHours(0,0,0,0);
+  var d0 = _localDate(inocDate); d0.setHours(0,0,0,0);
+  var d1 = new Date();           d1.setHours(0,0,0,0);
   return Math.max(0, Math.floor((d1 - d0) / 86400000));
 }
 // Returns the fase definition that matches the current temporal position.
@@ -5421,8 +5423,8 @@ function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
     var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
-      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = new Date(todayIso); d1.setHours(0, 0, 0, 0);
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
       dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
     }
     entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
@@ -5469,7 +5471,7 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
   if (!reg) return;
 
   if (faseId === 'inoculacion') {
-    var d0new = new Date(fechaStr); d0new.setHours(0, 0, 0, 0);
+    var d0new = _localDate(fechaStr); d0new.setHours(0, 0, 0, 0);
     fases.forEach(function(f) {
       if (f.fase === 'inoculacion') {
         f.fecha = fechaStr; f.ts = tsNew; f.dia = 0; delete f.auto;
@@ -5482,8 +5484,8 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
     var inocDate = _creInoculacionDate(formulaId, geneticaId, _sp.frasco);
     var dia = 0;
     if (inocDate) {
-      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = new Date(fechaStr); d1.setHours(0, 0, 0, 0);
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(fechaStr); d1.setHours(0, 0, 0, 0);
       dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
     }
     reg.fecha = fechaStr;
@@ -5649,8 +5651,8 @@ function _creBatchFaseRegisterNow(formulaId, faseId, fechaOverride, horaOverride
     var inocDate = _creInoculacionDate(formulaId, gId, frCtx);
     var dia = 0;
     if (inocDate) {
-      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
-      var d1 = new Date(todayIso); d1.setHours(0, 0, 0, 0);
+      var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = _localDate(todayIso); d1.setHours(0, 0, 0, 0);
       dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
     }
     var entry = { fase: faseId, dia: dia, fecha: todayIso, ts: tsNow };
