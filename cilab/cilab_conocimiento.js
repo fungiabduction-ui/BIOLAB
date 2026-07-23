@@ -1073,6 +1073,15 @@ function _creExtrasBackfillV2() {
   arr.forEach(function(r) {
     // Solo records ya sellados por V1 pero no corregidos por V2
     if (!r._extrasBackfilled || r._extrasBackfilledV2) return;
+    // MEJ-0015: si el snapshot ya fue mergeado limpio al crear el record
+    // (creGetSnapshotWithExtras, marca permanente y sellada en el propio
+    // snapshot — formulaSnapshot es inmutable salvo backfill), no hay nada
+    // que reconstruir. El merge de creación nunca tagea las entradas con
+    // _extra (solo lo hace este V2 al insertar una entrada nueva más abajo),
+    // así que si se lo dejaba seguir, el filtro `!i._extra` no reconocía las
+    // cantidades ya mergeadas como "extra" y las volvía a sumar encima —
+    // duplicando la dosis de un record que nació correcto.
+    if (r.formulaSnapshot && r.formulaSnapshot._extrasIncluded) { r._extrasBackfilledV2 = true; return; }
     if (!r.experimentoId || !r.frascoId) { r._extrasBackfilledV2 = true; return; }
 
     var exp = exps.find(function(e) { return e.id === r.experimentoId; });
@@ -5107,7 +5116,7 @@ function _creScoringScoreTabHTML(formulaId, geneticaId, fRecs) {
   var compColor = compVal != null ? _creScoreColor(compVal * 10) : 'var(--tx3)';
   var colonStats = _creColonizacionStats(formulaId, geneticaId);
   var _rizoRatioDisp = (preRizo !== '' && preTotal !== '' && +preTotal > 0) ? (+preRizo / +preTotal) : null;
-  var _effPenaltyDisp = (preScore == null || preScore < 7) ? _creEffectivePenalty(colonStats.penalty || 0, _rizoRatioDisp) : 0;
+  var _effPenaltyDisp = _creEffectivePenalty(colonStats.penalty || 0, _rizoRatioDisp);
   var _formulaDisp = preScore >= 7
     ? (preScore != null ? preScore : '?') + ' × ' + (preTotal !== '' && +preTotal > 0 ? Math.round((+preRizo / +preTotal) * 100) + '%' : '?%')
     : (preScore != null ? preScore : '?') + ' (difuso)';
@@ -5195,9 +5204,14 @@ function _creCalcCompound(score, rizo, total, formulaId, geneticaId) {
   var rizoRatio = (rizo != null && total != null && total > 0) ? (rizo / total) : null;
   var base = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
   var stats = _creColonizacionStats(formulaId, geneticaId);
-  // Rizomórfico (≥7): velocidad de colonización no penaliza — la calidad compensa.
-  // Tormentoso/difuso (<7): lento + mal crecimiento sí penaliza.
-  var penalty = score >= 7 ? 0 : (stats.penalty || 0);
+  // Decisión 2026-07-22: la colonización lenta SIEMPRE penaliza, tenga el
+  // score que tenga — antes se perdonaba entero con score≥7 ("rizomórfico
+  // compensa"), pero un resultado lento sigue costando tiempo real de lab
+  // aunque termine rizomórfico. Se atenúa (no se anula) cuando la incidencia
+  // rizomórfica es alta: _creEffectivePenalty ya traía esa lógica gradual
+  // (perdón progresivo de 70% a 100% de incidencia) pero quedaba
+  // inalcanzable en la práctica al estar detrás de este mismo corte binario.
+  var penalty = _creEffectivePenalty(stats.penalty || 0, rizoRatio);
   return +Math.max(0, base - penalty).toFixed(1);
 }
 
@@ -5444,7 +5458,7 @@ function creUpdateCompound(formulaId) {
     var pctStr = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? Math.round((rizo/total)*100) + '%' : (rizoApplies ? '?%' : 'N/A');
     var stats = _creColonizacionStats(formulaId, _sp.cepaId);
     var _rizoRatioLive = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? (rizo/total) : null;
-    var _effPenaltyLive = (!rizoApplies) ? _creEffectivePenalty(stats.penalty || 0, null) : 0;
+    var _effPenaltyLive = _creEffectivePenalty(stats.penalty || 0, _rizoRatioLive);
     var _penaltyStr = _effPenaltyLive > 0 ? ' − ' + _effPenaltyLive + ' colonizacion' : '';
     cmpFEl.textContent = rizoApplies
       ? (score || '?') + ' × ' + pctStr + _penaltyStr
