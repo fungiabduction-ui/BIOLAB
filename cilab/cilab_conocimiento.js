@@ -4916,18 +4916,16 @@ function _creEffectivePenalty(rawPenalty, rizoRatio) {
 
 function _creCalcCompound(score, rizo, total, formulaId, geneticaId, frascoCtx) {
   if (score == null) return null;
+  // Decisión 2026-07-23: se saca la penalización por colonización lenta del todo —
+  // el usuario la consideró una fuente de confusión y valores absurdos (ver sesión
+  // de fases-por-frasco), y decidió que scoreObservado/scoreCompuesto reflejen
+  // únicamente calidad × incidencia rizomórfica, sin ajuste por tiempo de colonización.
+  // formulaId/geneticaId/frascoCtx quedan sin usar acá (antes alimentaban
+  // _creColonizacionStats/_creEffectivePenalty) — se mantienen en la firma para no
+  // tener que tocar cada call site de nuevo.
   var rizoRatio = (rizo != null && total != null && total > 0) ? (rizo / total) : null;
   var base = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
-  var stats = _creColonizacionStats(formulaId, geneticaId, frascoCtx);
-  // Decisión 2026-07-22: la colonización lenta SIEMPRE penaliza, tenga el
-  // score que tenga — antes se perdonaba entero con score≥7 ("rizomórfico
-  // compensa"), pero un resultado lento sigue costando tiempo real de lab
-  // aunque termine rizomórfico. Se atenúa (no se anula) cuando la incidencia
-  // rizomórfica es alta: _creEffectivePenalty ya traía esa lógica gradual
-  // (perdón progresivo de 70% a 100% de incidencia) pero quedaba
-  // inalcanzable en la práctica al estar detrás de este mismo corte binario.
-  var penalty = _creEffectivePenalty(stats.penalty || 0, rizoRatio);
-  return +Math.max(0, base - penalty).toFixed(1);
+  return +Math.max(0, base).toFixed(1);
 }
 
 // ── Handlers globales del scoring panel ─────────────────────────────────────
@@ -5268,7 +5266,11 @@ function creSubmitScoringPanel(formulaId) {
       var rec = creCreate(args);
       var obs = {
         tipo: 'definitiva', dia: 0, fecha: new Date().toISOString().slice(0, 10),
-        scoreObservado: compScore != null ? compScore : tgt.score,
+        // Decisión 2026-07-23: scoreObservado es SIEMPRE el score crudo que cargó el usuario,
+        // sin penalización por colonización ni ajuste por incidencia — "si observé 7, es 7".
+        // scoreCompuesto queda calculado y guardado aparte, solo como referencia — ya no
+        // alimenta scoreObservado/scoreFinal/scoreFinalNorm (el target real del modelo OLS).
+        scoreObservado: tgt.score,
         calidadScore: tgt.score, scoreCompuesto: compScore,
         colonizacionDias: colonStats.dias,
         colonizacionPenalty: _creEffectivePenalty(colonStats.penalty || 0, !isNaN(tgt.rizo) && !isNaN(tgt.total) && tgt.total > 0 ? tgt.rizo / tgt.total : null),
