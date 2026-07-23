@@ -5372,6 +5372,20 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
   _creRenderCepasSection(formulaId);
 }
 
+function creFaseDeleteConfirm(formulaId, geneticaId, faseId) {
+  if (!confirm('¿Eliminar esta fase? Esta acción no se puede deshacer.')) return;
+  var fases = _creFasesRead(formulaId, geneticaId).filter(function(f) { return f.fase !== faseId; });
+  _creFasesWrite(formulaId, geneticaId, fases);
+  var notas = _creNotasRead(formulaId, geneticaId).filter(function(n) {
+    return !(n.auto && n.logType === 'fase' && n.faseId === faseId);
+  });
+  _creNotasWrite(formulaId, geneticaId, notas);
+  notif('Fase eliminada', 'info');
+  _sp.faseEditOpen = null;
+  _creRenderCepasSection(formulaId);
+  if (_sp.formulaId) _creRenderLogSection(_sp.formulaId);
+}
+
 function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
   var fases = _creFasesRead(formulaId, geneticaId);
   var reg = fases.find(function(f) { return f.fase === faseId; });
@@ -5397,8 +5411,11 @@ function _creFaseEditStripHTML(formulaId, geneticaId, faseId) {
   }
   html += '<div class="cre-fase-edit-actions">'
     + '<button class="clab-btn clab-btn-sm" style="background:var(--ac2);color:var(--bg);border-color:var(--ac2)" onclick="creFaseEditSave(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\',\'' + faseIdE + '\')">Guardar</button>'
-    + '<button class="clab-btn clab-btn-sm" onclick="creFaseEditCancel(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\')">Cancelar</button>'
-    + '</div></div>';
+    + '<button class="clab-btn clab-btn-sm" onclick="creFaseEditCancel(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\')">Cancelar</button>';
+  if (faseId !== 'inoculacion') {
+    html += '<button class="clab-btn clab-btn-sm" style="color:var(--er,#e74c3c);border-color:var(--er,#e74c3c);margin-left:auto" onclick="creFaseDeleteConfirm(\'' + esc(formulaId) + '\',\'' + esc(geneticaId) + '\',\'' + faseIdE + '\')">🗑 Eliminar</button>';
+  }
+  html += '</div></div>';
   return html;
 }
 
@@ -5966,6 +5983,7 @@ Object.assign(window, {
   creSelectSPTab,
   creFaseEditSave,
   creFaseEditCancel,
+  creFaseDeleteConfirm,
   creFaseGridClick,
   creFaseGridBatchClick,
   creColonizacionCierrePrompt,
