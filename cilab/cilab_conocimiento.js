@@ -4132,6 +4132,7 @@ function creSetScoringFrasco(formulaId, frascoKey) {
   _sp.tipo           = null;
   _sp.batchScore     = null;
   _sp.batchTipo      = null;
+  _sp.batchFasePos   = {};
   _sp.expandedCepaId = null;
   _sp.faseEditOpen   = null;
   _sp.selected       = new Set();
@@ -6169,6 +6170,8 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
     var gId = key.split('|')[2];
     if (!gId) return;
     var fases    = _creFasesRead(formulaId, gId);
+    var already  = fases.find(function(f) { return f.fase === faseId; });
+    if (already && already.auto !== 'inferred') return; // ya registrada — batch no sobreescribe (protege el ancla de inoculación y evita perder una fecha real ya cargada)
     var inocDate = _creInoculacionDate(formulaId, gId);
     var dia = 0;
     if (inocDate) {
