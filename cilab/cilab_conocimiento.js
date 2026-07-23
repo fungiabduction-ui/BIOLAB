@@ -6021,6 +6021,63 @@ function _creFaseRegisterNow(formulaId, geneticaId, faseId) {
   _creRenderCepasSection(formulaId);
 }
 
+function creFaseEditCancel(formulaId, geneticaId) {
+  _sp.faseEditOpen = null;
+  _creRenderCepasSection(formulaId);
+}
+
+function creFaseEditSave(formulaId, geneticaId, faseId) {
+  var fechaEl  = document.getElementById('cre-fase-edit-fecha-' + faseId);
+  var horaEl   = document.getElementById('cre-fase-edit-hora-' + faseId);
+  var placasEl = document.getElementById('cre-fase-edit-placas-' + faseId);
+  if (!fechaEl || !fechaEl.value) return;
+
+  var fechaStr = fechaEl.value;
+  var horaStr  = (horaEl && horaEl.value) ? horaEl.value : '00:00';
+  var tsNew    = new Date(fechaStr + 'T' + horaStr + ':00').toISOString();
+
+  var fases = _creFasesRead(formulaId, geneticaId);
+  var reg = fases.find(function(f) { return f.fase === faseId; });
+  if (!reg) return;
+
+  if (faseId === 'inoculacion') {
+    var d0new = new Date(fechaStr); d0new.setHours(0, 0, 0, 0);
+    fases.forEach(function(f) {
+      if (f.fase === 'inoculacion') {
+        f.fecha = fechaStr; f.ts = tsNew; f.dia = 0; delete f.auto;
+      } else if (f.fecha) {
+        var df = new Date(f.fecha); df.setHours(0, 0, 0, 0);
+        f.dia = Math.max(0, Math.floor((df - d0new) / 86400000));
+      }
+    });
+  } else {
+    var inocDate = _creInoculacionDate(formulaId, geneticaId);
+    var dia = 0;
+    if (inocDate) {
+      var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
+      var d1 = new Date(fechaStr); d1.setHours(0, 0, 0, 0);
+      dia = Math.max(0, Math.floor((d1 - d0) / 86400000));
+    }
+    reg.fecha = fechaStr;
+    reg.ts    = tsNew;
+    reg.dia   = dia;
+    delete reg.auto; // una corrección manual reemplaza cualquier origen previo (CI o inferido)
+    if (placasEl && placasEl.value !== '') reg.placasObservadas = parseInt(placasEl.value, 10);
+  }
+
+  _creFasesWrite(formulaId, geneticaId, fases);
+  var edited = fases.find(function(f) { return f.fase === faseId; });
+  _creLogFase(formulaId, geneticaId, faseId, edited ? edited.dia : 0, edited ? edited.fecha : fechaStr, true, _sp.frasco);
+
+  if (faseId === 'colonizacion_completa') {
+    _creSyncColonizacionToCI(formulaId, geneticaId, fechaStr);
+  }
+
+  notif('Fecha calibrada · Día ' + (edited ? edited.dia : 0), 'info');
+  _sp.faseEditOpen = null;
+  _creRenderCepasSection(formulaId);
+}
+
 // ── Prompt de cierre de ciclo tras colonización ──────────────────────────────
 
 function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
