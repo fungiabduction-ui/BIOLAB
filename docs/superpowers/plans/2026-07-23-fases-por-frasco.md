@@ -1291,7 +1291,9 @@ git commit -m "fix(cilab): _creLogScore y funciones de backfill de logs resuelve
 - Modify: `cilab/cilab_conocimiento.js:4813-4816` (`creOpenScoringPanel`, wire the call in)
 - Test: scratchpad `task10_migration.test.js`
 
-**Context:** 22 already-closed `bl2_crec` records have `colonizacionDias`/`colonizacionPenalty`/`scoreObservado`/`scoreCompuesto` frozen using the wrong frasco's colonization date. Reuses `_creInoculacionDate`/`_creGetColonizacionDate` (now frasco-aware from Task 2) — does not reimplement date resolution. Only touches records where a real per-frasco `bl2_seg` tanda exists; never invents.
+**Context:** 22 already-closed `bl2_crec` records have `colonizacionDias`/`colonizacionPenalty` frozen using the wrong frasco's colonization date. Reuses `_creInoculacionDate`/`_creGetColonizacionDate` (now frasco-aware from Task 2) — does not reimplement date resolution. Only touches records where a real per-frasco `bl2_seg` tanda exists; never invents.
+
+**Scope decision (2026-07-23, made during execution, not in the original design):** `scoreCompuesto` is deliberately NOT recomputed by this migration. `_creCalcCompound`'s formula changed same-day (commit `c3049b2`, the "penalización siempre aplica" policy) — recomputing `scoreCompuesto` for records frozen before that change would silently re-score them under a policy that didn't exist when they closed, conflating an objective date-bug fix with an undecided retroactive policy change. Confirmed via git history that `colonizacionPenalty` itself was never gated by the old score≥7 policy (only `_creCalcCompound`'s assembly of `scoreCompuesto` was), so it's safe to correct in isolation. See CLAUDE.md's new "PENDIENTE" note under CILAB CONOCIMIENTO for the deferred policy question.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1343,10 +1345,10 @@ var recB = after.find(function(r) { return r.id === 'CRE-0032'; }).observaciones
 console.log('result.updated === 2:', result.updated === 2);
 console.log('recA.colonizacionDias === 17:', recA.colonizacionDias === 17);
 console.log('recA.colonizacionPenalty === 0.5:', recA.colonizacionPenalty === 0.5);
-console.log('recA.scoreCompuesto === 6.4:', recA.scoreCompuesto === 6.4); // 6.9 - 0.5
+console.log('recA.scoreCompuesto UNCHANGED === 6.4 (seeded, never recomputed):', recA.scoreCompuesto === 6.4);
 console.log('recB.colonizacionDias === 22:', recB.colonizacionDias === 22);
 console.log('recB.colonizacionPenalty === 1.75:', recB.colonizacionPenalty === 1.75);
-console.log('recB.scoreCompuesto === 2.1:', recB.scoreCompuesto === 2.1); // 3.8 - 1.75
+console.log('recB.scoreCompuesto UNCHANGED === 1.55 (seeded, never recomputed):', recB.scoreCompuesto === 1.55);
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1360,7 +1362,7 @@ Add after line 1141 (right after `_creExtrasBackfillV2`'s closing brace, before 
 
 ```js
 /**
- * Migración one-shot: recalcula colonizacionDias/colonizacionPenalty/scoreCompuesto
+ * Migración one-shot: recalcula colonizacionDias/colonizacionPenalty (SOLO estos dos campos)
  * en records de bl2_crec cerrados cuyo frasco propio tiene una fecha de colonización
  * real en bl2_seg distinta de la que quedó congelada (bug: se calculaba con la fecha
  * compartida entre frascos, ver docs/superpowers/specs/2026-07-23-fases-por-frasco-design.md).
@@ -1368,10 +1370,23 @@ Add after line 1141 (right after `_creExtrasBackfillV2`'s closing brace, before 
  * resolución de fechas. Si no encuentra tanda de bl2_seg con inoculoTs+colonizacion reales
  * para ESE frasco, no toca el record (no inventa procedencia).
  * Solo sobreescribe si el valor recalculado difiere del congelado.
+ * NO recalcula scoreCompuesto a propósito: ese campo depende de qué versión de
+ * _creEffectivePenalty/_creCalcCompound estaba vigente cuando el record se cerró
+ * (ver commit c3049b2, política "penalización siempre aplica" del 2026-07-22/23) —
+ * recomputarlo acá mezclaría la corrección objetiva de fecha con un cambio de
+ * política retroactivo no decidido. Detalle completo: este mismo plan, Task 10.
  */
 function _creMigrarColonizacionDiasPorFrascoV1() {
   var arr = creRead();
   var updated = 0;
+
+  // Fechas 'YYYY-MM-DD' (sin hora) las parsea el motor JS como medianoche UTC —
+  // en un huso horario negativo (ej. Argentina, UTC-3) eso cae en el día calendario
+  // anterior. Mismo gotcha ya documentado en FR/genFrId (CLAUDE.md): forzar
+  // T00:00:00 local en vez de new Date(str) a secas cuando no trae hora.
+  function _localDate(str) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+  }
 
   arr.forEach(function(rec) {
     if (rec.status !== 'cerrado' || !rec.experimentoId || !rec.frascoId || !rec.geneticaId) return;
@@ -1381,8 +1396,8 @@ function _creMigrarColonizacionDiasPorFrascoV1() {
     var colonDate = _creGetColonizacionDate(rec.formulaId, rec.geneticaId, frCtx);
     if (!inocDate || !colonDate) return; // sin dato real de ESTE frasco — no tocar
 
-    var d0 = new Date(inocDate); d0.setHours(0, 0, 0, 0);
-    var d1 = new Date(colonDate); d1.setHours(0, 0, 0, 0);
+    var d0 = _localDate(inocDate); d0.setHours(0, 0, 0, 0);
+    var d1 = _localDate(colonDate); d1.setHours(0, 0, 0, 0);
     var correctDias = Math.floor((d1 - d0) / 86400000);
     if (correctDias < 0) return; // dato inconsistente — no tocar
 
@@ -1394,13 +1409,9 @@ function _creMigrarColonizacionDiasPorFrascoV1() {
       var correctPenalty = _creEffectivePenalty(
         Math.min(3, +(Math.max(0, correctDias - 15) * 0.25).toFixed(2)), rizoRatio
       );
-      var score = o.calidadScore != null ? o.calidadScore : o.scoreObservado;
-      var base  = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
-      var correctCompuesto = +Math.max(0, base - correctPenalty).toFixed(1);
 
       o.colonizacionDias    = correctDias;
       o.colonizacionPenalty = correctPenalty;
-      o.scoreCompuesto       = correctCompuesto;
       updated++;
     });
   });
