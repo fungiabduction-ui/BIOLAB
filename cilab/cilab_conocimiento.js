@@ -3760,20 +3760,20 @@ function _creInoculacionDate(formulaId, geneticaId, frascoCtx) {
   return rec ? rec.inoculationDate : null;
 }
 
-function _creAutoFillInoculacion(formulaId, geneticaId) {
+function _creAutoFillInoculacion(formulaId, geneticaId, frascoCtx) {
   if (_creIsCleared(formulaId)) return;
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   if (fases.some(function(f) { return f.fase === 'inoculacion'; })) return;
-  var inocDate = _creInoculacionDate(formulaId, geneticaId);
+  var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   if (!inocDate) return;
   fases.unshift({ fase: 'inoculacion', dia: 0, fecha: inocDate, ts: now(), auto: true });
-  _creFasesWrite(formulaId, geneticaId, fases);
+  _creFasesWrite(formulaId, geneticaId, fases, frascoCtx);
 }
 
-function _creAutoFillColonizacion(formulaId, geneticaId) {
+function _creAutoFillColonizacion(formulaId, geneticaId, frascoCtx) {
   if (_creIsCleared(formulaId)) return;
-  var fases = _creFasesRead(formulaId, geneticaId);
-  var inocDate = _creInoculacionDate(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
+  var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   // Remove any auto-filled colonizacion that predates inoculación (bad CI data)
   if (inocDate) {
     var cleaned = fases.filter(function(f) {
@@ -3782,14 +3782,14 @@ function _creAutoFillColonizacion(formulaId, geneticaId) {
       return f.fecha >= inocDate;
     });
     if (cleaned.length !== fases.length) {
-      _creFasesWrite(formulaId, geneticaId, cleaned);
+      _creFasesWrite(formulaId, geneticaId, cleaned, frascoCtx);
       fases = cleaned;
     }
   }
   if (fases.some(function(f) { return f.fase === 'colonizacion_completa'; })) return;
-  var colonDate = _creGetColonizacionDate(formulaId, geneticaId);
+  var colonDate = _creGetColonizacionDate(formulaId, geneticaId, frascoCtx);
   if (!colonDate) return;
-  var inocDate = _creInoculacionDate(formulaId, geneticaId);
+  var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   var dia = null;
   if (inocDate) {
     var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
@@ -3799,17 +3799,17 @@ function _creAutoFillColonizacion(formulaId, geneticaId) {
     dia = rawDia;
   }
   fases.push({ fase: 'colonizacion_completa', dia: dia, fecha: colonDate, ts: now(), auto: true });
-  _creFasesWrite(formulaId, geneticaId, fases);
+  _creFasesWrite(formulaId, geneticaId, fases, frascoCtx);
 }
 
 // Auto-fills intermediate phases as 'inferred' (Desconocido) when enough
 // days have passed since inoculación. Never overwrites manually registered phases.
 // Skips inoculación (own auto-fill) and colonizacion_completa (CI source).
-function _creAutoFillInferredFases(formulaId, geneticaId) {
+function _creAutoFillInferredFases(formulaId, geneticaId, frascoCtx) {
   if (_creIsCleared(formulaId)) return;
-  var diasElapsed = _creDiasSinceInoc(formulaId, geneticaId);
+  var diasElapsed = _creDiasSinceInoc(formulaId, geneticaId, frascoCtx);
   if (diasElapsed == null) return;
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   var regMap = {};
   fases.forEach(function(f) { regMap[f.fase] = f; });
   var order = _FASES_DEF.map(function(d) { return d.id; });
@@ -3823,12 +3823,12 @@ function _creAutoFillInferredFases(formulaId, geneticaId) {
   });
   if (changed) {
     fases.sort(function(a, b) { return order.indexOf(a.fase) - order.indexOf(b.fase); });
-    _creFasesWrite(formulaId, geneticaId, fases);
+    _creFasesWrite(formulaId, geneticaId, fases, frascoCtx);
   }
 }
 
-function _creDiasSinceInoc(formulaId, geneticaId) {
-  var inocDate = _creInoculacionDate(formulaId, geneticaId);
+function _creDiasSinceInoc(formulaId, geneticaId, frascoCtx) {
+  var inocDate = _creInoculacionDate(formulaId, geneticaId, frascoCtx);
   if (!inocDate) return null;
   var d0 = new Date(inocDate); d0.setHours(0,0,0,0);
   var d1 = new Date();         d1.setHours(0,0,0,0);
@@ -3837,11 +3837,11 @@ function _creDiasSinceInoc(formulaId, geneticaId) {
 // Returns the fase definition that matches the current temporal position.
 // If registered phases cover the elapsed days, returns the last registered.
 // If elapsed days go past registered phases, infers from typicalDay.
-function _creTemporalZoneFase(formulaId, geneticaId) {
-  var fases = _creFasesRead(formulaId, geneticaId);
+function _creTemporalZoneFase(formulaId, geneticaId, frascoCtx) {
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   var regMap = {};
   fases.forEach(function(f) { regMap[f.fase] = f; });
-  var diasElapsed = _creDiasSinceInoc(formulaId, geneticaId);
+  var diasElapsed = _creDiasSinceInoc(formulaId, geneticaId, frascoCtx);
 
   // If no inoculación date, fall back to first unregistered fase
   if (diasElapsed == null) {
