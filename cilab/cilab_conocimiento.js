@@ -5476,7 +5476,7 @@ function creFaseEditSave(formulaId, geneticaId, faseId) {
       if (f.fase === 'inoculacion') {
         f.fecha = fechaStr; f.ts = tsNew; f.dia = 0; delete f.auto;
       } else if (f.fecha) {
-        var df = new Date(f.fecha); df.setHours(0, 0, 0, 0);
+        var df = _localDate(f.fecha); df.setHours(0, 0, 0, 0);
         f.dia = Math.max(0, Math.floor((df - d0new) / 86400000));
       }
     });
