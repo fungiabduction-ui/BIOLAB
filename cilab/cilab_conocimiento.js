@@ -5564,9 +5564,14 @@ function creFaseGridBatchClick(formulaId, faseId) {
 function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
   var fIdE = esc(formulaId);
   var gIdE = esc(geneticaId);
-  var formWrap = document.getElementById('cre-sp-form-' + formulaId);
-  if (!formWrap) return;
-  var old = formWrap.querySelector('.cre-coloniz-prompt');
+  // Bug preexistente encontrado en la revisión final del plan del grid de fases (2026-07-23):
+  // apuntaba a 'cre-sp-form-'+formulaId y a '.cre-3col-layout', ninguno de los dos existe en el
+  // markup real de _creScoringPanelHTML (nunca existieron con esos nombres/estructura) — el
+  // prompt nunca se mostraba, era un no-op silencioso. 'cre-cepa-cards-'+formulaId sí es un
+  // contenedor real y estable (ver _creScoringPanelHTML).
+  var cardsWrap = document.getElementById('cre-cepa-cards-' + formulaId);
+  if (!cardsWrap) return;
+  var old = document.querySelector('.cre-coloniz-prompt');
   if (old) old.remove();
   var div = document.createElement('div');
   div.className = 'cre-coloniz-prompt';
@@ -5580,7 +5585,7 @@ function creColonizacionCierrePrompt(formulaId, geneticaId, diasColonizacion) {
     + '<button class="clab-btn" onclick="creColonizacionCerrarCiclo(\'' + fIdE + '\',\'' + gIdE + '\')" style="background:var(--ac2);color:var(--bg);border-color:var(--ac2);font-weight:700">✓ Cerrar ciclo → GR</button>'
     + '<button class="clab-btn clab-btn-sm" onclick="this.closest(\'.cre-coloniz-prompt\').remove()" style="color:var(--tx3)">Mantener abierto</button>'
     + '</div>';
-  formWrap.querySelector('.cre-3col-layout').before(div);
+  cardsWrap.before(div);
 }
 
 function creColonizacionCerrarCiclo(formulaId, geneticaId) {
