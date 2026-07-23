@@ -3599,7 +3599,7 @@ function _creNotasPanelHTML(formulaId, geneticaId) {
   // Build placeholder showing the would-be context prefix
   var placeholder = 'Escribí una observación...';
   if (geneticaId) {
-    var _pfZone  = _creTemporalZoneFase(formulaId, geneticaId);
+    var _pfZone  = _creTemporalZoneFase(formulaId, geneticaId, _sp.frasco);
 
     var _pfCepas = [];
     if (_sp.selected && _sp.selected.size > 1) {
@@ -4277,7 +4277,7 @@ function _creRenderCepasSection(formulaId) {
     ? _creGetCepasForFrasco(formulaId, _sp.frasco.expId, _sp.frasco.frascoLabel)
     : _creGetCepasForFormula(formulaId);
   var allFases = {};
-  cepas.forEach(function(c) { allFases[c.id] = _creFasesRead(formulaId, c.id); });
+  cepas.forEach(function(c) { allFases[c.id] = _creFasesRead(formulaId, c.id, _sp.frasco); });
 
   var cardsWrap = document.getElementById('cre-cepa-cards-' + formulaId);
   if (cardsWrap) {
@@ -4564,7 +4564,7 @@ function _creScoringPanelHTML(formulaId, geneticaId) {
   var records  = creRead();
   var fRecs    = _creFRecsForContext(formulaId, records);
   var allFases = {};
-  cepas.forEach(function(c) { allFases[c.id] = _creFasesRead(formulaId, c.id); });
+  cepas.forEach(function(c) { allFases[c.id] = _creFasesRead(formulaId, c.id, _sp.frasco); });
 
   var fIdE = esc(formulaId);
   var html = '<div class="cre-sp-wrap">';
@@ -5264,7 +5264,7 @@ function creNotaEnviar(formulaId, geneticaId) {
   // ── Fase context — temporal zone inference ───────────────────────────────
   var faseId = null, faseLabel = null, dia = null;
   if (geneticaId) {
-    var ctxZone = _creTemporalZoneFase(formulaId, geneticaId);
+    var ctxZone = _creTemporalZoneFase(formulaId, geneticaId, _sp.frasco);
     faseId    = ctxZone.def.id;
     faseLabel = ctxZone.def.label;
     dia       = ctxZone.dia != null ? ctxZone.dia : 0;
