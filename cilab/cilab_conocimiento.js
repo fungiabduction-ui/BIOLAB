@@ -3696,21 +3696,26 @@ var _FASES_DEF = [
   { id: 'colonizacion_completa',  label: 'Colonización completa',  sub: 'Cierre de ciclo — pasa a GR', color: '#9b59b6',              typicalDay: 28 },
 ];
 
-function _creFasesKey(formulaId, geneticaId) {
-  return formulaId + '__' + (geneticaId || '_');
+// Genera clave para bl2_crec_fases: format legacy (formulaId__geneticaId) o frasco-suffixed (con expId+frascoLabel).
+// Ambos expId Y frascoLabel deben estar presentes en frascoCtx para usar el suffix; si falta uno, fallback a base.
+function _creFasesKey(formulaId, geneticaId, frascoCtx) {
+  var base = formulaId + '__' + (geneticaId || '_');
+  return (frascoCtx && frascoCtx.expId && frascoCtx.frascoLabel)
+    ? base + '__' + frascoCtx.expId + '__' + frascoCtx.frascoLabel
+    : base;
 }
 
-function _creFasesRead(formulaId, geneticaId) {
+function _creFasesRead(formulaId, geneticaId, frascoCtx) {
   try {
     var all = JSON.parse(localStorage.getItem(K_CREC_FASES)) || {};
-    return all[_creFasesKey(formulaId, geneticaId)] || [];
+    return all[_creFasesKey(formulaId, geneticaId, frascoCtx)] || [];
   } catch(e) { return []; }
 }
 
-function _creFasesWrite(formulaId, geneticaId, arr) {
+function _creFasesWrite(formulaId, geneticaId, arr, frascoCtx) {
   try {
     var all = JSON.parse(localStorage.getItem(K_CREC_FASES)) || {};
-    all[_creFasesKey(formulaId, geneticaId)] = arr;
+    all[_creFasesKey(formulaId, geneticaId, frascoCtx)] = arr;
     localStorage.setItem(K_CREC_FASES, JSON.stringify(all));
   } catch(e) { console.warn('[CREC_FASES] write failed', e); }
 }
