@@ -6202,7 +6202,7 @@ function _creBatchFaseRegisterNow(formulaId, faseId) {
 }
 
 function _creBatchControlsRerender(formulaId) {
-  var bw = document.getElementById('cre-batch-ctrl-' + esc(formulaId));
+  var bw = document.getElementById('cre-batch-controls-' + esc(formulaId));
   if (bw) bw.innerHTML = _creBatchControlsHTML(formulaId);
 }
 
