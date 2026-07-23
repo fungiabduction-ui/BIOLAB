@@ -5133,6 +5133,7 @@ function creSubmitScoringPanel(formulaId) {
     if (tgt.expId) {
       frCtx = allFrascos.find(function(f) { return f.expId === tgt.expId && f.frascoLabel === tgt.frascoLabel; }) || null;
     }
+    if (tgt.expId && !frCtx) console.warn('[CRE] frasco no encontrado para experimentoId=' + tgt.expId + ' frascoLabel=' + tgt.frascoLabel + ' — colonizacionPenalty puede quedar en 0 (bucket base)');
     var snap = frCtx ? creGetSnapshotWithExtras(formulaId, frCtx) : creGetFormulaSnapshot(formulaId);
     if (frCtx && snap) snap = Object.assign({}, snap, { nombre: snap.nombre + ' · Frasco ' + frCtx.frascoLabel });
     if (!snap) { errors++; return; }
