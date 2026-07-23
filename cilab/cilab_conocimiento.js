@@ -3359,10 +3359,10 @@ function _creGetColonizacionDate(formulaId, geneticaId, frascoCtx) {
   } catch(e) { return null; }
 }
 
-function _creColonizacionStats(formulaId, geneticaId) {
+function _creColonizacionStats(formulaId, geneticaId, frascoCtx) {
   // Usa el campo `dia` pre-calculado al registrar la fase — sin aritmética de fechas,
   // sin bl2_seg. Si no hay colonización registrada en CILAB, sin penalidad.
-  var fases = _creFasesRead(formulaId, geneticaId);
+  var fases = _creFasesRead(formulaId, geneticaId, frascoCtx);
   var fc = fases.find(function(f) { return f.fase === 'colonizacion_completa'; });
   if (!fc || fc.dia == null) return { dias: null, penalty: 0 };
   var dias  = fc.dia;
@@ -4807,11 +4807,11 @@ function _creEffectivePenalty(rawPenalty, rizoRatio) {
   return rawPenalty;
 }
 
-function _creCalcCompound(score, rizo, total, formulaId, geneticaId) {
+function _creCalcCompound(score, rizo, total, formulaId, geneticaId, frascoCtx) {
   if (score == null) return null;
   var rizoRatio = (rizo != null && total != null && total > 0) ? (rizo / total) : null;
   var base = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
-  var stats = _creColonizacionStats(formulaId, geneticaId);
+  var stats = _creColonizacionStats(formulaId, geneticaId, frascoCtx);
   // Decisión 2026-07-22: la colonización lenta SIEMPRE penaliza, tenga el
   // score que tenga — antes se perdonaba entero con score≥7 ("rizomórfico
   // compensa"), pero un resultado lento sigue costando tiempo real de lab
