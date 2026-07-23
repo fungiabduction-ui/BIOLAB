@@ -4417,7 +4417,7 @@ function creUpdateBatchCompound(formulaId) {
   var rizoVal = (rizoApplies && !isNaN(rizo)) ? rizo : null;
   var firstGId = null;
   _sp.selected.forEach(function(key) { if (!firstGId) firstGId = key.split('|')[2]; });
-  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, firstGId);
+  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, firstGId, _sp.frasco);
   var compColor = comp != null ? _creScoreColor(comp * 10) : 'var(--tx3)';
   if (cmpEl) { cmpEl.textContent = comp != null ? comp.toFixed(1) : '—'; cmpEl.style.color = compColor; }
 }
@@ -4738,9 +4738,9 @@ function _creScoringScoreTabHTML(formulaId, geneticaId, fRecs) {
   // ── Score Compuesto ───────────────────────────────────────────────────────
   html += '<div class="cre-compound" id="cre-sp-compound-' + fIdE + '">';
   var _rizoForComp = (preScore >= 7 && preRizo !== '') ? +preRizo : null;
-  var compVal = _creCalcCompound(preScore, _rizoForComp, preTotal !== '' ? +preTotal : null, formulaId, geneticaId);
+  var compVal = _creCalcCompound(preScore, _rizoForComp, preTotal !== '' ? +preTotal : null, formulaId, geneticaId, _sp.frasco);
   var compColor = compVal != null ? _creScoreColor(compVal * 10) : 'var(--tx3)';
-  var colonStats = _creColonizacionStats(formulaId, geneticaId);
+  var colonStats = _creColonizacionStats(formulaId, geneticaId, _sp.frasco);
   var _rizoRatioDisp = (preRizo !== '' && preTotal !== '' && +preTotal > 0) ? (+preRizo / +preTotal) : null;
   var _effPenaltyDisp = _creEffectivePenalty(colonStats.penalty || 0, _rizoRatioDisp);
   var _formulaDisp = preScore >= 7
@@ -5071,7 +5071,7 @@ function creUpdateCompound(formulaId) {
 
   var rizoApplies = score != null && score >= 7;
   var rizoVal = (rizoApplies && !isNaN(rizo)) ? rizo : null;
-  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, _sp.cepaId);
+  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, _sp.cepaId, _sp.frasco);
   var compColor = comp != null ? _creScoreColor(comp * 10) : 'var(--tx3)';
   if (cmpEl) {
     cmpEl.textContent = comp != null ? comp.toFixed(1) : '—';
@@ -5079,7 +5079,7 @@ function creUpdateCompound(formulaId) {
   }
   if (cmpFEl) {
     var pctStr = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? Math.round((rizo/total)*100) + '%' : (rizoApplies ? '?%' : 'N/A');
-    var stats = _creColonizacionStats(formulaId, _sp.cepaId);
+    var stats = _creColonizacionStats(formulaId, _sp.cepaId, _sp.frasco);
     var _rizoRatioLive = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? (rizo/total) : null;
     var _effPenaltyLive = _creEffectivePenalty(stats.penalty || 0, _rizoRatioLive);
     var _penaltyStr = _effPenaltyLive > 0 ? ' − ' + _effPenaltyLive + ' colonizacion' : '';
@@ -5137,8 +5137,8 @@ function creSubmitScoringPanel(formulaId) {
     if (frCtx && snap) snap = Object.assign({}, snap, { nombre: snap.nombre + ' · Frasco ' + frCtx.frascoLabel });
     if (!snap) { errors++; return; }
     var gObj       = allGenetics.find(function(g) { return g.id === gId; });
-    var compScore  = _creCalcCompound(tgt.score, !isNaN(tgt.rizo) ? tgt.rizo : null, !isNaN(tgt.total) && tgt.total > 0 ? tgt.total : null, formulaId, gId);
-    var colonStats = _creColonizacionStats(formulaId, gId);
+    var compScore  = _creCalcCompound(tgt.score, !isNaN(tgt.rizo) ? tgt.rizo : null, !isNaN(tgt.total) && tgt.total > 0 ? tgt.total : null, formulaId, gId, frCtx);
+    var colonStats = _creColonizacionStats(formulaId, gId, frCtx);
     var args = { formulaId: formulaId, formulaSnapshot: snap, geneticaId: gId, geneticaLabel: gObj ? gObj.label : gId };
     if (tgt.expId) {
       // Siempre propagar el contexto de frasco aunque frCtx no se haya encontrado en allFrascos.
