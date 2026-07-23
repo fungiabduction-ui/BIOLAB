@@ -4220,6 +4220,7 @@ function creSelectAllCepas(formulaId) {
   else        { keys.forEach(function(k) { s.add(k);    }); }
   _sp.selected       = s;
   _sp.expandedCepaId = null;
+  _sp.faseEditOpen   = null;
   _creRenderCepasSection(formulaId);
 }
 
@@ -4308,6 +4309,7 @@ function creToggleCepaBatch(formulaId, geneticaId) {
     _sp.expandedCepaId = null;
     _sp.score = null;
     _sp.tipo  = null;
+    _sp.faseEditOpen = null;
   }
 
   if (_sp.selected.has(selKey)) {
@@ -5187,6 +5189,7 @@ function creSubmitScoringPanel(formulaId) {
 
   // Reset state
   _sp.expandedCepaId = null;
+  _sp.faseEditOpen   = null;
   _sp.batchScore     = null;
   _sp.batchTipo      = null;
   _sp.selected       = new Set();
