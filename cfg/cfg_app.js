@@ -326,7 +326,7 @@
 
   // La API de Contents (ghApi) omite el content base64 inline para archivos
   // >1MB (encoding:"none", content vacío) — GitHub solo lo devuelve completo
-  // vía la Git Blobs API, que soporta hasta 100MB. Usada por ghPull/ghRestore.
+  // vía la Git Blobs API, que soporta hasta 100MB. Usada por ghRestore/ghLoadLatest.
   async function ghApiBlob(sha) {
     const gc = gOb(K.gh, {}); if (!gc.token || !gc.repo) throw new Error('GitHub no configurado');
     const url = `https://api.github.com/repos/${gc.repo}/git/blobs/${sha}`;
@@ -366,58 +366,6 @@
     return bkCollectAll({ skipGh: true });
   }
 
-  async function ghPush(silent = false) {
-    const el = document.getElementById('gh-status-box');
-    if (!silent) { el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Guardando en GitHub...'; }
-    try {
-      const gc = gOb(K.gh, {});
-      if (!gc.token || !gc.repo) { if (!silent) sN('GitHub no configurado', true); return; }
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(ghData(), null, 2))));
-      let sha = null; try { const cur = await ghApi('GET', gc.file); sha = cur.sha; } catch {}
-      const body = { message: `BIOLAB sync · ${new Date().toLocaleString('es-AR')}`, content };
-      if (sha) body.sha = sha;
-      try {
-        await ghApi('PUT', gc.file, body);
-      } catch (e) {
-        if (e.status === 409 || e.status === 422) {
-          // SHA stale — reintentar una vez con SHA fresco
-          const fresh = await ghApi('GET', gc.file);
-          body.sha = fresh.sha;
-          await ghApi('PUT', gc.file, body);
-        } else {
-          throw e;
-        }
-      }
-      gc.lastSync = now(); sOb(K.gh, gc);
-      if (!silent) { el.className = 'rbox'; el.innerHTML = '✓ Guardado · ' + fDate(gc.lastSync); }
-      const last = document.getElementById('gh-last');
-      if (last) last.textContent = 'Último guardado: ' + fDate(gc.lastSync);
-      ghLoadCfg();
-      if (!silent) sN('Guardado en GitHub');
-    } catch (e) {
-      if (!silent) { el.style.display = 'block'; el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
-      sN('Error: ' + e.message, true);
-    }
-  }
-
-  async function ghPull() {
-    if (!confirm(BK_RESTORE_WARNING)) return;
-    const el = document.getElementById('gh-status-box');
-    el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Cargando...';
-    try {
-      const gc = gOb(K.gh, {});
-      if (!gc.token || !gc.repo) { el.className = 'rbox er'; el.innerHTML = '⚠ No configurado'; return; }
-      const file = await ghApi('GET', gc.file);
-      const blob = await ghApiBlob(file.sha);
-      const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
-      const data = JSON.parse(decoded);
-      const n = bkRestoreAll(data, { wipe: true });
-      el.className = 'rbox'; el.innerHTML = `✓ Datos cargados desde GitHub (${n} keys) — recargando...`;
-      sN(`Datos cargados desde GitHub (${n} keys) — recargando...`);
-      setTimeout(() => location.reload(), 1200);
-    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
-  }
-
   async function ghBackup() {
     const el = document.getElementById('gh-status-box');
     el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Guardando backup...';
@@ -431,8 +379,43 @@
       const path = `backups/biolab-backup-${ts}.json`;
       const content = btoa(unescape(encodeURIComponent(JSON.stringify(ghData(), null, 2))));
       await ghApi('PUT', path, { message: `BIOLAB backup · ${ts}`, content });
-      el.className = 'rbox'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
+      // MEJ-0020 (2026-07-24): ghPush/ghPull (sync de archivo unico mutable)
+      // se eliminaron — redundantes con este backup inmutable, que ademas
+      // nunca se pisa. gh-last ahora refleja el ultimo backup/carga, no un
+      // "push" que ya no existe.
+      gc.lastSync = now(); sOb(K.gh, gc);
+      const last = document.getElementById('gh-last');
+      if (last) last.textContent = 'Último backup: ' + fDate(gc.lastSync);
+      el.className = 'rbox wn'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
       sN('Backup guardado');
+    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
+  }
+
+  // Carga siempre el backup MAS RECIENTE — reemplaza al viejo ghPull (que
+  // sincronizaba un archivo mutable aparte). Reusa el mismo orden que ya
+  // calcula ghListBackups (_bkParseFileTs, mas nuevo primero) para no
+  // duplicar el criterio de "cual es el ultimo".
+  async function ghLoadLatest() {
+    if (!confirm(BK_RESTORE_WARNING)) return;
+    const el = document.getElementById('gh-status-box');
+    el.style.display = 'block'; el.className = 'rbox'; el.innerHTML = '🔄 Buscando el último backup...';
+    try {
+      const gc = gOb(K.gh, {});
+      if (!gc.token || !gc.repo) { el.className = 'rbox er'; el.innerHTML = '⚠ No configurado'; return; }
+      const files = await ghApi('GET', 'backups').catch(() => []);
+      if (!files.length) { el.className = 'rbox er'; el.innerHTML = '⚠ Sin backups todavía — usá "Guardar backup ahora" primero'; return; }
+      files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name)));
+      const latest = files[0];
+      el.innerHTML = `🔄 Cargando <code>${esc(latest.name)}</code>...`;
+      const file = await ghApi('GET', latest.path);
+      const blob = await ghApiBlob(file.sha);
+      const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
+      const data = JSON.parse(decoded);
+      const n = bkRestoreAll(data, { wipe: true });
+      gc.lastSync = now(); sOb(K.gh, gc);
+      el.className = 'rbox'; el.innerHTML = `✓ Cargado <code>${esc(latest.name)}</code> (${n} keys) — recargando...`;
+      sN(`Backup más reciente cargado (${n} keys) — recargando...`);
+      setTimeout(() => location.reload(), 1200);
     } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
   }
 
@@ -593,7 +576,7 @@
     if (elR && gc.repo) elR.value = gc.repo;
     if (elF && gc.file) elF.value = gc.file;
     const ls = document.getElementById('gh-last');
-    if (ls) ls.textContent = gc.lastSync ? 'Último guardado: ' + fDate(gc.lastSync) : 'Sin sincronizaciones aún';
+    if (ls) ls.textContent = gc.lastSync ? 'Último backup: ' + fDate(gc.lastSync) : 'Sin backups todavía';
     const hdr = document.getElementById('gh-hdr-status');
     if (hdr) hdr.innerHTML = gc.token && gc.repo
       ? `☁ GitHub: <b style="color:var(--ac)">${esc(gc.repo)}</b> · <span style="color:var(--tx3)">${gc.lastSync ? fDate(gc.lastSync) : 'sin sync'}</span>`
@@ -689,8 +672,7 @@
   window.ghBackup       = ghBackup;
   window.ghListBackups  = ghListBackups;
   window.ghDiffBackupModulos = ghDiffBackupModulos;
-  window.ghPull         = ghPull;
-  window.ghPush         = ghPush;
+  window.ghLoadLatest   = ghLoadLatest;
   window.ghRestore      = ghRestore;
   window.ghSaveCfg      = ghSaveCfg;
   window.ghTest         = ghTest;

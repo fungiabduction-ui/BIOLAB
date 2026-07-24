@@ -1171,6 +1171,15 @@
         var contPctTxt = (agg && agg.contPct != null) ? fmt(agg.contPct, 1) + '%' : '—';
         var diasColTxt = (agg && agg.diasColAvg != null) ? fmt(agg.diasColAvg, 1) + 'd' : '—';
         var ratioTxt   = (agg && agg.ratio != null)     ? fmt(agg.ratio, 1) + '%' : '—';
+        // Columnas propias de Cosecha (2026-07-24): reemplazan Cont.%/Dias Col./Ratio
+        // (estadisticas agregadas del LOTE SU, ya irrelevantes una vez que la bolsa esta
+        // cosechando) por rendimiento deshidratado real de ESTA bolsa. Decision del usuario:
+        // no agregar una columna de "Calidad" — un solo flush de alto BE (300-400%) no es
+        // comparable contra 3 flushes de 80% cada uno, promediar scoreAuto seria enganoso.
+        var rendSeco    = biomasaSecaTotal(b.flushes);
+        var pctDeshid   = (rend > 0 && rendSeco > 0) ? (rendSeco / rend) * 100 : null;
+        var rendSecoTxt = rendSeco > 0 ? fmt(rendSeco, 1) + ' g' : '-';
+        var pctDeshidTxt = pctDeshid != null ? fmt(pctDeshid, 1) + '%' : '-';
         var fEntrada   = fmtFecha(b.fechaInicio || b.fechaEntradaFR || _parseFechaFromId(b.id));
         var fUltCos    = '—';
         var fArchFecha = '—';
@@ -1221,9 +1230,12 @@
             + '<td class="fr-num" ' + cl + '>' + fN + '</td>'
             + '<td class="fr-num" ' + cl + '>' + (rend > 0 ? fmt(rend, 1) + ' g' : '-') + '</td>'
             + '<td class="fr-num-pct" ' + cl + '>' + (be > 0 ? fmt(be, 1) + '%' : '-') + '</td>'
-            + '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + contPctTxt + '</td>'
-            + '<td class="fr-num-days" ' + cl + ' title="Agregado lote SU ' + suId + '">' + diasColTxt + '</td>'
-            + '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + ratioTxt + '</td>';
+            + ((tabNombre === 'cosecha' || tabNombre === 'archivo')
+                ? '<td class="fr-num" ' + cl + ' title="Rendimiento deshidratado total, todas las oleadas de esta bolsa">' + rendSecoTxt + '</td>'
+                + '<td class="fr-num-pct" ' + cl + ' title="Peso deshidratado / peso fresco total de esta bolsa">' + pctDeshidTxt + '</td>'
+                : '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + contPctTxt + '</td>'
+                + '<td class="fr-num-days" ' + cl + ' title="Agregado lote SU ' + suId + '">' + diasColTxt + '</td>'
+                + '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + ratioTxt + '</td>');
         if (tabNombre === 'cosecha' || tabNombre === 'archivo') {
             row += '<td class="fr-num-days" ' + cl + ' title="Fecha de ultima oleada">' + esc(fUltCos) + '</td>';
         }
@@ -1261,10 +1273,20 @@
     var _COL_ULT_COSECHA = { key: 'ult_cosecha', label: 'Ult. oleada', title: 'Ordenar por fecha de ultima oleada registrada' };
     var _COL_ARCH_FECHA  = { key: 'arch_fecha',  label: 'Archivado',   title: 'Ordenar por fecha de archivado' };
 
+    // Cosecha + Archivo (2026-07-24, extendido a Archivo el mismo dia): reemplaza
+    // las 3 columnas de agregado del lote SU (Cont.%/Dias Col./Ratio — contexto de
+    // colonizacion, ya pasado una vez que la bolsa cosecha o se cierra) por
+    // rendimiento deshidratado real de la bolsa. Activos sigue mostrando el
+    // contexto de SU sin cambios — ahi si importa (bolsa todavia colonizando).
+    var _COL_BASE_RESULTADO = _COL_BASE.slice(0, -3).concat([
+        { key: 'rendseco',  label: 'Rend. Seco', title: 'Ordenar por rendimiento deshidratado total de la bolsa' },
+        { key: 'pctdeshid', label: '% Deshid.',  title: 'Ordenar por % deshidratado sobre el peso fresco' }
+    ]);
+
     var _SORT_COLS = {
         activos: _COL_BASE,
-        cosecha: _COL_BASE.concat([_COL_ULT_COSECHA]),
-        archivo: _COL_BASE.concat([_COL_ULT_COSECHA, _COL_ARCH_FECHA])
+        cosecha: _COL_BASE_RESULTADO.concat([_COL_ULT_COSECHA]),
+        archivo: _COL_BASE_RESULTADO.concat([_COL_ULT_COSECHA, _COL_ARCH_FECHA])
     };
 
     /** Filtra una bolsa segun el termino de busqueda libre. */
@@ -1301,6 +1323,11 @@
         if (key === 'contpct') { ag = _aggregadosPorSU(b.suLoteId); return (ag && ag.contPct   != null) ? ag.contPct   : -1; }
         if (key === 'diascol') { ag = _aggregadosPorSU(b.suLoteId); return (ag && ag.diasColAvg != null) ? ag.diasColAvg : -1; }
         if (key === 'ratio')   { ag = _aggregadosPorSU(b.suLoteId); return (ag && ag.ratio      != null) ? ag.ratio      : -1; }
+        if (key === 'rendseco') return biomasaSecaTotal(b.flushes);
+        if (key === 'pctdeshid') {
+            var hum = biomasaHumedaTotal(b.flushes), sec = biomasaSecaTotal(b.flushes);
+            return (hum > 0 && sec > 0) ? (sec / hum) * 100 : -1;
+        }
         return '';
     }
 
