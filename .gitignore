@@ -14,3 +14,6 @@ biolab_full_backup*.json
 
 # Bitacora de inteligencia de laboratorio — datos propietarios, nunca al repo publico
 docs/lab-intelligence/
+
+# Mockups temporales del skill de brainstorming (superpowers)
+.superpowers/

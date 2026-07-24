@@ -380,7 +380,7 @@ function _buildCandidate(label, ingScores, maxIngs, geneticaId, allIngs, targetS
       var r = scoreFormula(testIngs, geneticaId);
       if (r.hybridScore > bestHybrid) {
         bestHybrid = r.hybridScore;
-        best = { ing: c.ing, qty: c.optQty, score: r.hybridScore };
+        best = { ing: c.ing, qty: c.optQty, score: r.hybridScore, evidence: c.evidence };
       }
     });
 
@@ -393,7 +393,8 @@ function _buildCandidate(label, ingScores, maxIngs, geneticaId, allIngs, targetS
       id:     best.ing.id,
       nombre: best.ing.nombre,
       qty:    best.qty,
-      unidad: best.ing.unidad || 'g'
+      unidad: best.ing.unidad || 'g',
+      evidence: best.evidence
     });
     // Parar si ya alcanzamos el target pedido (no over-engineer)
     if (targetScore != null && best.score >= targetScore) break;
@@ -455,9 +456,12 @@ function generateFormula(targetScore, geneticaId) {
     var olsEntry   = coefs[ing.id];
     var olsContrib = olsEntry && olsEntry.confidence !== 'insuficiente'
       ? olsEntry.coef : 0; // already in 0-100 scale
+    // Señal de confianza real (misma noción que el resto del motor: coefs[id].confidence).
+    // Ausencia de entrada en coefs = el ingrediente nunca apareció en un CRE cerrado.
+    var evidence = olsEntry ? olsEntry.confidence : 'sin_ensayos';
 
     var combined = alpha * thContrib * 100 + (1 - alpha) * olsContrib;
-    return { ing: ing, combined: combined, optQty: optQty };
+    return { ing: ing, combined: combined, optQty: optQty, evidence: evidence };
   }).filter(Boolean).sort(function(a, b) { return b.combined - a.combined; });
 
   var results = [];
@@ -488,7 +492,9 @@ function generateFormula(targetScore, geneticaId) {
         thContrib += (m.contribuciones[r] || 0);
       });
     }
-    return { ing: ing, combined: thContrib, optQty: optQty };
+    var olsEntryC = coefs[ing.id];
+    var evidence  = olsEntryC ? olsEntryC.confidence : 'sin_ensayos';
+    return { ing: ing, combined: thContrib, optQty: optQty, evidence: evidence };
   }).filter(Boolean).sort(function(a, b) { return b.combined - a.combined; });
 
   var cC = _buildCandidate('Conservadora (teorica)', ingScoresThOnly, FI_MAX_INGS, geneticaId, allIngs, null);

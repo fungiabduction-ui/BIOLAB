@@ -379,7 +379,9 @@ function _buildFeatureMatrix(records, minRecords) {
 
     // Target: incidencia objetiva (rizoPozitivas/totalPlacas) × 10 cuando disponible,
     // fallback a scoreObservado subjetivo. Misma escala [0-10] para compatibilidad.
-    var incidenceTarget = hasIncidence ? (r.rizoPozitivas / r.totalPlacas) * 10 : null;
+    // Clamp a 1.0: rizoPositivas>totalPlacas es dato imposible (ver CRE-0084, cilab_conocimiento.js
+    // _saveTarget) — sin esto un record corrupto empuja el target y por encima de 10.
+    var incidenceTarget = hasIncidence ? Math.min(1, r.rizoPozitivas / r.totalPlacas) * 10 : null;
     if (incidenceTarget !== null) nIncidence++;
 
     // Features obs_* — extraídas de la obs definitiva con enriched.complete === true

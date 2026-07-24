@@ -470,6 +470,72 @@
     return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
   }
 
+  // Mapa key de localStorage → módulo dueño (ver tabla "PERSISTENCIA" en
+  // CLAUDE.md). No exhaustivo llave-por-llave: además del match exacto, cae a
+  // un match por prefijo para keys nuevas/legacy no listadas explícitamente.
+  const _BK_KEY_MODULO_EXACTO = {
+    'biolab.ge.v4': 'GE',
+    'bl2_cultivos': 'CI', 'bl2_forms': 'CI', 'bl2_seg': 'CI',
+    'bl2_experimentos': 'CI', 'bl2_pending_crec_action': 'CI',
+    'bl2_seg_notas': 'CI/CILAB',
+    'bl2_ings': 'CILAB', 'bl2_lab_obs': 'CILAB', 'bl2_lab_strain_ranges': 'CILAB',
+    'bl2_crec': 'CILAB', 'bl2_crec_notas': 'CILAB', 'bl2_crec_fases': 'CILAB',
+    'bl2_crec_excluded_formulas': 'CILAB', 'bl2_crec_cleared': 'CILAB',
+    'bl2_inteligencia_model': 'CILAB', 'bl2_formula_intel': 'CILAB',
+    'bl2_ci_gr_links': 'CI/GR',
+    'gr_lotes': 'GR', 'gr_biblioteca': 'GR', 'gr_usados': 'GR', 'gr_usados_ref': 'GR',
+    'su_lotes': 'SU', 'su_biblioteca': 'SU', 'sustratos_lotes': 'SU', 'sustratos_biblioteca': 'SU',
+    'fr_bolsas': 'FR', 'fr_cal_intel': 'FR', 'fr_experimentos': 'FR',
+  };
+  const _BK_PREFIJO_MODULO = [
+    ['biolab_migracion_fr', 'FR'], ['biolab_migracion_gr', 'GR'], ['biolab_migracion_su', 'SU'],
+    ['bl2_seg_rowimgs_', 'CI'], ['bl2_seg_notas_migrated', 'CI'],
+    ['bl2_col_align', 'CILAB'], ['bl2_lab_', 'CILAB'], ['bl2_stock_reconcile', 'CILAB'],
+    ['gr_', 'GR'], ['su_', 'SU'], ['sustratos_', 'SU'], ['fr_', 'FR'], ['bl2_', 'CILAB'],
+  ];
+  function _bkKeyToModulo(key) {
+    if (_BK_KEY_MODULO_EXACTO[key]) return _BK_KEY_MODULO_EXACTO[key];
+    const hit = _BK_PREFIJO_MODULO.find(([p]) => key.startsWith(p));
+    return hit ? hit[1] : 'otros';
+  }
+
+  // Descarga (Blobs API) y decodifica el contenido completo de un backup —
+  // usada solo bajo demanda (botón "¿Qué cambió?"), nunca al listar.
+  async function _bkDecodeBlob(sha) {
+    const blob = await ghApiBlob(sha);
+    const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
+    return JSON.parse(decoded);
+  }
+
+  var _bkListaOrdenada = []; // cache en memoria de la última lista renderizada, para el diff on-demand
+
+  async function ghDiffBackupModulos(idx, btnEl) {
+    const actual = _bkListaOrdenada[idx];
+    const anterior = _bkListaOrdenada[idx + 1]; // el array está ordenado más-nuevo-primero
+    if (!anterior) { btnEl.outerHTML = '<span style="font-size:11px;color:var(--tx3)">es el más viejo — sin backup anterior para comparar</span>'; return; }
+    btnEl.disabled = true; btnEl.textContent = '🔄...';
+    try {
+      const [dataActual, dataAnterior] = await Promise.all([
+        _bkDecodeBlob(actual.sha), _bkDecodeBlob(anterior.sha)
+      ]);
+      const keysActual = new Set(Object.keys(dataActual).filter(k => !k.startsWith('_')));
+      const keysAnterior = new Set(Object.keys(dataAnterior).filter(k => !k.startsWith('_')));
+      const cambiadas = new Set();
+      keysActual.forEach(k => {
+        if (!keysAnterior.has(k) || JSON.stringify(dataActual[k]) !== JSON.stringify(dataAnterior[k])) cambiadas.add(k);
+      });
+      keysAnterior.forEach(k => { if (!keysActual.has(k)) cambiadas.add(k); });
+      if (!cambiadas.size) {
+        btnEl.outerHTML = '<span style="font-size:11px;color:var(--tx3)">sin cambios vs. el anterior</span>';
+        return;
+      }
+      const modulos = [...new Set([...cambiadas].map(_bkKeyToModulo))].sort();
+      btnEl.outerHTML = `<span style="font-size:11px;color:var(--tx2)" title="${esc([...cambiadas].sort().join(', '))}">${esc(modulos.join(', '))}</span>`;
+    } catch (e) {
+      btnEl.disabled = false; btnEl.textContent = '✕ error, reintentar';
+    }
+  }
+
   async function ghListBackups() {
     const el = document.getElementById('gh-bk-list');
     el.style.display = 'block'; el.innerHTML = '🔄 Cargando...';
@@ -479,11 +545,14 @@
       const files = await ghApi('GET', 'backups').catch(() => []);
       if (!files.length) { el.innerHTML = '<div class="empty">Sin backups todavía</div>'; return; }
       files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name))); // más nuevo primero
+      _bkListaOrdenada = files;
       // size y sha ya vienen en la respuesta de listado — sin llamadas extra a la API.
       // sha corto = huella exacta del contenido: dos filas con el mismo sha son
       // byte-a-byte idénticas (confirma o descarta "¿son realmente distintos?").
-      el.innerHTML = `<div class="tw"><table><thead><tr><th>Fecha</th><th>Tamaño</th><th>SHA</th><th>Acción</th></tr></thead><tbody>${
-        files.map(f => {
+      // "¿Qué cambió?" es aparte y bajo demanda — descarga+diffea contra el backup
+      // anterior recién al tocarlo, para no penalizar abrir la lista con N descargas.
+      el.innerHTML = `<div class="tw"><table><thead><tr><th>Fecha</th><th>Tamaño</th><th>SHA</th><th>Módulos</th><th>Acción</th></tr></thead><tbody>${
+        files.map((f, idx) => {
           const fecha = _bkKeyToDisplay(_bkParseFileTs(f.name));
           const kb = f.size != null ? (f.size / 1024).toFixed(1) + ' KB' : '—';
           const shaCorta = f.sha ? f.sha.slice(0, 7) : '—';
@@ -491,6 +560,7 @@
             <td style="font-size:12px;color:var(--tx2)" title="${esc(f.name)}">${esc(fecha)}</td>
             <td style="font-size:12px;color:var(--tx2)">${kb}</td>
             <td style="font-size:11px;color:var(--tx3);font-family:monospace">${shaCorta}</td>
+            <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghDiffBackupModulos(${idx}, this)">¿Qué cambió?</button></td>
             <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button></td>
           </tr>`;
         }).join('')
@@ -618,6 +688,7 @@
   window.exportData     = exportData;
   window.ghBackup       = ghBackup;
   window.ghListBackups  = ghListBackups;
+  window.ghDiffBackupModulos = ghDiffBackupModulos;
   window.ghPull         = ghPull;
   window.ghPush         = ghPush;
   window.ghRestore      = ghRestore;

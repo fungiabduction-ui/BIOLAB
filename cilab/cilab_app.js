@@ -6243,6 +6243,22 @@ function _optApplyConstraints(qtyMap, addedMap, unidadMap, existingIngIds, allIn
  *   6. Calcular diff, score proyectado, fenotipo y metadata de resultado
  */
 function _optBuildScenario(ingRows, allIngs, allMeta, scenarioId, calibCepaId) {
+  // MEJ-0018 (2026-07-24): señal de evidencia empírica por ingrediente — mismo
+  // criterio que generateFormula()/MEJ-0016. No cambia qué ingrediente elige
+  // _optBestActivatorForRoute (eso sigue siendo puramente teórico, decisión
+  // deliberada: cambiar el algoritmo de selección requiere su propio análisis),
+  // solo permite marcarlo si nunca se ensayó o si ya se probó con resultado
+  // negativo fuerte (coef OLS < -10, ej. Metionina/Tiamina complex).
+  const _optModel     = (window.cilabInt && typeof window.cilabInt.getModel === 'function') ? window.cilabInt.getModel() : null;
+  const _optUseStrain = !!(_optModel && _optModel.byStrain && calibCepaId && _optModel.byStrain[calibCepaId] && _optModel.byStrain[calibCepaId].nRecords >= 3);
+  const _optCoefs     = _optUseStrain ? (_optModel.byStrain[calibCepaId].coefs || {}) : ((_optModel && _optModel.coefs) || {});
+  function _optEvidenceFor(ingId) {
+    const c = _optCoefs[ingId];
+    if (!c) return { level: 'sin_ensayos' };
+    if (c.confidence !== 'insuficiente' && c.coef < -10) return { level: 'negativo', coef: c.coef, n: c.n };
+    return { level: c.confidence, coef: c.coef, n: c.n };
+  }
+
   // Mapa mutable de qtys (unidades nativas del ingrediente)
   const qtyMap = {};
   ingRows.forEach(fi => { qtyMap[fi.id] = fi.qty || 0; });
@@ -6405,11 +6421,12 @@ function _optBuildScenario(ingRows, allIngs, allMeta, scenarioId, calibCepaId) {
       changes.push({
         ingId: fi.id, nombre: (fi.snapshot?.nombre) || live?.nombre || fi.id,
         before, after, delta: after - before, isNew: false, unidad: unidadMap[fi.id] || 'gr',
+        evidence: _optEvidenceFor(fi.id),
       });
     }
   });
   Object.entries(addedMap).forEach(([ingId, a]) => {
-    changes.push({ ingId, nombre: a.ing?.nombre || ingId, before: 0, after: a.qty, delta: a.qty, isNew: true, unidad: a.unidad });
+    changes.push({ ingId, nombre: a.ing?.nombre || ingId, before: 0, after: a.qty, delta: a.qty, isNew: true, unidad: a.unidad, evidence: _optEvidenceFor(ingId) });
   });
 
   // ── Score, C/N, fenotipo y niveles proyectados ────────────────────────────
@@ -6630,10 +6647,19 @@ function _buildOptimizerTab() {
           const sign   = ch.isNew ? '＋ Agregar' : ch.delta > 0 ? '↑ Subir' : '↓ Reducir';
           const cls    = ch.isNew ? 'new' : ch.delta > 0 ? 'up' : 'dn';
           const before = ch.isNew ? '' : `${_optFmtQty(ch.before)} → `;
+          // MEJ-0018: aviso según evidencia real — "negativo" (ya se probó y dio
+          // mal) es más grave que "sin_ensayos" (nunca se probó), colores distintos.
+          let warnHTML = '';
+          if (ch.evidence && ch.evidence.level === 'negativo') {
+            warnHTML = `<div style="font-size:10px;color:var(--st-crit);margin-top:2px">⚠ ya se probó y dio negativo (coef ${ch.evidence.coef.toFixed(1)}, n=${ch.evidence.n})</div>`;
+          } else if (ch.evidence && ch.evidence.level === 'sin_ensayos') {
+            warnHTML = `<div style="font-size:10px;color:var(--tx3);margin-top:2px">⚠ sin ensayar — teórico</div>`;
+          }
           return `<div class="clab-opt-change clab-opt-ch-${cls}">
             <span class="clab-opt-sign">${sign}</span>
             <span class="clab-opt-cname">${esc(ch.nombre)}</span>
             <span class="clab-opt-cqty">${before}<b>${_optFmtQty(ch.after)}</b> ${esc(ch.unidad)}</span>
+            ${warnHTML}
           </div>`;
         }).join('');
 
@@ -6735,9 +6761,16 @@ function _buildOptimizerTab() {
           // Per-ingredient justification
           var ings = cand.ings || [];
           function ingJustification(ing) {
+            // MEJ-0016 Parte 1 (2026-07-24): ing.evidence viene de generateFormula() —
+            // 'sin_ensayos' significa que el ingrediente nunca apareció en un CRE
+            // cerrado (ausente de coefs[id], no solo confidence baja). Sin esta marca,
+            // un ingrediente puramente teórico (ej. NatureBell en una fórmula con 0
+            // ensayos) mostraba el mismo texto "Activa: X (+Y%)" que uno validado por
+            // decenas de registros reales — indistinguibles para el usuario.
+            var warn = (ing.evidence === 'sin_ensayos') ? '⚠ sin ensayar — ' : '';
             var coefData = activeCoefs && activeCoefs[ing.id];
             if (coefData && coefData.confidence !== 'insuficiente' && coefData.coef > 0) {
-              return 'Coef empírico: +' + coefData.coef.toFixed(1) + ' (n=' + coefData.n + ' ensayos)';
+              return warn + 'Coef empírico: +' + coefData.coef.toFixed(1) + ' (n=' + coefData.n + ' ensayos)';
             }
             var meta = ingMeta && ingMeta[ing.id];
             if (meta && meta.contribuciones) {
@@ -6749,10 +6782,10 @@ function _buildOptimizerTab() {
               if (topRouteId) {
                 var routeObj = ROUTES.find(function(r) { return r.id === topRouteId; });
                 var shortName = routeObj ? routeObj.short : topRouteId;
-                return 'Activa: ' + shortName + ' (+' + topPct + '%)';
+                return warn + 'Activa: ' + shortName + ' (+' + topPct + '%)';
               }
             }
-            return 'Ingrediente del rango óptimo metabólico';
+            return warn + 'Ingrediente del rango óptimo metabólico';
           }
 
           var keyIngs = ings.slice(0, 4);

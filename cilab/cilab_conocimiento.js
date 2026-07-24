@@ -901,15 +901,12 @@ function _creBackfillAutoLogs() {
       if (!hasLog) {
         var obs      = scoredObs[scoredObs.length - 1];
         var score    = obs.calidadScore;
-        var compScore = obs.scoreCompuesto != null ? obs.scoreCompuesto : null;
         var rizo     = obs.rizoPozitivas;
         var total    = obs.totalPlacas;
         var tipo     = obs.tipoCordon || null;
 
         var parts    = [];
-        var sStr     = 'Score ' + score + '/10';
-        if (compScore != null && +compScore.toFixed(1) !== score) sStr += ' → ' + compScore.toFixed(1);
-        parts.push(sStr);
+        parts.push('Score ' + score + '/10');
         if (score >= 7) {
           if (total > 0 && rizo >= 0) parts.push('Incidencia ' + Math.round(rizo / total * 100) + '% (' + rizo + '/' + total + ')');
           if (tipo) parts.push('Cordón: ' + tipo);
@@ -1165,12 +1162,10 @@ function _creExtrasBackfillV2() {
  * resolución de fechas. Si no encuentra tanda de bl2_seg con inoculoTs+colonizacion reales
  * para ESE frasco, no toca el record (no inventa procedencia).
  * Solo sobreescribe si el valor recalculado difiere del congelado.
- * NO recalcula scoreCompuesto a propósito: ese campo depende de qué versión de
- * _creEffectivePenalty/_creCalcCompound estaba vigente cuando el record se cerró
- * (ver commit c3049b2, política "penalización siempre aplica" del 2026-07-22/23) —
- * recomputarlo acá mezclaría la corrección objetiva de fecha con un cambio de
- * política retroactivo no decidido. Detalle completo:
- * docs/superpowers/plans/2026-07-23-fases-por-frasco.md, Task 10.
+ * (scoreCompuesto existía cuando se escribió esta nota — eliminado del todo más
+ * tarde el mismo día, ver _creMigrarPenalizacionEliminadaV1. colonizacionDias/
+ * colonizacionPenalty siguen siendo campos informativos, sin efecto en el score.)
+ * Detalle completo: docs/superpowers/plans/2026-07-23-fases-por-frasco.md, Task 10.
  */
 function _creMigrarColonizacionDiasPorFrascoV1() {
   var arr = creRead();
@@ -1211,6 +1206,62 @@ function _creMigrarColonizacionDiasPorFrascoV1() {
     creWrite(arr);
     try { localStorage.removeItem('bl2_inteligencia_model'); } catch(e) {}
     try { localStorage.removeItem('bl2_formula_intel'); } catch(e) {}
+  }
+  return { updated: updated };
+}
+
+/**
+ * Migración one-shot: recalcula scoreObservado/scoreFinal/scoreFinalNorm/scoreCompuesto
+ * en records cerrados creados ANTES de la decisión 2026-07-23 de eliminar la penalización
+ * por colonización lenta (ver CLAUDE.md sección CILAB CONOCIMIENTO). Esos records quedaron
+ * con el score compuesto viejo (score×(0.9+0.1×ratio) − penalty) congelado en scoreObservado/
+ * scoreFinal/scoreFinalNorm — el campo que getCalibrationModel(), computeRizoLearnIndex() y
+ * el fallback de cilab_inteligencia.js (records sin incidencia objetiva) leen como "la verdad".
+ *
+ * Recalcula SOLO a partir de calidadScore (el score crudo 1-10 que ya está guardado en cada
+ * obs — no se inventa ningún dato nuevo). NO toca rizoPozitivas/totalPlacas crudos (son el
+ * dato de laboratorio real — la incidencia queda como dato complementario/opcional, nunca
+ * ajusta el score).
+ *
+ * Decisión 2026-07-23 (segunda ronda, misma sesión): además de la penalización por
+ * colonización, se elimina scoreCompuesto entero (el multiplicador ×(0.9+0.1×incidencia))
+ * — mismo principio ("el puntaje es el que cargué a mano"), aplicado también acá. Esta
+ * migración limpia el campo scoreCompuesto de cualquier obs que lo tenga, no solo de las
+ * que difieren en scoreObservado/scoreFinal.
+ */
+function _creMigrarPenalizacionEliminadaV1() {
+  var arr = creRead();
+  var updated = 0;
+
+  arr.forEach(function(rec) {
+    if (rec.status !== 'cerrado') return;
+    var obsArr = rec.observaciones || [];
+    var lastDef = null;
+    for (var i = obsArr.length - 1; i >= 0; i--) {
+      if (obsArr[i].tipo === 'definitiva') { lastDef = obsArr[i]; break; }
+    }
+    if (!lastDef || lastDef.calidadScore == null) return;
+    var needsScoreFix = lastDef.scoreObservado !== lastDef.calidadScore || rec.scoreFinal !== lastDef.calidadScore;
+    var needsCompCleanup = lastDef.scoreCompuesto != null;
+    if (!needsScoreFix && !needsCompCleanup) return;
+
+    lastDef.scoreObservado = lastDef.calidadScore;
+    delete lastDef.scoreCompuesto;
+    rec.scoreFinal     = lastDef.calidadScore;
+    rec.scoreFinalNorm = +(lastDef.calidadScore * 10).toFixed(1);
+    updated++;
+  });
+
+  if (updated > 0) {
+    creWrite(arr);
+    try { localStorage.removeItem('bl2_inteligencia_model'); } catch(e) {}
+    try { localStorage.removeItem('bl2_formula_intel'); } catch(e) {}
+    rizoLearnInvalidate();
+    // Las auto-notas de bl2_seg_notas (lo que muestra el dashboard de CI, "Score Definitivo...")
+    // son texto congelado al cerrar el record — no leen bl2_crec en vivo. Sin este regen quedan
+    // mostrando el score compuesto viejo aunque el record ya esté corregido (encontrado en vivo:
+    // CI-0010/N5 seguía mostrando "6.3/10" en el dashboard de CI después de migrar bl2_crec).
+    try { _creRegenScoreLogs(); } catch(e) { console.warn('[CRE] regen logs post-migracion fallo', e); }
   }
   return { updated: updated };
 }
@@ -1259,10 +1310,7 @@ function _creRegenScoreLogs() {
 
     var parts = [];
     if (frascoStr) parts.push('🔬 ' + frascoStr);
-    var sStr = 'Score ' + o.calidadScore + '/10';
-    if (o.scoreCompuesto != null && +o.scoreCompuesto.toFixed(1) !== o.calidadScore)
-      sStr += ' → ' + o.scoreCompuesto.toFixed(1);
-    parts.push(sStr);
+    parts.push('Score ' + o.calidadScore + '/10');
     if (o.calidadScore >= 7) {
       if (o.totalPlacas > 0 && o.rizoPozitivas >= 0)
         parts.push('Incidencia ' + Math.round(o.rizoPozitivas / o.totalPlacas * 100) + '% (' + o.rizoPozitivas + '/' + o.totalPlacas + ')');
@@ -2398,8 +2446,28 @@ function _creFormulaCards(records, model) {
             badgeHTML = '<span class="cre-fc-badge cre-fc-badge--pend">pendiente</span>';
           }
           var shortLabel = _creAbrevEspecie(c.label);
+
+          // Días de colonización por cepa — pedido 2026-07-24. Mismo par de fuentes
+          // que ya usa _creMigrarColonizacionDiasPorFrascoV1 (fases de CRE / bl2_seg
+          // vía _creInoculacionDate + bl2_seg.colonizacion vía _creGetColonizacionDate),
+          // no una fecha nueva inventada. Funciona también para cepas sin CRE todavía
+          // (usa c.id/f.id directo, no depende de `rec`).
+          var colonDaysHTML = '';
+          try {
+            var frCtxRow = (rec && rec.experimentoId && rec.frascoId) ? { expId: rec.experimentoId, frascoLabel: rec.frascoId } : null;
+            var inocD  = (typeof _creInoculacionDate === 'function') ? _creInoculacionDate(f.id, c.id, frCtxRow) : null;
+            var colonD = (typeof _creGetColonizacionDate === 'function') ? _creGetColonizacionDate(f.id, c.id, frCtxRow) : null;
+            if (inocD && colonD) {
+              var _dias = Math.round((_localDate(colonD) - _localDate(inocD)) / 86400000);
+              if (_dias >= 0) colonDaysHTML = ' <span class="cre-fc-colon-days">🕐 ' + _dias + 'd coloniz.</span>';
+            } else if (inocD && !colonD) {
+              var _diasHoy = Math.round((new Date() - _localDate(inocD)) / 86400000);
+              if (_diasHoy >= 0) colonDaysHTML = ' <span class="cre-fc-colon-days cre-fc-colon-days--live">🕐 D+' + _diasHoy + '</span>';
+            }
+          } catch (e) { /* sin dato de fechas — no mostrar nada, no romper la card */ }
+
           return '<div class="cre-fc-cepa-row">'
-            + '<span class="' + nameCls + '">' + (rec && rec.scoreFinalNorm != null ? '✓ ' : '◑ ') + esc(shortLabel) + ' <em class="cre-fc-date">' + esc(dateLabel) + '</em></span>'
+            + '<span class="' + nameCls + '">' + (rec && rec.scoreFinalNorm != null ? '✓ ' : '◑ ') + esc(shortLabel) + ' <em class="cre-fc-date">' + esc(dateLabel) + '</em>' + colonDaysHTML + '</span>'
             + badgeHTML
             + '</div>';
         }).join('');
@@ -2426,7 +2494,9 @@ function _creFormulaCards(records, model) {
           + (isExcluded ? '+' : '×')
           + '</button>'
           + '<div class="cre-fc-top">'
-          +   '<div class="cre-fc-name" title="' + esc(snapshot.nombre) + '">' + esc(snapshot.nombre) + '</div>'
+          +   '<div class="cre-fc-name" title="' + esc(f.id) + ' — ' + esc(snapshot.nombre) + ' ' + esc(f.version || 'v1') + '">'
+          +     '<span class="cre-fc-id">' + esc(f.id) + '</span> ' + esc(snapshot.nombre) + ' <span class="cre-fc-ver">' + esc(f.version || 'v1') + '</span>'
+          +   '</div>'
           +   '<span class="cre-fc-status">' + (isExcluded ? 'Fuera motor' : statusLabel) + '</span>'
           + '</div>'
           + '<div class="cre-fc-chips">'
@@ -2447,20 +2517,27 @@ function _creFormulaCards(records, model) {
     + '</div>';
 }
 
+// Decisión 2026-07-23: el número de la card refleja el score que el usuario adjudicó a
+// mano (calidadScore), sin ajustar por incidencia — la incidencia rizomórfica ya es su
+// propio target objetivo en el motor OLS (_buildFeatureMatrix, cilab_inteligencia.js),
+// que es quien decide qué ingrediente funciona y cuál no. Antes multiplicaba
+// score×(rizoPozitivas/totalPlacas): un frasco con calidadScore 7 pero 0% de incidencia
+// mostraba "0.0" acá, aunque las badges de cepa de la misma card mostraban "7" — inconsistencia
+// real encontrada en datos reales (N5/CI-0010, frasco B: CRE-0085/86/87, calidadScore:7,
+// rizoPozitivas:0 → promedio viejo daba 0.0).
+// Lee calidadScore directo de la última obs 'definitiva' (no scoreFinalNorm) para no
+// depender del timing de la migración one-shot que recalcula scoreFinal/scoreFinalNorm.
 function _creCompoundAvg(fRecs) {
-  var valid = fRecs.filter(function(r) {
-    return r.scoreFinalNorm != null && r.totalPlacas > 0 && r.rizoPozitivas != null;
-  });
-  if (!valid.length) {
-    var simple = fRecs.filter(function(r) { return r.scoreFinalNorm != null; });
-    if (!simple.length) return '—';
-    var avg = simple.reduce(function(a, r) { return a + Math.round(r.scoreFinalNorm / 10); }, 0) / simple.length;
-    return avg.toFixed(1);
-  }
-  var sum = valid.reduce(function(a, r) {
-    return a + (Math.round(r.scoreFinalNorm / 10) * (r.rizoPozitivas / r.totalPlacas));
-  }, 0);
-  return (sum / valid.length).toFixed(1);
+  var scores = fRecs.map(function(r) {
+    var obsArr = r.observaciones || [];
+    for (var i = obsArr.length - 1; i >= 0; i--) {
+      if (obsArr[i].tipo === 'definitiva' && obsArr[i].calidadScore != null) return obsArr[i].calidadScore;
+    }
+    return null;
+  }).filter(function(s) { return s != null; });
+  if (!scores.length) return '—';
+  var avg = scores.reduce(function(a, s) { return a + s; }, 0) / scores.length;
+  return avg.toFixed(1);
 }
 
 // Score compuesto separado por frasco — decisión 2026-07-23: cada frasco de un
@@ -3610,15 +3687,13 @@ function _creUpdateSelChips(formulaId) {
   wrap.innerHTML = html;
 }
 
-function _creLogScore(formulaId, targets, score, compScore, rizoApplies, obsTotal, obsRizo, tipo, frascoCtx) {
+function _creLogScore(formulaId, targets, score, rizoApplies, obsTotal, obsRizo, tipo, frascoCtx) {
   // targets: array of {gId, gLabel}
   // frascoCtx: { label, experimentoId, frascoId } | null
   // Batch (>1 cepa) → formula-level bucket (null gId); single → cepa-level bucket.
   var parts = [];
   if (frascoCtx) parts.push('🔬 ' + frascoCtx.label);
-  var scoreStr = 'Score ' + score + '/10';
-  if (compScore != null && +compScore.toFixed(1) !== score) scoreStr += ' → ' + compScore.toFixed(1);
-  parts.push(scoreStr);
+  parts.push('Score ' + score + '/10');
   if (rizoApplies) {
     if (!isNaN(obsTotal) && obsTotal > 0 && !isNaN(obsRizo) && obsRizo >= 0) {
       parts.push('Incidencia ' + Math.round(obsRizo / obsTotal * 100) + '% (' + obsRizo + '/' + obsTotal + ')');
@@ -4497,7 +4572,6 @@ function creUpdateBatchCompound(formulaId) {
   var totalEl = document.getElementById('cre-bat-total-' + formulaId);
   var rizoEl  = document.getElementById('cre-bat-rizo-'  + formulaId);
   var pctEl   = document.getElementById('cre-bat-pct-'   + formulaId);
-  var cmpEl   = document.getElementById('cre-bat-compound-val-' + formulaId);
   if (!totalEl || !rizoEl) return;
 
   var total = parseInt(totalEl.value, 10);
@@ -4520,13 +4594,6 @@ function creUpdateBatchCompound(formulaId) {
     }
   }
 
-  var rizoApplies = score != null && score >= 7;
-  var rizoVal = (rizoApplies && !isNaN(rizo)) ? rizo : null;
-  var firstGId = null;
-  _sp.selected.forEach(function(key) { if (!firstGId) firstGId = key.split('|')[2]; });
-  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, firstGId, _sp.frasco);
-  var compColor = comp != null ? _creScoreColor(comp * 10) : 'var(--tx3)';
-  if (cmpEl) { cmpEl.textContent = comp != null ? comp.toFixed(1) : '—'; cmpEl.style.color = compColor; }
 }
 
 // ── Batch controls section ───────────────────────────────────────────────────
@@ -4632,11 +4699,6 @@ function _creBatchControlsHTML(formulaId) {
 
   html += '<div class="cre-incidence-result" id="cre-bat-pct-' + fIdE + '">'
     + '<span style="color:var(--tx3)">— %</span></div>';
-
-  html += '<div class="cre-compound" id="cre-bat-compound-' + fIdE + '">'
-    + '<div><div class="cre-compound-label">Score Batch</div></div>'
-    + '<div class="cre-compound-val" style="color:var(--tx3)" id="cre-bat-compound-val-' + fIdE + '">—</div>'
-    + '</div>';
 
   // Botón 🔬 batch — solo si hay al menos un record cerrado con obs entre las cepas seleccionadas
   var _batchHasRecs = false;
@@ -4842,29 +4904,6 @@ function _creScoringScoreTabHTML(formulaId, geneticaId, fRecs) {
   }
   html += '</div>';
 
-  // ── Score Compuesto ───────────────────────────────────────────────────────
-  html += '<div class="cre-compound" id="cre-sp-compound-' + fIdE + '">';
-  var _rizoForComp = (preScore >= 7 && preRizo !== '') ? +preRizo : null;
-  var compVal = _creCalcCompound(preScore, _rizoForComp, preTotal !== '' ? +preTotal : null, formulaId, geneticaId, _sp.frasco);
-  var compColor = compVal != null ? _creScoreColor(compVal * 10) : 'var(--tx3)';
-  var colonStats = _creColonizacionStats(formulaId, geneticaId, _sp.frasco);
-  var _rizoRatioDisp = (preRizo !== '' && preTotal !== '' && +preTotal > 0) ? (+preRizo / +preTotal) : null;
-  var _effPenaltyDisp = _creEffectivePenalty(colonStats.penalty || 0, _rizoRatioDisp);
-  var _formulaDisp = preScore >= 7
-    ? (preScore != null ? preScore : '?') + ' × ' + (preTotal !== '' && +preTotal > 0 ? Math.round((+preRizo / +preTotal) * 100) + '%' : '?%')
-    : (preScore != null ? preScore : '?') + ' (difuso)';
-  html += '<div>'
-    + '<div class="cre-compound-label">Score Compuesto</div>'
-    + '<div class="cre-compound-formula" id="cre-sp-compound-formula-' + fIdE + '">'
-    + _formulaDisp
-    + (_effPenaltyDisp > 0 ? ' − ' + _effPenaltyDisp + ' colonizacion' : '')
-    + '</div>'
-    + '</div>'
-    + '<div class="cre-compound-val" style="color:' + compColor + '" id="cre-sp-compound-val-' + fIdE + '">'
-    + (compVal != null ? compVal.toFixed(1) : '—')
-    + '</div>';
-  html += '</div>';
-
   // ── Acciones ──────────────────────────────────────────────────────────────
   html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">';
   var nSel = _sp.selected.size;
@@ -4914,20 +4953,6 @@ function _creEffectivePenalty(rawPenalty, rizoRatio) {
   return rawPenalty;
 }
 
-function _creCalcCompound(score, rizo, total, formulaId, geneticaId, frascoCtx) {
-  if (score == null) return null;
-  // Decisión 2026-07-23: se saca la penalización por colonización lenta del todo —
-  // el usuario la consideró una fuente de confusión y valores absurdos (ver sesión
-  // de fases-por-frasco), y decidió que scoreObservado/scoreCompuesto reflejen
-  // únicamente calidad × incidencia rizomórfica, sin ajuste por tiempo de colonización.
-  // formulaId/geneticaId/frascoCtx quedan sin usar acá (antes alimentaban
-  // _creColonizacionStats/_creEffectivePenalty) — se mantienen en la firma para no
-  // tener que tocar cada call site de nuevo.
-  var rizoRatio = (rizo != null && total != null && total > 0) ? (rizo / total) : null;
-  var base = rizoRatio != null ? score * (0.9 + 0.1 * rizoRatio) : score;
-  return +Math.max(0, base).toFixed(1);
-}
-
 // ── Handlers globales del scoring panel ─────────────────────────────────────
 
 function creOpenScoringPanel(formulaId) {
@@ -4946,6 +4971,15 @@ function creOpenScoringPanel(formulaId) {
       localStorage.setItem('biolab_migracion_crec_colonizacion_frasco_v1', '1');
     }
   } catch(e) { console.warn('[CRE] migracion colonizacionDias por frasco fallo', e); }
+  // Corrección one-shot: recalcula scoreObservado/scoreFinal/scoreFinalNorm/scoreCompuesto en
+  // records cerrados antes de la eliminación de la penalización por colonización (2026-07-23).
+  try {
+    if (!localStorage.getItem('biolab_migracion_crec_penalizacion_eliminada_v1')) {
+      var _penEliminadaResult = _creMigrarPenalizacionEliminadaV1();
+      if (_penEliminadaResult.updated > 0) console.info('[CRE] scores recalculados sin penalización:', _penEliminadaResult.updated, 'records');
+      localStorage.setItem('biolab_migracion_crec_penalizacion_eliminada_v1', '1');
+    }
+  } catch(e) { console.warn('[CRE] migracion penalizacion eliminada fallo', e); }
   _spReset(formulaId);
   // Importar fases de CI → bl2_crec_fases para todas las cepas de esta fórmula.
   // Operación idempotente: solo escribe si el dato no existe ya. CILAB queda autónomo.
@@ -5156,8 +5190,6 @@ function creUpdateCompound(formulaId) {
   var totalEl = document.getElementById('cre-sp-total-' + formulaId);
   var rizoEl  = document.getElementById('cre-sp-rizo-'  + formulaId);
   var pctEl   = document.getElementById('cre-sp-pct-'   + formulaId);
-  var cmpEl   = document.getElementById('cre-sp-compound-val-'     + formulaId);
-  var cmpFEl  = document.getElementById('cre-sp-compound-formula-' + formulaId);
   if (!totalEl || !rizoEl) return;
 
   var total = parseInt(totalEl.value, 10);
@@ -5182,25 +5214,6 @@ function creUpdateCompound(formulaId) {
       pctEl.innerHTML = '<div class="cre-incidence-pct" style="color:var(--tx3)">—%</div>'
         + '<div class="cre-incidence-sub">ingresá los valores</div>';
     }
-  }
-
-  var rizoApplies = score != null && score >= 7;
-  var rizoVal = (rizoApplies && !isNaN(rizo)) ? rizo : null;
-  var comp = _creCalcCompound(score, rizoVal, !isNaN(total) && total > 0 ? total : null, formulaId, _sp.cepaId, _sp.frasco);
-  var compColor = comp != null ? _creScoreColor(comp * 10) : 'var(--tx3)';
-  if (cmpEl) {
-    cmpEl.textContent = comp != null ? comp.toFixed(1) : '—';
-    cmpEl.style.color = compColor;
-  }
-  if (cmpFEl) {
-    var pctStr = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? Math.round((rizo/total)*100) + '%' : (rizoApplies ? '?%' : 'N/A');
-    var stats = _creColonizacionStats(formulaId, _sp.cepaId, _sp.frasco);
-    var _rizoRatioLive = (rizoApplies && !isNaN(total) && total > 0 && !isNaN(rizo)) ? (rizo/total) : null;
-    var _effPenaltyLive = _creEffectivePenalty(stats.penalty || 0, _rizoRatioLive);
-    var _penaltyStr = _effPenaltyLive > 0 ? ' − ' + _effPenaltyLive + ' colonizacion' : '';
-    cmpFEl.textContent = rizoApplies
-      ? (score || '?') + ' × ' + pctStr + _penaltyStr
-      : (score || '?') + ' (difuso)' + _penaltyStr;
   }
 }
 
@@ -5244,6 +5257,14 @@ function creSubmitScoringPanel(formulaId) {
   function _saveTarget(tgt) {
     var gId = tgt.geneticaId;
     if (!gId) return;
+    // Guardia contra rizo>total físicamente imposible. Choke point único: cubre tanto
+    // el target individual (ya validado en DOM antes de llegar acá) como cada target de
+    // batch (NO validado — el split proporcional por cepa, ceRizo = round(batRizo×cePlacas/aggCITotal),
+    // puede superar ceTotal de esa cepa aunque batRizo<=batTotal agregado sí pasara la
+    // validación de creSubmitScoringPanel). Bug real: CRE-0084 (rizoPozitivas:8/totalPlacas:4).
+    if (!isNaN(tgt.total) && tgt.total > 0 && !isNaN(tgt.rizo) && tgt.rizo > tgt.total) {
+      tgt.rizo = tgt.total;
+    }
     var frCtx = null;
     if (tgt.expId) {
       frCtx = allFrascos.find(function(f) { return f.expId === tgt.expId && f.frascoLabel === tgt.frascoLabel; }) || null;
@@ -5253,7 +5274,6 @@ function creSubmitScoringPanel(formulaId) {
     if (frCtx && snap) snap = Object.assign({}, snap, { nombre: snap.nombre + ' · Frasco ' + frCtx.frascoLabel });
     if (!snap) { errors++; return; }
     var gObj       = allGenetics.find(function(g) { return g.id === gId; });
-    var compScore  = _creCalcCompound(tgt.score, !isNaN(tgt.rizo) ? tgt.rizo : null, !isNaN(tgt.total) && tgt.total > 0 ? tgt.total : null, formulaId, gId, frCtx);
     var colonStats = _creColonizacionStats(formulaId, gId, frCtx);
     var args = { formulaId: formulaId, formulaSnapshot: snap, geneticaId: gId, geneticaLabel: gObj ? gObj.label : gId };
     if (tgt.expId) {
@@ -5268,10 +5288,11 @@ function creSubmitScoringPanel(formulaId) {
         tipo: 'definitiva', dia: 0, fecha: new Date().toISOString().slice(0, 10),
         // Decisión 2026-07-23: scoreObservado es SIEMPRE el score crudo que cargó el usuario,
         // sin penalización por colonización ni ajuste por incidencia — "si observé 7, es 7".
-        // scoreCompuesto queda calculado y guardado aparte, solo como referencia — ya no
-        // alimenta scoreObservado/scoreFinal/scoreFinalNorm (el target real del modelo OLS).
+        // Decisión 2026-07-23 (segunda ronda, misma sesión): se elimina también scoreCompuesto
+        // (el multiplicador ×(0.9+0.1×incidencia)) — la incidencia rizomórfica queda como dato
+        // complementario/opcional, igual que las fases, sin tocar el score en absoluto.
         scoreObservado: tgt.score,
-        calidadScore: tgt.score, scoreCompuesto: compScore,
+        calidadScore: tgt.score,
         colonizacionDias: colonStats.dias,
         colonizacionPenalty: _creEffectivePenalty(colonStats.penalty || 0, !isNaN(tgt.rizo) && !isNaN(tgt.total) && tgt.total > 0 ? tgt.rizo / tgt.total : null),
         notasMorf: '', notas: '', tipoCordon: tgt.tipo || null,
@@ -5282,7 +5303,7 @@ function creSubmitScoringPanel(formulaId) {
       if (!updated) { errors++; return; }
       if (!isNaN(tgt.total) && tgt.total > 0) _creUpdateRizoData(rec.id, !isNaN(tgt.rizo) ? tgt.rizo : null, tgt.total, '');
       saved++;
-      allTargetsForLog.push({ gId: gId, gLabel: gObj ? gObj.label : gId, score: tgt.score, rizo: tgt.rizo, total: tgt.total, tipo: tgt.tipo, compScore: compScore, isInd: tgt.isInd });
+      allTargetsForLog.push({ gId: gId, gLabel: gObj ? gObj.label : gId, score: tgt.score, rizo: tgt.rizo, total: tgt.total, tipo: tgt.tipo, isInd: tgt.isInd });
     } catch(e) { errors++; }
   }
 
@@ -5338,11 +5359,11 @@ function creSubmitScoringPanel(formulaId) {
     var indLog = allTargetsForLog.filter(function(t) { return t.isInd; });
     if (indLog.length) {
       var l = indLog[0];
-      _creLogScore(formulaId, [{ gId: l.gId, gLabel: l.gLabel }], l.score, l.compScore, l.score >= 7, l.total, l.rizo, l.tipo || null, _logFrascoCtx);
+      _creLogScore(formulaId, [{ gId: l.gId, gLabel: l.gLabel }], l.score, l.score >= 7, l.total, l.rizo, l.tipo || null, _logFrascoCtx);
     }
     var batLog = allTargetsForLog.filter(function(t) { return !t.isInd; });
     if (batLog.length) {
-      _creLogScore(formulaId, batLog.map(function(t) { return { gId: t.gId, gLabel: t.gLabel }; }), batScore, null, batScore >= 7, batTotal, batRizo, _sp.batchTipo || null, _logFrascoCtx);
+      _creLogScore(formulaId, batLog.map(function(t) { return { gId: t.gId, gLabel: t.gLabel }; }), batScore, batScore >= 7, batTotal, batRizo, _sp.batchTipo || null, _logFrascoCtx);
     }
   }
 
