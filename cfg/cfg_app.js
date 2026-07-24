@@ -59,6 +59,23 @@
     return out.sort();
   }
 
+  // Fingerprint de cambios sin guardar (2026-07-24): no criptográfico, solo
+  // para detectar si el estado actual difiere del que se subió en el último
+  // backup exitoso — dos hashes FNV-1a en paralelo + largo del string, para
+  // no depender de un solo hash de 32 bits sobre 1MB+ de texto. Se calcula
+  // sobre el mismo objeto que ghBackup() sube (ghData(), ver más abajo), así
+  // que el fingerprint representa exactamente "lo que ya está respaldado".
+  function _bkFingerprint(dataObj) {
+    const str = JSON.stringify(dataObj);
+    let h1 = 0x811c9dc5, h2 = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      h1 = (h1 ^ c) >>> 0; h1 = (h1 * 0x01000193) >>> 0;
+      h2 = (h2 ^ (c + i)) >>> 0; h2 = (h2 * 0x01000193) >>> 0;
+    }
+    return h1.toString(16) + h2.toString(16) + ':' + str.length;
+  }
+
   function bkCollectAll(opts) {
     opts = opts || {};
     const data = {};
@@ -377,15 +394,18 @@
       const ts = `FECHA_${_pad(_n.getDate())}-${_pad(_n.getMonth() + 1)}-${_n.getFullYear()}`
                + `_HORA_${_pad(_n.getHours())}-${_pad(_n.getMinutes())}-${_pad(_n.getSeconds())}`;
       const path = `backups/biolab-backup-${ts}.json`;
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(ghData(), null, 2))));
+      const dataObj = ghData();
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj, null, 2))));
       await ghApi('PUT', path, { message: `BIOLAB backup · ${ts}`, content });
       // MEJ-0020 (2026-07-24): ghPush/ghPull (sync de archivo unico mutable)
       // se eliminaron — redundantes con este backup inmutable, que ademas
-      // nunca se pisa. gh-last ahora refleja el ultimo backup/carga, no un
-      // "push" que ya no existe.
-      gc.lastSync = now(); sOb(K.gh, gc);
-      const last = document.getElementById('gh-last');
-      if (last) last.textContent = 'Último backup: ' + fDate(gc.lastSync);
+      // nunca se pisa. gh-last refleja EXCLUSIVAMENTE el último backup
+      // GUARDADO — ghLoadLatest()/ghRestore() (cargar/restaurar) no deben
+      // tocar lastSync, solo lastBackupFp (ver esas funciones).
+      gc.lastSync = now();
+      gc.lastBackupFp = _bkFingerprint(dataObj);
+      sOb(K.gh, gc);
+      ghLoadCfg();
       el.className = 'rbox wn'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
       sN('Backup guardado');
     } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
@@ -412,7 +432,14 @@
       const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
       const data = JSON.parse(decoded);
       const n = bkRestoreAll(data, { wipe: true });
-      gc.lastSync = now(); sOb(K.gh, gc);
+      // Cargar/restaurar NO es guardar un backup nuevo — lastSync (el
+      // timestamp que muestra "Último backup: ...") solo lo toca ghBackup().
+      // Bug real reportado 2026-07-24: acá se pisaba lastSync con la hora de
+      // la carga, mostrando un backup "guardado" que nunca ocurrió. Sí
+      // actualiza lastBackupFp — el estado local ahora coincide exactamente
+      // con este archivo, que ya existe en GitHub, así que no hay "cambios
+      // sin guardar" recién restaurado.
+      gc.lastBackupFp = _bkFingerprint(ghData()); sOb(K.gh, gc);
       el.className = 'rbox'; el.innerHTML = `✓ Cargado <code>${esc(latest.name)}</code> (${n} keys) — recargando...`;
       sN(`Backup más reciente cargado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
@@ -561,6 +588,11 @@
       const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
       const data = JSON.parse(decoded);
       const n = bkRestoreAll(data, { wipe: true });
+      // Mismo criterio que ghLoadLatest(): no toca lastSync (no se guardó
+      // nada), sí actualiza lastBackupFp — el estado local coincide con este
+      // backup puntual, que ya existe en GitHub.
+      const gc = gOb(K.gh, {});
+      gc.lastBackupFp = _bkFingerprint(ghData()); sOb(K.gh, gc);
       el.className = 'rbox'; el.innerHTML = `✓ Backup restaurado (${n} keys) — recargando...`;
       sN(`Backup restaurado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
@@ -577,6 +609,20 @@
     if (elF && gc.file) elF.value = gc.file;
     const ls = document.getElementById('gh-last');
     if (ls) ls.textContent = gc.lastSync ? 'Último backup: ' + fDate(gc.lastSync) : 'Sin backups todavía';
+    // Aviso de cambios sin guardar (2026-07-24, a pedido del usuario): compara
+    // el fingerprint del estado actual contra el que quedó guardado en el
+    // último backup exitoso (ghBackup()/ghLoadLatest()/ghRestore() son los 3
+    // únicos que tocan lastBackupFp). Sin token/repo configurado, o sin ningún
+    // backup todavía, no hay nada contra qué comparar — no se muestra nada.
+    const unsavedEl = document.getElementById('gh-unsaved');
+    if (unsavedEl) {
+      if (gc.token && gc.repo && gc.lastBackupFp) {
+        const currentFp = _bkFingerprint(ghData());
+        unsavedEl.style.display = (currentFp !== gc.lastBackupFp) ? 'block' : 'none';
+      } else {
+        unsavedEl.style.display = 'none';
+      }
+    }
     const hdr = document.getElementById('gh-hdr-status');
     if (hdr) hdr.innerHTML = gc.token && gc.repo
       ? `☁ GitHub: <b style="color:var(--ac)">${esc(gc.repo)}</b> · <span style="color:var(--tx3)">${gc.lastSync ? fDate(gc.lastSync) : 'sin sync'}</span>`

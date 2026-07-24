@@ -6249,13 +6249,31 @@ function _optBuildScenario(ingRows, allIngs, allMeta, scenarioId, calibCepaId) {
   // deliberada: cambiar el algoritmo de selección requiere su propio análisis),
   // solo permite marcarlo si nunca se ensayó o si ya se probó con resultado
   // negativo fuerte (coef OLS < -10, ej. Metionina/Tiamina complex).
+  //
+  // MEJ-0024 (2026-07-24): 'negativo' ahora exige además que el CI90 (bootstrap,
+  // ya calculado por buildModel()) no cruce cero — antes el umbral fijo coef<-10
+  // por sí solo podía marcar como "confirmado negativo" un ingrediente cuyo
+  // intervalo de confianza en realidad incluye 0 (ej. hoy mismo ING-0031 Creatina
+  // coef:-1.99 y ING-0029 Ácido ascórbico coef:-3.36 no llegan a -10, pero el caso
+  // general — un ingrediente con n bajo y varianza alta cuyo coef puntual sí cruce
+  // -10 con un CI90 ancho — no estaba cubierto). También se excluye explícitamente
+  // confidence:'indeterminate' (antes solo se excluía 'insuficiente') — mismo
+  // criterio que ya usa el flag bioConflict en cilab_inteligencia.js: un coef sin
+  // varianza/grupo de control real no es evidencia, aunque el valor puntual sea
+  // negativo. Nota: los coefs por-cepa (byStrain[id].coefs) no llevan ci90 —
+  // buildModel() solo corre el bootstrap sobre el modelo global (ver
+  // cilab_inteligencia.js ~línea 1238) — así que en vista por-cepa 'negativo'
+  // nunca dispara hoy; es el comportamiento correcto (no hay CI que evaluar, no
+  // hay base para la alerta fuerte), no un bug pendiente.
   const _optModel     = (window.cilabInt && typeof window.cilabInt.getModel === 'function') ? window.cilabInt.getModel() : null;
   const _optUseStrain = !!(_optModel && _optModel.byStrain && calibCepaId && _optModel.byStrain[calibCepaId] && _optModel.byStrain[calibCepaId].nRecords >= 3);
   const _optCoefs     = _optUseStrain ? (_optModel.byStrain[calibCepaId].coefs || {}) : ((_optModel && _optModel.coefs) || {});
   function _optEvidenceFor(ingId) {
     const c = _optCoefs[ingId];
     if (!c) return { level: 'sin_ensayos' };
-    if (c.confidence !== 'insuficiente' && c.coef < -10) return { level: 'negativo', coef: c.coef, n: c.n };
+    const hasRealConfidence = c.confidence !== 'insuficiente' && c.confidence !== 'indeterminate';
+    const ci90ExcludesZero  = !!(c.ci90 && typeof c.ci90.hi === 'number' && c.ci90.hi < 0);
+    if (hasRealConfidence && c.coef < -10 && ci90ExcludesZero) return { level: 'negativo', coef: c.coef, n: c.n };
     return { level: c.confidence, coef: c.coef, n: c.n };
   }
 

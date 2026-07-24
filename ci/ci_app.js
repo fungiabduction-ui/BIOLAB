@@ -675,6 +675,8 @@ function ciRenderFormulasList() {
       return `Col: ${colonFmt}`;
     })();
 
+    const diasBadge = _ciDashDiasDesdeInoculacion(segsF);
+
     const expCount = expByFormula(f.id).length;
     const notas    = (SEG.seguimientoNotas[f.id] || []);
     const lastNota = notas.length ? notas[notas.length - 1] : null;
@@ -694,6 +696,7 @@ function ciRenderFormulasList() {
           ${f.archivada ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:#FFC000;letter-spacing:1px">ARCH</span>' : ''}
         </div>
         <div class="ci-dash-tile-id">${f.id} · ${tileIdDate}</div>
+        ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
         <div class="ci-dash-metrics">
           <div class="ci-dash-metric">
             <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>
@@ -2291,6 +2294,36 @@ function _segFmtDias(inoculoTs, colonizacion) {
   const ms = Date.now() - inoDate.getTime();
   if (ms < 0) return '—';
   return 'D+' + Math.floor(ms / 86400000);
+}
+
+/**
+ * Días desde inoculación para una card de fórmula (Dashboard / Formulación),
+ * a partir de TODAS las tandas SEG de esa fórmula (puede haber varias por
+ * experimentos multi-frasco o reuso de la fórmula en tandas distintas).
+ *
+ * Regla (2026-07-24, pedido del usuario): NUNCA promediar días entre tandas
+ * — mezclar una tanda ya colonizada (sellada) con una en curso (contando en
+ * vivo) da un número que no representa ninguna de las dos realidades y que
+ * además cambia día a día por una tanda que ya terminó. En cambio, se toma
+ * la tanda con inoculoTs/inoculoFecha MÁS RECIENTE (la que refleja el estado
+ * actual real de la fórmula) y se le aplica _segFmtDias — mismo criterio de
+ * "sellado si hay colonización, contador vivo si no" que ya usa la celda D+
+ * de la tabla SEG. Devuelve null si la fórmula nunca fue inoculada (ninguna
+ * tanda con inoculoTs/inoculoFecha) — la card no debe mostrar nada en ese caso.
+ */
+function _ciDashDiasDesdeInoculacion(segsF) {
+  const conIno = segsF
+    .map(s => {
+      const d = s.inoculoFecha ? _segParseDate(s.inoculoFecha) : (s.inoculoTs ? new Date(s.inoculoTs) : null);
+      return (d && !isNaN(d)) ? { s, d } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.d - a.d);
+  if (!conIno.length) return null;
+  const { s, d } = conIno[0];
+  const inoTs = s.inoculoTs || d.toISOString();
+  const txt = _segFmtDias(inoTs, s.colonizacion);
+  return (txt && txt !== '—') ? txt : null;
 }
 
 /**
@@ -5171,6 +5204,8 @@ function ciRenderDashboard() {
       return `Col: ${colonFmt}`;
     })();
 
+    const diasBadge = _ciDashDiasDesdeInoculacion(segsF);
+
     const expCount = expByFormula(f.id).length;
     const notas = (SEG.seguimientoNotas[f.id] || []);
     const lastNota = notas.length ? notas[notas.length - 1] : null;
@@ -5189,6 +5224,7 @@ function ciRenderDashboard() {
           <span class="ci-dash-tile-ver">${esc(f.version || 'v1')}</span>
         </div>
         <div class="ci-dash-tile-id">${f.id} · ${tileIdDate2}</div>
+        ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
         <div class="ci-dash-metrics">
           <div class="ci-dash-metric">
             <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>

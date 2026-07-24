@@ -1692,6 +1692,13 @@ tr.seg-promo-row label {
   color: var(--tx3);
   margin-bottom: 10px;
 }
+.ci-dash-dias-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFC000;
+  margin: -6px 0 10px;
+}
 
 .ci-dash-metrics {
   display: flex;

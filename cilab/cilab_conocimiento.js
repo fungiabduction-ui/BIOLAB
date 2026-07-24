@@ -2461,7 +2461,13 @@ function _creFormulaCards(records, model) {
               var _dias = Math.round((_localDate(colonD) - _localDate(inocD)) / 86400000);
               if (_dias >= 0) colonDaysHTML = ' <span class="cre-fc-colon-days">🕐 ' + _dias + 'd coloniz.</span>';
             } else if (inocD && !colonD) {
-              var _diasHoy = Math.round((new Date() - _localDate(inocD)) / 86400000);
+              // Math.floor, no Math.round (bug real 2026-07-24): esto es un contador EN VIVO
+              // ("días completos transcurridos desde que se inoculó"), no una medición cerrada
+              // entre dos fechas fijas — no hay que redondear hacia arriba un día que todavía
+              // no terminó. Mismo criterio que _segFmtDias en ci_app.js (fuente de la card
+              // equivalente en CI), que ya usaba Math.floor acá — CILAB usaba Math.round y
+              // mostraba D+3 cuando CI, para la misma fecha de inoculación real, mostraba D+2.
+              var _diasHoy = Math.floor((new Date() - _localDate(inocD)) / 86400000);
               if (_diasHoy >= 0) colonDaysHTML = ' <span class="cre-fc-colon-days cre-fc-colon-days--live">🕐 D+' + _diasHoy + '</span>';
             }
           } catch (e) { /* sin dato de fechas — no mostrar nada, no romper la card */ }

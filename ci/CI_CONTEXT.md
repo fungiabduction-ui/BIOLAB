@@ -2,9 +2,8 @@
 
 **Archivo principal:** `ci/ci_app.js` (~6042 líneas, IIFE)  
 **HTML:** `ci/ci_index.html` — SPA standalone  
-**Comparador:** `ci/ci_comparador.js`  
 **Estado:** Activo — módulo operativo central (mayo 2026)  
-**Última actualización:** 2026-05-31
+**Última actualización:** 2026-07-24 (eliminado `ci_comparador.js`, ver `CLAUDE.md`)
 
 ---
 
@@ -232,7 +231,6 @@ ci_index.html
   │     │     tile: nombre · id · C/N · masa · ings · ratio sanas/total · Exp count · notas
   │     │     → click → ciDashOpenFormula → ciDashRenderDetalle
   │     └── #ci-dash-detalle-wrap (detail view colapsable)
-  │           ↳ botón 📊 Comparar fórmulas → window.ciComparador.activarModoComparacion()
   │
   ├── #ci-sub-form
   │     ├── Constructor nueva fórmula
