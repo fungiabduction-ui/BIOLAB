@@ -3537,6 +3537,7 @@
     FR.startEditObs = function(notaId) {
         var txtEl = document.getElementById('fr-log-text-' + notaId);
         if (!txtEl) return;
+        if (txtEl.querySelector('input')) return; // ya en edicion: evita blanquear el texto en un doble click
         var original = txtEl.textContent;
         // Construido como elemento real (no innerHTML con texto libre interpolado):
         // `original` puede contener comillas/backslashes de una nota real de lab,
