@@ -3957,6 +3957,15 @@ function segVerImagenNota(frmId, notaId, imgIdx) {
 }
 
 function segCargarNotas() {
+  // La migración unificada DEBE correr antes del parse de abajo: escribe ids/tipo/ts
+  // ISO directo en localStorage, pero no toca SEG.seguimientoNotas (usa su propio
+  // JSON.parse aislado). Si corriera después (como estaba antes), en la primera carga
+  // de la sesión (flag todavía no seteado) `n` se asigna a SEG.seguimientoNotas ANTES
+  // de migrar — toda la sesión queda operando sobre notas sin id (no solo las de
+  // CILAB) hasta el próximo reload real del módulo, aunque localStorage ya esté
+  // migrado. Bug encontrado en re-review tras 9452cfd (ese fix no era suficiente:
+  // atenuaba una duplicación exponencial a lineal, pero no cerraba la causa raíz).
+  _segMigrarNotasUnificadasV1();
   try {
     const n = JSON.parse(localStorage.getItem('bl2_seg_notas'));
     if (!n) return;
@@ -3992,7 +4001,6 @@ function segCargarNotas() {
     // Escribir estado migrado/limpio a localStorage inmediatamente
     try { localStorage.setItem('bl2_seg_notas', JSON.stringify(n)); } catch {}
   } catch {}
-  _segMigrarNotasUnificadasV1();
 }
 
 // ════════════════════════════════════════════
