@@ -3526,6 +3526,61 @@
         renderObs(b);
     };
 
+    FR.deleteObs = function(notaId) {
+        var b = getSelected();
+        if (!b || !Array.isArray(b.observaciones)) return;
+        b.observaciones = b.observaciones.filter(function(o) { return o.id !== notaId; });
+        saveBolsas();
+        renderObs(b);
+    };
+
+    FR.startEditObs = function(notaId) {
+        var txtEl = document.getElementById('fr-log-text-' + notaId);
+        if (!txtEl) return;
+        var original = txtEl.textContent;
+        // Construido como elemento real (no innerHTML con texto libre interpolado):
+        // `original` puede contener comillas/backslashes de una nota real de lab,
+        // que romperían un atributo onkeydown armado como string. onkeydown/onblur
+        // se asignan acá como funciones JS reales (mismo patron que segEditarNota
+        // en ci/ci_app.js), nunca embebidos en markup.
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'fr-log-edit-' + notaId;
+        input.value = original;
+        input.style.cssText = 'width:100%;background:var(--bg-tertiary);border:1px solid var(--primary);color:var(--tx);padding:3px 6px;border-radius:4px;font-size:inherit;box-sizing:border-box';
+        input.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                FR.saveEditObs(notaId);
+            } else if (e.key === 'Escape') {
+                FR.cancelEditObs(notaId, original);
+            }
+        };
+        txtEl.innerHTML = '';
+        txtEl.appendChild(input);
+        input.focus();
+        input.select();
+    };
+
+    FR.saveEditObs = function(notaId) {
+        var input = document.getElementById('fr-log-edit-' + notaId);
+        if (!input) return;
+        var nuevo = input.value.trim();
+        if (!nuevo) return;
+        var b = getSelected();
+        if (!b || !Array.isArray(b.observaciones)) return;
+        var nota = b.observaciones.find(function(o) { return o.id === notaId; });
+        if (!nota) return;
+        nota.texto = nuevo;
+        nota.editedAt = new Date().toISOString();
+        saveBolsas();
+        renderObs(b);
+    };
+
+    FR.cancelEditObs = function(notaId, original) {
+        var txtEl = document.getElementById('fr-log-text-' + notaId);
+        if (txtEl) txtEl.textContent = original;
+    };
+
     // ======================================================
     // RENOMBRE DE ID DE BOLSA FR
     // ======================================================
