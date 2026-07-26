@@ -2772,25 +2772,26 @@ window.grEliminarRegistro = grEliminarRegistro;
     // ==========================================
     
     function grRegistrarSeguimiento(tipo, mensaje, emoji) {
-        const loteActual = {
-            id: document.getElementById('loteId')?.value || 'N/A',
-            seguimiento: []
-        };
-        
         let estado = 'none';
         if (emoji === '🟡') estado = 'yellow';
         else if (emoji === '🔴') estado = 'red';
         else if (emoji === '🟢') estado = 'green';
-        
+
         const existing = GR.seguimientoNotas || [];
-        
+
         existing.push({
-            ts: grTimestamp(),
+            id: _grNotaId(),
+            ts: new Date().toISOString(),
+            tsLegacy: null,
+            tsInferred: false,
             tipo: tipo,
             texto: mensaje,
-            estado: estado
+            estado: estado,
+            auto: true,
+            editedAt: null,
+            imagenes: []
         });
-        
+
         GR.seguimientoNotas = existing;
         window.grRenderSeguimientoNotas();
     }
@@ -3272,18 +3273,22 @@ window.grRenderSeguimientoNotas = function() {
                             : e === 'yellow' ? '#FFC107'
                             : e === 'red'    ? '#C00000'
                             : '#888';
-    cont.innerHTML = notas.map((n, i) => {
+    cont.innerHTML = notas.map((n) => {
         const col = colorEstado(n.estado);
         const meta = [];
         if (typeof n.frascos === 'number' && n.frascos > 0) meta.push(`${n.frascos} ${_grUds()}`);
         if (typeof n.dias === 'number' && n.dias > 0)       meta.push(`${n.dias} días`);
         if (n.tipo) meta.push(n.tipo);
         const metaStr = meta.length ? ` · <span style="color:var(--tx2)">${meta.join(' · ')}</span>` : '';
-        const displayTs = n.fechaHora ? _grFmtFechaHora(n.fechaHora) : (n.ts || '');
-        return `<div class="gr-seg-entry" style="padding:10px 12px;margin-bottom:8px;background:var(--bg,#1D1D1D);border-left:3px solid ${col};border-radius:6px;color:var(--tx,#F5F5F5);position:relative;">
+        const displayTs = _grFmtFechaHora(n.ts) + (n.tsInferred ? ' ~' : '');
+        const idAttr = esc(n.id || '');
+        return `<div class="gr-seg-entry" id="gr-seg-entry-${idAttr}" style="padding:10px 12px;margin-bottom:8px;background:var(--bg,#1D1D1D);border-left:3px solid ${col};border-radius:6px;color:var(--tx,#F5F5F5);position:relative;">
             <div class="nota-time" style="font-size:0.78rem;color:${col};font-weight:600;margin-bottom:4px">${displayTs}${metaStr}</div>
-            <div class="nota-text" style="font-size:0.92rem;color:var(--tx,#F5F5F5)">${n.texto || ''}</div>
-            <button onclick="grEliminarSeguimientoNota(${i})" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:var(--tx2);cursor:pointer;font-size:0.9rem;padding:2px 6px;" title="Eliminar nota">✕</button>
+            <div class="nota-text" id="gr-seg-text-${idAttr}" style="font-size:0.92rem;color:var(--tx,#F5F5F5)">${esc(n.texto || '')}${n.editedAt ? ' <span style="opacity:.6">✦</span>' : ''}</div>
+            <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">
+            <button onclick="grEditarSeguimientoNota('${idAttr}')" style="background:transparent;border:none;color:var(--tx2);cursor:pointer;font-size:0.85rem;padding:2px 4px;" title="Editar">✏️</button>
+            <button onclick="grEliminarSeguimientoNota('${idAttr}')" style="background:transparent;border:none;color:var(--tx2);cursor:pointer;font-size:0.9rem;padding:2px 6px;" title="Eliminar nota">✕</button>
+            </div>
         </div>`;
     }).join('');
 };
@@ -3307,14 +3312,19 @@ window.grAddSeguimientoNota = function() {
         }
     } catch (e) {}
     if (!Array.isArray(GR.seguimientoNotas)) GR.seguimientoNotas = [];
-    var _isoNow = new Date().toISOString();
     GR.seguimientoNotas.push({
-        ts: grTimestamp(),
-        fechaHora: _isoNow,
-        texto,
-        estado,
-        frascos,
-        dias
+        id: _grNotaId(),
+        ts: new Date().toISOString(),
+        tsLegacy: null,
+        tsInferred: false,
+        tipo: null,
+        texto: texto,
+        estado: estado,
+        auto: false,
+        editedAt: null,
+        imagenes: [],
+        frascos: frascos,
+        dias: dias
     });
     input.value = '';
     if (estadoSel) estadoSel.value = 'none';
@@ -3322,12 +3332,61 @@ window.grAddSeguimientoNota = function() {
     window.grRenderSeguimientoNotas();
 };
 
-window.grEliminarSeguimientoNota = function(index) {
+window.grEliminarSeguimientoNota = function(notaId) {
     if (!Array.isArray(GR.seguimientoNotas)) return;
-    if (index >= 0 && index < GR.seguimientoNotas.length) {
-        GR.seguimientoNotas.splice(index, 1);
-        window.grRenderSeguimientoNotas();
-    }
+    GR.seguimientoNotas = GR.seguimientoNotas.filter(function(n) { return n.id !== notaId; });
+    window.grRenderSeguimientoNotas();
+};
+
+// ---------- SEGUIMIENTO (editar, patrón de closures reales — ver FR.startEditObs/fr_app.js
+// y suDbEditarSeguimientoNota/su_app.js: nunca armar el onkeydown como string HTML con el
+// texto libre de la nota interpolado adentro — un apóstrofo en la nota rompería el JS generado
+// silenciosamente, matando save-on-Enter y cancel-on-Escape a la vez) ----------
+window.grEditarSeguimientoNota = function(notaId) {
+    const txtEl = document.getElementById('gr-seg-text-' + notaId);
+    if (!txtEl) return;
+    if (txtEl.querySelector('input')) return; // ya en edición: evita blanquear el texto en un doble click
+    let original = '';
+    txtEl.childNodes.forEach(function(node) {
+        if (node.nodeType === Node.TEXT_NODE) original += node.textContent;
+    });
+    original = original.trim();
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'gr-seg-edit-' + notaId;
+    input.value = original;
+    input.style.cssText = 'width:100%;background:var(--bg-tertiary,#2A2A2A);border:1px solid var(--highlight,#4A90D9);color:var(--tx,#F5F5F5);padding:3px 6px;border-radius:4px;font-size:inherit;box-sizing:border-box';
+    input.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+            window.grGuardarEdicionSeguimientoNota(notaId);
+        } else if (e.key === 'Escape') {
+            window.grCancelarEdicionSeguimientoNota(notaId, original);
+        }
+    };
+    txtEl.innerHTML = '';
+    txtEl.appendChild(input);
+    input.focus();
+    input.select();
+};
+
+window.grGuardarEdicionSeguimientoNota = function(notaId) {
+    const input = document.getElementById('gr-seg-edit-' + notaId);
+    if (!input) return;
+    const nuevo = input.value.trim();
+    if (!nuevo) return;
+    if (!Array.isArray(GR.seguimientoNotas)) return;
+    const nota = GR.seguimientoNotas.find(function(n) { return n.id === notaId; });
+    if (!nota) return;
+    nota.texto = nuevo;
+    nota.editedAt = new Date().toISOString();
+    window.grRenderSeguimientoNotas();
+};
+
+window.grCancelarEdicionSeguimientoNota = function(notaId, original) {
+    // No se toca GR.seguimientoNotas (nunca se mutó) — solo re-renderiza desde el estado
+    // real, evitando divergencias con meta/color que un textContent directo se perdería.
+    window.grRenderSeguimientoNotas();
 };
 
 // ==========================================
@@ -3810,7 +3869,7 @@ function _grRenderTrazaPanel(analisis, grLoteId) {
         notasHtml = '<div class="gr-traza-section"><div class="gr-traza-title">NOTAS DE SEGUIMIENTO</div>' +
             lote.seguimientoNotas.map(function(n) {
                 var col = colorEstado(n.estado);
-                var ts = n.fechaHora ? _grFmtFechaHora(n.fechaHora) : (n.ts || '');
+                var ts = _grFmtFechaHora(n.ts) + (n.tsInferred ? ' ~' : '');
                 return '<div class="gr-traza-nota" style="border-left-color:' + col + '">' +
                     '<span class="gr-traza-nota-ts" style="color:' + col + '">' + ts + '</span>' +
                     '<span class="gr-traza-nota-txt">' + (n.texto || '') + '</span>' +
