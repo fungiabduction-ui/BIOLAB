@@ -124,6 +124,9 @@
             String(d.getMonth() + 1).padStart(2, '0') + '-' +
             String(d.getDate()).padStart(2, '0');
     }
+    function _frNotaId() {
+        return 'nt_fr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+    }
     function ahoraISOLocal() {
         var d = new Date();
         return d.getFullYear() + '-' +
@@ -4669,6 +4672,33 @@
         }
     }
 
+    function _frMigrarNotasUnificadasV1() {
+        var KEY_MIG = 'biolab_migracion_fr_notas_unificadas_v1';
+        try {
+            if (localStorage.getItem(KEY_MIG) === '1') return;
+            var raw = localStorage.getItem(FR_KEY);
+            if (!raw) { localStorage.setItem(KEY_MIG, '1'); return; }
+            var arr = JSON.parse(raw);
+            if (!Array.isArray(arr)) { localStorage.setItem(KEY_MIG, '1'); return; }
+            arr.forEach(function(b) {
+                if (!Array.isArray(b.observaciones)) return;
+                b.observaciones.forEach(function(o) {
+                    if (!o.id) o.id = _frNotaId();
+                    if (typeof o.auto !== 'boolean') o.auto = (o.tipo === 'auto');
+                    o.tipo = null;
+                    if (o.tsLegacy === undefined) o.tsLegacy = null;
+                    if (o.tsInferred === undefined) o.tsInferred = false;
+                    if (o.editedAt === undefined) o.editedAt = null;
+                    if (!Array.isArray(o.imagenes)) o.imagenes = [];
+                });
+            });
+            localStorage.setItem(FR_KEY, JSON.stringify(arr));
+            localStorage.setItem(KEY_MIG, '1');
+        } catch (e) {
+            console.error('[FR] Error en migración de notas unificadas:', e);
+        }
+    }
+
     function _migrarFrInoculoSourceNull() {
         var KEY_MIG = 'biolab_migracion_fr_inoculo_source_v1';
         try {
@@ -5352,6 +5382,7 @@
         FR._initialized = true;
 
         try { _migrarFrInoculoSourceNull(); } catch (e) { console.warn('[FR] migracion inoculoSource:', e); }
+        try { _frMigrarNotasUnificadasV1(); } catch (e) { console.warn('[FR] migracion notas unificadas:', e); }
         try { loadBolsas(); } catch (e) { console.warn('[FR] loadBolsas:', e); }
         try { loadExperimentos(); } catch (e) { console.warn('[FR-EX] loadExperimentos:', e); }
         try { migrarLegacySUtoFRv2(); } catch (e) { console.warn('[FR] migracion v2:', e); }
