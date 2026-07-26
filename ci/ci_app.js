@@ -3148,6 +3148,93 @@ function segEscapeHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function _ciNotaId() {
+  return 'nt_ci_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function _ciParseTsConAno(tsStr) {
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2})\s*(a\.\s?m\.|p\.\s?m\.)/i.exec(tsStr || '');
+  if (!m) return null;
+  var dd = parseInt(m[1], 10), mo = parseInt(m[2], 10), yyyy = parseInt(m[3], 10),
+      hh = parseInt(m[4], 10), mi = parseInt(m[5], 10);
+  var isPM = /p/i.test(m[6]);
+  if (isPM && hh < 12) hh += 12;
+  if (!isPM && hh === 12) hh = 0;
+  return new Date(yyyy, mo - 1, dd, hh, mi);
+}
+
+function _ciParseTsSinAno(tsStr) {
+  var m = /^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})\s*(a\.\s?m\.|p\.\s?m\.)/i.exec(tsStr || '');
+  if (!m) return null;
+  var dd = parseInt(m[1], 10), mo = parseInt(m[2], 10),
+      hh = parseInt(m[3], 10), mi = parseInt(m[4], 10);
+  var isPM = /p/i.test(m[5]);
+  if (isPM && hh < 12) hh += 12;
+  if (!isPM && hh === 12) hh = 0;
+  return { dd: dd, mo: mo, hh: hh, mi: mi };
+}
+
+function _segFmtTs(iso) {
+  if (!iso) return '';
+  try {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  } catch (e) { return String(iso); }
+}
+
+function _segMigrarNotasUnificadasV1() {
+  var MIGRACION_KEY = 'biolab_migracion_ci_notas_unificadas_v1';
+  try {
+    if (localStorage.getItem(MIGRACION_KEY) === '1') return;
+    var raw = localStorage.getItem('bl2_seg_notas');
+    if (!raw) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+    var notasPorFormula = JSON.parse(raw);
+    if (!notasPorFormula || typeof notasPorFormula !== 'object') { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+    var forms = gDB(K.forms);
+    Object.keys(notasPorFormula).forEach(function(formulaId) {
+      var arr = notasPorFormula[formulaId];
+      if (!Array.isArray(arr)) return;
+      var form = forms.find(function(f) { return f.id === formulaId; });
+      var anchor = (form && form.fecha) ? new Date(form.fecha) : new Date('2026-01-01T00:00:00.000Z');
+      arr.forEach(function(n) {
+        if (!n.id) n.id = _ciNotaId();
+        if (n._eventType !== undefined) { n.tipo = n._eventType; delete n._eventType; }
+        else if (n.tipo === undefined) n.tipo = null;
+        if (n.editedAt === undefined) n.editedAt = null;
+        if (!Array.isArray(n.imagenes)) n.imagenes = [];
+        var conAno = _ciParseTsConAno(n.ts);
+        if (conAno) {
+          n.tsLegacy = n.ts;
+          n.ts = conAno.toISOString();
+          n.tsInferred = false;
+        } else {
+          var sinAno = _ciParseTsSinAno(n.ts);
+          if (sinAno) {
+            var y = anchor.getFullYear();
+            var candidato;
+            for (var tries = 0; tries < 3; tries++) {
+              candidato = new Date(y, sinAno.mo - 1, sinAno.dd, sinAno.hh, sinAno.mi);
+              if (candidato >= anchor) break;
+              y++;
+            }
+            n.tsLegacy = n.ts;
+            n.ts = candidato.toISOString();
+            n.tsInferred = true;
+          } else if (n.tsInferred === undefined) {
+            n.tsLegacy = n.tsLegacy || null;
+            n.tsInferred = false;
+          }
+        }
+      });
+    });
+    localStorage.setItem('bl2_seg_notas', JSON.stringify(notasPorFormula));
+    localStorage.setItem(MIGRACION_KEY, '1');
+  } catch (e) {
+    console.error('[CI] Error en migración de notas unificadas:', e);
+  }
+}
+
 // ── imágenes por fila (rowId → []) ──
 function segGetRowImgs(rowId) {
   if (!SEG.rowImagenes) SEG.rowImagenes = {};
@@ -3876,6 +3963,7 @@ function segCargarNotas() {
     // Escribir estado migrado/limpio a localStorage inmediatamente
     try { localStorage.setItem('bl2_seg_notas', JSON.stringify(n)); } catch {}
   } catch {}
+  _segMigrarNotasUnificadasV1();
 }
 
 // ════════════════════════════════════════════
