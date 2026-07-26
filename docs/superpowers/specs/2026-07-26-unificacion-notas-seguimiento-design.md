@@ -1,6 +1,6 @@
 # Unificación de notas de seguimiento (CI / GR / SU / FR)
 
-**Fecha:** 2026-07-26
+**Fecha:** 2026-07-26 (revisado el mismo día: 2° escritor de CI + ts sin año descubierto durante la preparación del plan, algoritmo de reconstrucción corregido y validado; SU.reNotas — código muerto — incorporado al alcance como limpieza)
 **Estado:** aprobado, pendiente de plan de implementación
 
 ## 1. Problema
@@ -9,7 +9,7 @@ CI, GR, SU y FR tienen cada uno su propio sistema de "notas de seguimiento" (tim
 
 | Módulo | Storage | Escritores | Shape real | Direccionamiento edit/del | Fotos |
 |---|---|---|---|---|---|
-| CI | `bl2_seg_notas[formulaId]` | auto + manual | `ts`(locale), `texto`, `estado`, `auto`, `imagenes[]`, `tandaId`, `_eventType` | índice de array | sí (build completo, 0 uso real) |
+| CI | `bl2_seg_notas[formulaId]` | **3 escritores**: `segAddNotaCard` (manual, `ci_app.js`, `.push()`), `segEmitirNotaAuto` (auto, `ci_app.js`, **`.unshift()`** — inserta al principio del array), `_creWriteAutoNota` (auto, `cilab_conocimiento.js:741` — CILAB escribe directo en storage de CI, documentado en CLAUDE.md como escritor compartido de esta key) | `ts`(locale — **2 formatos distintos, ver nota abajo**), `texto`, `estado`, `auto`, `imagenes[]`, `tandaId`, `_eventType` | índice de array | sí (build completo, 0 uso real) |
 | GR | `gr_lotes[].seguimientoNotas` | 2 escritores: `grRegistrarSeguimiento` (auto) + `grAddSeguimientoNota` (manual, botón real en UI) | auto: `ts`(sin año), `tipo`, `texto`, `estado`. Manual: `ts`, `fechaHora`, `texto`, `estado`, `frascos`, `dias` — shapes distintos, sin `auto` en ninguno de los dos | índice de array | no |
 | SU | `su_lotes[].dbSeguimiento` | auto + manual | `ts`(locale), `texto`, `estado`, `auto`, `tipo`(solo auto) | índice de array | no |
 | FR | `fr_bolsas[].observaciones` | 1 escritor (`addObsTo`), agregar sí — **editar/borrar no existen en la UI** | `ts`(ISO), `tipo`('auto'\|'manual' — **mismo nombre de campo que GR/SU con otro significado**), `estado`, `dias`, `texto` | n/a | no |
@@ -29,6 +29,23 @@ Dry-run de la migración propuesta contra el backup del 25/07 — **cero ambigü
 - SU: 84 auto+tipo, 3 manual sin tipo — ya 100% consistente con el patrón esperado.
 
 Se descartó como fuera de alcance un supuesto shape "fósil" de GR (`{tipo:'inoculacion'|'contaminacion'}` sin `ts`/`texto`/`estado`) — no aparece en ningún backup real disponible. Se confirmó en cambio un hallazgo real distinto: GR tiene **dos escritores activos** con shapes divergentes (ver tabla arriba), no uno solo como se asumió al principio.
+
+**Segundo hallazgo real, en CI:** el campo `ts` de `bl2_seg_notas` tiene 2 formatos históricos, no uno:
+- **Formato B** (148/192 notas): `DD/MM/YYYY, HH:MM a. m./p. m.` — con año. Producido por `segAddNotaCard` y `segEmitirNotaAuto` (ambos en `ci_app.js`, ambos vía `segTimestamp()`, que sí incluye `year`).
+- **Formato A** (44/192 notas): `D/M HH:MM a. m./p. m.` — **sin año**. Producido exclusivamente por `_creWriteAutoNota` (`cilab_conocimiento.js:741`), cuyo `toLocaleString('es-AR', {day,month,hour,minute})` omite `year` a propósito. Todas las notas en formato A son auto-notas de CILAB (🏁/🔬/🐌/🏆 — creación de CRE, fases, score).
+
+**Descubrimiento adicional que invalida un supuesto de diseño:** el array de `bl2_seg_notas[formulaId]` **no está en orden cronológico**, ni siquiera aproximado. `segEmitirNotaAuto` inserta con `arr.unshift(newNota)` (al principio, no al final), mientras que `segAddNotaCard` y `_creWriteAutoNota` usan `.push()` (al final). El resultado real es una mezcla: un bloque de eventos auto de CI en orden de inserción inverso (más nuevo primero) seguido de un bloque de notas manuales/CILAB en orden de inserción normal. Cualquier algoritmo de reconstrucción de `ts` que asuma "posición en el array = orden cronológico" (como interpolar con la nota vecina) es inválido para CI — se probó y dio 39/44 violaciones de orden al validarlo contra datos reales.
+
+**Algoritmo correcto para el `ts` sin año de CI (validado):** igual principio que GR — anclar a una fecha real del contexto padre, **no** al momento de la migración y **no** encadenado entre notas (cada nota se resuelve de forma independiente, sin depender de sus vecinas en el array). El ancla es `bl2_forms[formulaId].fecha` (fecha de creación de la fórmula — siempre presente, siempre anterior a cualquier nota real sobre ella):
+```
+para cada nota con ts formato "D/M HH:MM a. m./p. m." (sin año) de la fórmula F:
+  anchor = bl2_forms[F].fecha  (ISO, fallback a una fecha fija segura si F no resuelve)
+  Y = year(anchor)
+  candidato = Date(Y, MM, DD, HH, MM)  (con HH ya normalizada a 24h desde el sufijo a.m./p.m.)
+  mientras candidato < anchor: Y += 1; recalcular candidato
+  ts = candidato.toISOString(); tsLegacy = "<original>"; tsInferred = true
+```
+Validado contra las 44 notas reales de formato A: **44/44 resuelven sin ambigüedad a 2026**, cero conflicto. Formato B (con año) se parsea directo, con el mismo parser consciente de `a. m./p. m.` (ambos formatos usan 12h con sufijo en español, no 24h).
 
 ## 3. Shape unificado
 
@@ -71,7 +88,11 @@ Patrón: un módulo, una migración one-shot con su propio flag (`biolab_migraci
 `tipo:'auto'|'manual'` → `auto:true|false`. Se descarta el `tipo` viejo (dato ya trasladado 1:1, no se pierde nada). `ts` ya es ISO real — no toca `tsLegacy`/`tsInferred`. `id` nuevo generado para las 344 notas existentes.
 
 ### CI
-`_eventType` → rename directo a `tipo` (solo en notas donde existe, i.e. notas auto). `auto` ya existe. `ts` ya es locale string sin año-ausente pero SÍ con año (formato `DD/MM/YYYY, HH:MM` vía `toLocaleString`) — se parsea a ISO real sin ambigüedad, se guarda igual el string original en `tsLegacy` por las dudas de un parseo con locale distinto al esperado. `id` nuevo generado, reemplaza el direccionamiento por índice actual en `segEditarNota`/`segEliminarSeguimientoNota`/`segPersistirNotas` (este último ya hace merge por clave `ts+texto` o `_eventType+tandaId` — pasa a mergear por `id`, más simple y más seguro).
+`_eventType` → rename directo a `tipo` (solo en notas donde existe, i.e. notas auto). `auto` ya existe.
+
+`ts` tiene 2 formatos reales (ver §2): formato B (con año, 148/192) se parsea directo con un parser propio consciente de `a. m./p. m.` (12h con sufijo en español — `Date.parse`/`new Date(string)` NO parsea este formato de forma confiable entre engines, hay que hand-parsear con regex). Formato A (sin año, 44/192, exclusivo de `_creWriteAutoNota` en `cilab_conocimiento.js`) se reconstruye anclando a `bl2_forms[formulaId].fecha`, **de forma independiente por nota, sin encadenar con la nota anterior en el array** — el array de `bl2_seg_notas[formulaId]` no está en orden cronológico (`segEmitirNotaAuto` usa `.unshift()`, los otros 2 escritores usan `.push()`, se mezclan sub-bloques con orden interno distinto). En ambos casos se preserva `tsLegacy` con el string original.
+
+`id` nuevo generado, reemplaza el direccionamiento por índice actual en `segEditarNota`/`segEliminarSeguimientoNota`/`segVerImagenNota`/`segEliminarImagenNota`/`_segRefreshDrawersPorFormula`/`segPersistirNotas` (este último ya hace merge por clave `ts+texto` o `_eventType+tandaId` — pasa a mergear por `id`, más simple y más seguro, y deja de depender de que `ts+texto` sea único).
 
 ### SU
 Ya tiene `auto`/`tipo` consistentes — solo se agrega `id` nuevo. `ts` (locale con año, `toLocaleString('es-ES', ...)`) se parsea a ISO igual que CI, con el mismo resguardo `tsLegacy`.
@@ -112,6 +133,8 @@ FR y SU primero (migraciones más simples, sin reconstrucción de fecha), despu�
 - **CI**: ya tiene agregar/editar/borrar completos. Solo migra el shape interno y pasa de índice a `id` en `segEditarNota`, `segGuardarEdicionNota`, `segEliminarSeguimientoNota`, `_segRefreshDrawersPorFormula`.
 - **GR**: tiene agregar (x2 escritores) y borrar (`grEliminarSeguimientoNota`). **Falta editar** — se agrega inline, mismo patrón visual que ya usa CI (click en texto → `<input>` → guardar/cancelar).
 - **SU**: mismo gap que GR — tiene agregar/borrar, falta editar. Mismo patrón.
+
+**Hallazgo adicional en SU, incorporado al alcance:** existe un tercer sistema de notas, `SU.reNotas` (`su_app.js:171`, funciones `suAddReNota`/`suReRenderNotas`/`suReTimestamp`, persistido en `su_lotes[].reNotas`), completamente separado de `dbSeguimiento`. Confirmado código muerto: 0 registros reales en producción, y el HTML no tiene ninguno de los elementos que su JS busca (`#suReNotas`, `#suReNotaInput`, `#suReEstado` no existen en `su_index.html`) — no hay forma de dispararlo desde la UI. Se elimina como parte de este plan (mismo criterio ya aplicado en el proyecto con `ci_comparador.js`: código muerto confirmado, sin callers reales, se borra limpio en vez de dejarlo pudrirse).
 - **FR**: solo tiene agregar (`FR.addObs`). **Faltan editar Y borrar** — hoy `renderObs` es de solo lectura. Se agregan ambos botones sobre `fr-log-row`, mismo patrón visual que CI/GR/SU.
 
 No se propone unificar el *layout visual* (CI usa cards agrupadas por tanda, GR/SU/FR son listas planas por lote/bolsa) — eso es scope de UI que nadie pidió tocar. Se unifican los *campos* y las *3 acciones* (agregar/editar/borrar), no la arquitectura de agrupación de cada módulo.
