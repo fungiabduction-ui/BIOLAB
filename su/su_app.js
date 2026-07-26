@@ -147,6 +147,7 @@ window.SU.init = function suInit() {
     window.SU._initialized = true;
 
     try { cargarBibliotecaDesdeStorage(); } catch (e) { console.warn('SU.init cargarBiblioteca:', e); }
+    try { _suMigrarNotasUnificadasV1(); }  catch (e) { console.warn('SU.init migracion notas:', e); }
     try { cargarLotesDesdeStorage(); }     catch (e) { console.warn('SU.init cargarLotes:', e); }
     try { inicializarEventos(); }          catch (e) { console.warn('SU.init eventos:', e); }
     try { establecerFechaActual(); }       catch (e) { console.warn('SU.init fecha:', e); }
@@ -2451,6 +2452,60 @@ function suDbTimestamp() {
         day: '2-digit', month: '2-digit', year: '2-digit',
         hour: '2-digit', minute: '2-digit'
     });
+}
+
+function _suNotaId() {
+    return 'nt_su_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function suDbFmtTs(iso) {
+    if (!iso) return '';
+    try {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso);
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var hh = String(d.getHours()).padStart(2, '0');
+        var mi = String(d.getMinutes()).padStart(2, '0');
+        return dd + '/' + mm + '/' + d.getFullYear() + ' ' + hh + ':' + mi;
+    } catch (e) { return String(iso); }
+}
+
+function _suMigrarNotasUnificadasV1() {
+    var MIGRACION_KEY = 'biolab_migracion_su_notas_unificadas_v1';
+    try {
+        if (localStorage.getItem(MIGRACION_KEY) === '1') return;
+        var raw = localStorage.getItem(SU_STORAGE_KEY);
+        if (!raw) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+        var lotes = JSON.parse(raw);
+        if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+        lotes.forEach(function(lote) {
+            if (!Array.isArray(lote.dbSeguimiento)) return;
+            lote.dbSeguimiento.forEach(function(n) {
+                if (!n.id) n.id = _suNotaId();
+                if (typeof n.auto !== 'boolean') n.auto = false;
+                if (n.tipo === undefined) n.tipo = null;
+                if (n.editedAt === undefined) n.editedAt = null;
+                if (!Array.isArray(n.imagenes)) n.imagenes = [];
+                var m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}),\s*(\d{1,2}):(\d{2})$/.exec(n.ts || '');
+                if (m) {
+                    var dd = parseInt(m[1], 10), mo = parseInt(m[2], 10), yy = parseInt(m[3], 10),
+                        hh = parseInt(m[4], 10), mi = parseInt(m[5], 10);
+                    var resolved = new Date(2000 + yy, mo - 1, dd, hh, mi);
+                    n.tsLegacy = n.ts;
+                    n.ts = resolved.toISOString();
+                    n.tsInferred = false;
+                } else if (n.tsInferred === undefined) {
+                    n.tsLegacy = n.tsLegacy || null;
+                    n.tsInferred = false;
+                }
+            });
+        });
+        localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotes));
+        localStorage.setItem(MIGRACION_KEY, '1');
+    } catch (e) {
+        console.error('[SU] Error en migración de notas unificadas:', e);
+    }
 }
 
 function suDbEscapeHtml(s) {
