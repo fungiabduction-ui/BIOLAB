@@ -420,11 +420,17 @@
             dias = diasEntre(b.fechaInicio, hoyISO());
         }
         b.observaciones.push({
+            id: _frNotaId(),
             ts: new Date().toISOString(),
-            tipo: tipo === 'auto' ? 'auto' : 'manual',
+            tsLegacy: null,
+            tsInferred: false,
+            texto: t,
             estado: est,
+            auto: tipo === 'auto',
+            tipo: null,
             dias: dias,
-            texto: t
+            editedAt: null,
+            imagenes: []
         });
     }
 
@@ -2564,15 +2570,23 @@
         }
         var ICONO_EST = { green: 'G', yellow: 'Y', red: 'R', none: '' };
         var html = obs.slice().reverse().map(function(o) {
-            var tipoCls = o.tipo === 'auto' ? 'fr-log-auto' : 'fr-log-manual';
+            var isAuto = (typeof o.auto === 'boolean') ? o.auto : (o.tipo === 'auto');
+            var tipoCls = isAuto ? 'fr-log-auto' : 'fr-log-manual';
             var estado = ESTADOS_OBS[o.estado] ? o.estado : 'none';
             var estCls = 'fr-log-estado-' + estado;
             var ico = ICONO_EST[estado] || '';
             var diasTxt = (o.dias != null) ? ('dia ' + o.dias) : '';
-            return '<div class="fr-log-row ' + tipoCls + ' ' + estCls + '">'
-                + '<span class="fr-log-ts">' + fmtFecha(o.ts) + (diasTxt ? ' · ' + diasTxt : '') + '</span>'
-                + '<span class="fr-log-tag">' + (ico ? ico + ' ' : '') + (o.tipo === 'auto' ? 'auto' : 'nota') + '</span>'
-                + '<span class="fr-log-text">' + esc(o.texto) + '</span>'
+            var idAttr = esc(o.id || '');
+            var accionesHtml = (!o.id) ? '' :
+                '<span class="fr-log-actions">'
+                + '<button type="button" class="fr-log-btn-edit" onclick="FR.startEditObs(\'' + idAttr + '\')" title="Editar">✏️</button>'
+                + '<button type="button" class="fr-log-btn-del" onclick="FR.deleteObs(\'' + idAttr + '\')" title="Eliminar">✕</button>'
+                + '</span>';
+            return '<div class="fr-log-row ' + tipoCls + ' ' + estCls + '" id="fr-log-row-' + idAttr + '">'
+                + '<span class="fr-log-ts">' + fmtFecha(o.ts) + (diasTxt ? ' · ' + diasTxt : '') + (o.editedAt ? ' ✦' : '') + '</span>'
+                + '<span class="fr-log-tag">' + (ico ? ico + ' ' : '') + (isAuto ? 'auto' : 'nota') + '</span>'
+                + '<span class="fr-log-text" id="fr-log-text-' + idAttr + '">' + esc(o.texto) + '</span>'
+                + accionesHtml
                 + '</div>';
         }).join('');
         log.innerHTML = html;

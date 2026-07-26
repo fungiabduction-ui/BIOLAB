@@ -949,13 +949,31 @@ body {
 }
 .fr-log-row {
     display: grid;
-    grid-template-columns: 110px 70px 1fr;
+    grid-template-columns: 110px 70px 1fr auto;
     gap: 10px;
     align-items: baseline;
     padding: 8px 10px;
     background: var(--dark-secondary);
     border: 1px solid var(--border);
     border-radius: 6px;
+}
+.fr-log-actions {
+    display: flex;
+    gap: 4px;
+}
+.fr-log-btn-edit,
+.fr-log-btn-del {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    opacity: 0.6;
+}
+.fr-log-btn-edit:hover,
+.fr-log-btn-del:hover {
+    opacity: 1;
 }
 .fr-log-row.fr-log-auto {
     border-left: 3px solid var(--fr-main-soft);
