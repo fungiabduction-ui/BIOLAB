@@ -3220,6 +3220,11 @@ function grTimestamp() {
     return fecha + ' ' + hora;
 }
 
+function _grNotaId() {
+    return 'nt_gr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+}
+var GR_EVENT_TIPOS = { inoculacion: true, contaminacion: true, colonizacion: true, 'frascos-gr': true };
+
 function grRenderNotas() {
     const cont = document.getElementById('grProtoNotas');
     if (!cont) return;
@@ -3367,6 +3372,59 @@ window.grEliminarSeguimientoNota = function(index) {
             localStorage.setItem(MIGRACION_INOCULO_KEY, '1');
         } catch(e) {
             console.error('[GR] Error en migración inoculoSource:', e);
+        }
+    }
+
+    function _grMigrarNotasUnificadasV1() {
+        var MIGRACION_KEY = 'biolab_migracion_gr_notas_unificadas_v1';
+        try {
+            if (localStorage.getItem(MIGRACION_KEY) === '1') return;
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+            var lotes = JSON.parse(raw);
+            if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+            lotes.forEach(function(lote) {
+                if (!Array.isArray(lote.seguimientoNotas)) return;
+                var anchor = lote.fecha ? new Date(lote.fecha + 'T00:00:00') : null;
+                lote.seguimientoNotas.forEach(function(n) {
+                    if (!n.id) n.id = _grNotaId();
+                    if (typeof n.auto !== 'boolean') {
+                        var hasEventTipo = n.tipo && GR_EVENT_TIPOS[n.tipo];
+                        var hasManualFields = ('fechaHora' in n) || ('frascos' in n) || ('dias' in n);
+                        n.auto = !!hasEventTipo && !hasManualFields;
+                    }
+                    if (n.tipo === undefined) n.tipo = null;
+                    if (n.editedAt === undefined) n.editedAt = null;
+                    if (!Array.isArray(n.imagenes)) n.imagenes = [];
+                    if (n.fechaHora) {
+                        n.tsLegacy = n.ts;
+                        n.ts = n.fechaHora;
+                        n.tsInferred = false;
+                    } else {
+                        var m = /^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/.exec(n.ts || '');
+                        if (m && anchor) {
+                            var dd = parseInt(m[1], 10), mo = parseInt(m[2], 10), hh = parseInt(m[3], 10), mi = parseInt(m[4], 10);
+                            var y = anchor.getFullYear();
+                            var candidato;
+                            for (var tries = 0; tries < 3; tries++) {
+                                candidato = new Date(y, mo - 1, dd, hh, mi);
+                                if (candidato >= anchor) break;
+                                y++;
+                            }
+                            n.tsLegacy = n.ts;
+                            n.ts = candidato.toISOString();
+                            n.tsInferred = true;
+                        } else if (n.tsInferred === undefined) {
+                            n.tsLegacy = n.tsLegacy || null;
+                            n.tsInferred = false;
+                        }
+                    }
+                });
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(lotes));
+            localStorage.setItem(MIGRACION_KEY, '1');
+        } catch (e) {
+            console.error('[GR] Error en migración de notas unificadas:', e);
         }
     }
 
@@ -3883,6 +3941,7 @@ function grInit() {
         } catch(e) { console.warn('[GR] migración BIBLIOTECA_KEY:', e); }
     })();
     _migrarInoculoSourceNull();
+    _grMigrarNotasUnificadasV1();
     // Pre-hidratar biblioteca antes de cualquier handler DOM.
     // Esto garantiza que GR.biblioteca esté disponible aunque
     // cualquier otro código dispare accesos tempranos.
