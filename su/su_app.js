@@ -2460,6 +2460,7 @@ function _suNotaId() {
 
 function suDbFmtTs(iso) {
     if (!iso) return '';
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(iso)) return String(iso);
     try {
         var d = new Date(iso);
         if (isNaN(d.getTime())) return String(iso);
