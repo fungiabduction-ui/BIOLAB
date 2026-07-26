@@ -3860,6 +3860,17 @@ function segEliminarSeguimientoNota(notaId, frmId) {
  *   Chrome (Playwright) al implementar direccionamiento por id — el delete nunca
  *   persistía. Excluir explícitamente el id recién borrado del lado "solo en storage"
  *   resuelve el conflicto entre las dos semánticas (preservar ajeno vs. respetar borrado propio).
+ *
+ * Backfill de id en notas externas sin id: `_creWriteAutoNota` (cilab_conocimiento.js,
+ * uno de los 3 escritores reales de bl2_seg_notas fuera de CI) escribe notas SIN campo
+ * `id` — el chequeo `!n.id` original las clasificaba como "solo en storage" SIEMPRE,
+ * incondicionalmente, incluso cuando ya estaban también en memArr (por referencia, tras
+ * segCargarNotas). Eso duplicaba esa nota en cada llamada (1→2→4→8...) y la dejaba
+ * inaccesible en la UI (`esc(nota.id)` con id undefined colapsa a '', DOM id/handlers
+ * de todas esas notas colisionan). Fix: asignarle un id real ACÁ (no solo en
+ * segCargarNotas al cargar el módulo) — una nota externa puede escribirse en storage
+ * mientras el tab de CI ya está abierto, a mitad de sesión; un fix solo en load-time no
+ * cubriría ese interleaving.
  */
 function segPersistirNotas(deletedId) {
   try {
@@ -3870,8 +3881,9 @@ function segPersistirNotas(deletedId) {
       const memArr  = SEG.seguimientoNotas[fId] || [];
       const memIds = new Set(memArr.map(function(n) { return n.id; }).filter(Boolean));
       const soloEnStorage = storArr.filter(function(n) {
+        if (!n.id) n.id = _ciNotaId();
         if (deletedId && n.id === deletedId) return false;
-        return !n.id || !memIds.has(n.id);
+        return !memIds.has(n.id);
       });
       merged[fId] = soloEnStorage.concat(memArr);
     });
