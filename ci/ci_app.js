@@ -2625,12 +2625,17 @@ function segEmitirNotaAuto(frmId, estado, texto, tandaId = null) {
   const tId = tandaId || null;
   const arr = SEG.seguimientoNotas[frmId];
   // Reemplazar nota existente del mismo tipo+tanda en lugar de acumular
-  const existingIdx = arr.findIndex(n => n.auto && n._eventType === eventType && n.tandaId === tId);
+  const existingIdx = arr.findIndex(n => n.auto && n.tipo === eventType && n.tandaId === tId);
   const newNota = {
-    ts: segTimestamp(), texto, estado, auto: true,
+    id: existingIdx >= 0 ? arr[existingIdx].id : _ciNotaId(),
+    ts: new Date().toISOString(),
+    tsLegacy: null,
+    tsInferred: false,
+    texto, estado, auto: true,
+    tipo: eventType,
+    editedAt: null,
     imagenes: existingIdx >= 0 ? (arr[existingIdx].imagenes || []) : [],
     tandaId: tId,
-    _eventType: eventType,
   };
   if (existingIdx >= 0) arr.splice(existingIdx, 1);
   arr.unshift(newNota);
@@ -3000,9 +3005,7 @@ function _segRenderDrawerContent(container, frmId, rowId, tandaId) {
 
   // Filtrar notas de esta tanda (backward compat: _segResolveTandaId maneja legacy)
   const resolvedTarget = tandaId || '__general__';
-  const notasDeTanda = allNotas
-    .map((n, i) => ({ ...n, globalIdx: i }))
-    .filter(n => _segResolveTandaId(n) === resolvedTarget);
+  const notasDeTanda = allNotas.filter(n => _segResolveTandaId(n) === resolvedTarget);
 
   // Determinar si es sección de experimento por el tbody padre
   const tbody = container.closest('tbody');
@@ -3014,7 +3017,7 @@ function _segRenderDrawerContent(container, frmId, rowId, tandaId) {
 
   // ── Timeline de notas compacta ────────────────────────────────────────
   const timelineHtml = notasDeTanda.length
-    ? notasDeTanda.map(n => _segRenderNotaTimeline(n, n.globalIdx, frmId, false)).join('')
+    ? notasDeTanda.map(n => _segRenderNotaTimeline(n, frmId, false)).join('')
     : '<div class="seg-drawer-empty">Sin notas para esta tanda todavía.</div>';
 
   // ── Foto count para el botón del drawer ─────────────────────────────
@@ -3093,10 +3096,15 @@ function segAddNotaDrawer(frmId, tandaId, safeRowId) {
   if (!SEG.seguimientoNotas[frmId]) SEG.seguimientoNotas[frmId] = [];
 
   SEG.seguimientoNotas[frmId].push({
-    ts:      segTimestamp(),
+    id: _ciNotaId(),
+    ts:      new Date().toISOString(),
+    tsLegacy: null,
+    tsInferred: false,
     texto,
     estado,
     auto:    false,
+    tipo: null,
+    editedAt: null,
     imagenes: [],
     tandaId: tandaId === '__general__' ? null : tandaId,
   });
@@ -3120,14 +3128,12 @@ function segAddNotaDrawer(frmId, tandaId, safeRowId) {
     // Recuperar tandaId real desde el input safeRowId no es necesario — lo tenemos
     const allNotas = SEG.seguimientoNotas[frmId] || [];
     const resolvedTarget = tandaId || '__general__';
-    const notasDeTanda = allNotas
-      .map((n, i) => ({ ...n, globalIdx: i }))
-      .filter(n => _segResolveTandaId(n) === resolvedTarget);
+    const notasDeTanda = allNotas.filter(n => _segResolveTandaId(n) === resolvedTarget);
 
     const timelineEl = document.getElementById('seg-dw-timeline-' + safeRowId);
     if (timelineEl) {
       timelineEl.innerHTML = notasDeTanda.length
-        ? notasDeTanda.map(n => _segRenderNotaTimeline(n, n.globalIdx, frmId, false)).join('')
+        ? notasDeTanda.map(n => _segRenderNotaTimeline(n, frmId, false)).join('')
         : '<div class="seg-drawer-empty">Sin notas para esta tanda todavía</div>';
     }
     // Actualizar contador en header del drawer
@@ -3413,8 +3419,7 @@ function segAddSeguimientoNota(frmId) {
 /**
  * Renderiza el panel de seguimiento CI con una card interactiva por cada Nodo/Tanda.
  * Agrupa notas por tandaId (campo directo en notas nuevas, o regex en notas legacy).
- * Preserva el índice global en el array plano para que segEditarNota /
- * segEliminarSeguimientoNota / segVerImagenNota sigan funcionando sin cambios.
+ * Direccionamiento por nota.id (estable) — no por posición en el array plano.
  */
 function segRenderSeguimientoNotas(frmId) {
   const cont = document.getElementById('segSeguimientoNotas-' + frmId);
@@ -3425,7 +3430,7 @@ function segRenderSeguimientoNotas(frmId) {
   // ── Obtener tandas activas desde bl2_seg ────────────────────────────────
   const tandasStorage = gDB(K.seg).filter(s => s.formula_id === frmId);
 
-  // ── Construir mapa: tandaId → { notas: [{nota, globalIdx}], storageRow } ─
+  // ── Construir mapa: tandaId → { notas: [nota], storageRow } ─
   const grupos = new Map();
 
   // Registrar todas las tandas del storage (incluso sin notas = queremos card para ellas)
@@ -3436,10 +3441,10 @@ function segRenderSeguimientoNotas(frmId) {
   });
 
   // Distribuir notas en sus grupos
-  notas.forEach((nota, globalIdx) => {
+  notas.forEach((nota) => {
     const tid = _segResolveTandaId(nota);
     if (!grupos.has(tid)) grupos.set(tid, { notas: [], storageRow: null });
-    grupos.get(tid).notas.push({ nota, globalIdx });
+    grupos.get(tid).notas.push(nota);
   });
 
   if (grupos.size === 0) {
@@ -3516,7 +3521,7 @@ function _segRenderTandaCard(frmId, tandaId, notasGrupo, storageRow, isEdit) {
   })();
 
   // ── Color de borde según peor estado y contexto ───────────────────────
-  const worstEstado = notasGrupo.reduce((acc, { nota }) => {
+  const worstEstado = notasGrupo.reduce((acc, nota) => {
     if (nota.estado === 'red')                              return 'red';
     if (nota.estado === 'yellow' && acc !== 'red')          return 'yellow';
     if (nota.estado === 'green'  && acc === 'none')         return 'green';
@@ -3552,8 +3557,8 @@ function _segRenderTandaCard(frmId, tandaId, notasGrupo, storageRow, isEdit) {
 
   // ── Timeline de notas ─────────────────────────────────────────────────
   const timelineHtml = notasGrupo.length
-    ? notasGrupo.map(({ nota, globalIdx }) =>
-        _segRenderNotaTimeline(nota, globalIdx, frmId, isEdit)
+    ? notasGrupo.map((nota) =>
+        _segRenderNotaTimeline(nota, frmId, isEdit)
       ).join('')
     : '<div class="seg-tc-no-notas">Sin notas registradas — usá el formulario para agregar una.</div>';
 
@@ -3588,9 +3593,9 @@ function _segRenderTandaCard(frmId, tandaId, notasGrupo, storageRow, isEdit) {
 
 /**
  * Genera una entrada de timeline para una nota individual.
- * Preserva el globalIdx del array plano para edición/eliminación.
+ * Direccionamiento por nota.id (estable) — no por índice del array plano.
  */
-function _segRenderNotaTimeline(nota, globalIdx, frmId, isEdit) {
+function _segRenderNotaTimeline(nota, frmId, isEdit) {
   const estadoMap = {
     green:  { dot: '#70AD47', emoji: '🟢', cls: 'estado-green'  },
     yellow: { dot: '#FFC000', emoji: '🟡', cls: 'estado-yellow' },
@@ -3601,29 +3606,30 @@ function _segRenderNotaTimeline(nota, globalIdx, frmId, isEdit) {
   const autoTag = nota.auto
     ? '<span class="seg-nota-auto-tag">AUTO</span>'
     : '<span class="seg-nota-manual-tag">MANUAL</span>';
+  const nId = esc(nota.id);
 
   const imgs_clean = (nota.imagenes || []).filter(Boolean);
   const imagenesHtml = imgs_clean.length
     ? `<div class="seg-nota-imgs">${imgs_clean.map((img, ii) =>
         `<div class="seg-nota-img-wrap">
-          <img src="${img.data}" alt="" onclick="segVerImagenNota('${esc(frmId)}',${globalIdx},${ii})">
-          ${isEdit ? `<button class="seg-nota-img-del" onclick="segEliminarImagenNota('${esc(frmId)}',${globalIdx},${ii})">✕</button>` : ''}
+          <img src="${img.data}" alt="" onclick="segVerImagenNota('${esc(frmId)}','${nId}',${ii})">
+          ${isEdit ? `<button class="seg-nota-img-del" onclick="segEliminarImagenNota('${esc(frmId)}','${nId}',${ii})">✕</button>` : ''}
         </div>`).join('')}</div>`
     : '';
 
   const accionesHtml = isEdit
     ? `<div class="seg-nota-acciones">
-        <button class="seg-nota-btn-edit" onclick="segEditarNota(${globalIdx},'${esc(frmId)}')" title="Editar">✏️</button>
-        <button class="seg-nota-btn-del"  onclick="segEliminarSeguimientoNota(${globalIdx},'${esc(frmId)}')" title="Eliminar">✕</button>
+        <button class="seg-nota-btn-edit" onclick="segEditarNota('${nId}','${esc(frmId)}')" title="Editar">✏️</button>
+        <button class="seg-nota-btn-del"  onclick="segEliminarSeguimientoNota('${nId}','${esc(frmId)}')" title="Eliminar">✕</button>
        </div>`
-    : `<button class="seg-nota-btn-del solo" onclick="segEliminarSeguimientoNota(${globalIdx},'${esc(frmId)}')" title="Eliminar">✕</button>`;
+    : `<button class="seg-nota-btn-del solo" onclick="segEliminarSeguimientoNota('${nId}','${esc(frmId)}')" title="Eliminar">✕</button>`;
 
   return `
 <div class="seg-nota-item ${est.cls}">
   <div class="seg-nota-dot" style="background:${est.dot}"></div>
   <div class="seg-nota-content">
-    <div class="seg-nota-meta">${segEscapeHtml(nota.ts)} · ${est.emoji} ${autoTag}</div>
-    <div class="seg-nota-txt" id="seg-nota-texto-${globalIdx}">${segEscapeHtml(nota.texto)}</div>
+    <div class="seg-nota-meta">${segEscapeHtml(_segFmtTs(nota.ts))}${nota.tsInferred ? ' ~' : ''} · ${est.emoji} ${autoTag}</div>
+    <div class="seg-nota-txt" id="seg-nota-texto-${nId}">${segEscapeHtml(nota.texto)}</div>
     ${imagenesHtml}
   </div>
   ${accionesHtml}
@@ -3704,10 +3710,15 @@ function segAddNotaCard(frmId, tandaId) {
   const imagenes = (SEG.imagenesTemp[tcKey] || []).filter(Boolean);
 
   SEG.seguimientoNotas[frmId].push({
-    ts:      segTimestamp(),
+    id: _ciNotaId(),
+    ts:      new Date().toISOString(),
+    tsLegacy: null,
+    tsInferred: false,
     texto,
     estado:  estadoSel ? estadoSel.value : 'none',
     auto:    false,
+    tipo: null,
+    editedAt: null,
     imagenes,
     tandaId: tandaId === '__general__' ? null : tandaId,
   });
@@ -3769,21 +3780,24 @@ function segTC_quitarImg(frmId, tandaId, idx, el) {
   if (el && el.parentNode) el.parentNode.removeChild(el);
 }
 
-function segEditarNota(index, frmId) {
-  const notaEl = document.getElementById('seg-nota-texto-' + index); if (!notaEl) return;
+function segEditarNota(notaId, frmId) {
+  const notaEl = document.getElementById('seg-nota-texto-' + notaId); if (!notaEl) return;
   const currentText = notaEl.textContent || '';
   const input = document.createElement('input');
   input.type = 'text'; input.value = currentText;
   input.style.cssText = 'width:100%;background:var(--bg-tertiary);border:1px solid #00CC33;color:var(--tx);padding:6px 10px;border-radius:6px;font-size:.92rem;box-sizing:border-box';
-  input.onblur = () => segGuardarEdicionNota(index, frmId, input.value);
-  input.onkeypress = e => { if (e.key === 'Enter') segGuardarEdicionNota(index, frmId, input.value); };
+  input.onblur = () => segGuardarEdicionNota(notaId, frmId, input.value);
+  input.onkeypress = e => { if (e.key === 'Enter') segGuardarEdicionNota(notaId, frmId, input.value); };
   notaEl.innerHTML = ''; notaEl.appendChild(input); input.focus();
 }
 
-function segGuardarEdicionNota(index, frmId, newText) {
-  if (!SEG.seguimientoNotas?.[frmId]?.[index]) return;
-  SEG.seguimientoNotas[frmId][index].texto = newText.trim();
-  SEG.seguimientoNotas[frmId][index].ts += ' (editado)';
+function segGuardarEdicionNota(notaId, frmId, newText) {
+  const notas = SEG.seguimientoNotas?.[frmId];
+  if (!notas) return;
+  const nota = notas.find(n => n.id === notaId);
+  if (!nota) return;
+  nota.texto = newText.trim();
+  nota.editedAt = new Date().toISOString();
   segRenderSeguimientoNotas(frmId);
   segPersistirNotas();
 }
@@ -3806,14 +3820,12 @@ function _segRefreshDrawersPorFormula(frmId) {
     const tandaId     = dataTr?.querySelector('.seg-tanda')?.value?.trim() || '';
     const target      = tandaId || '__general__';
 
-    const notasDeTanda = allNotas
-      .map(function(n, i) { return Object.assign({}, n, { globalIdx: i }); })
-      .filter(function(n) { return _segResolveTandaId(n) === target; });
+    const notasDeTanda = allNotas.filter(function(n) { return _segResolveTandaId(n) === target; });
 
     const timelineEl = document.getElementById('seg-dw-timeline-' + safeRowId);
     if (timelineEl) {
       timelineEl.innerHTML = notasDeTanda.length
-        ? notasDeTanda.map(function(n) { return _segRenderNotaTimeline(n, n.globalIdx, frmId, false); }).join('')
+        ? notasDeTanda.map(function(n) { return _segRenderNotaTimeline(n, frmId, false); }).join('')
         : '<div class="seg-drawer-empty">Sin notas para esta tanda todavía.</div>';
     }
     const countEl = container.querySelector('.seg-drawer-nota-count');
@@ -3821,42 +3833,45 @@ function _segRefreshDrawersPorFormula(frmId) {
   });
 }
 
-function segEliminarSeguimientoNota(index, frmId) {
-  if (SEG.seguimientoNotas?.[frmId]?.length > index) {
-    SEG.seguimientoNotas[frmId].splice(index, 1);
-    _segRefreshDrawersPorFormula(frmId);   // refresca drawers abiertos
-    segRenderSeguimientoNotas(frmId);      // refresca panel de cards
-    segPersistirNotas();
-  }
+function segEliminarSeguimientoNota(notaId, frmId) {
+  const notas = SEG.seguimientoNotas?.[frmId];
+  if (!notas) return;
+  const idx = notas.findIndex(n => n.id === notaId);
+  if (idx === -1) return;
+  notas.splice(idx, 1);
+  _segRefreshDrawersPorFormula(frmId);   // refresca drawers abiertos
+  segRenderSeguimientoNotas(frmId);      // refresca panel de cards
+  segPersistirNotas(notaId);             // id explícito: no debe resucitar en el merge
 }
 
 /**
  * Persiste SEG.seguimientoNotas a localStorage usando MERGE con lo que ya está
  * en storage, no un replace total. Esto previene que notas de fórmulas no cargadas
- * en memoria sean borradas silenciosamente al guardar.
+ * en memoria sean borradas silenciosamente al guardar (ej. CILAB Conocimiento escribe
+ * en bl2_seg_notas de una fórmula que este tab de CI no tiene en memoria).
+ * Merge por nota.id (estable) — reemplaza el matching frágil por ts+texto/
+ * _eventType+tandaId que causó el bug histórico MEJ-0010.
+ *
+ * @param {string} [deletedId] — id de una nota borrada explícitamente en ESTA llamada.
+ *   Sin este parámetro, borrar una nota se "resucitaba" solo: la nota sigue existiendo
+ *   en el storage leído al toque (nadie más escribió todavía), memIds ya no la tiene
+ *   (se hizo splice en memoria) → el filtro la clasifica como "solo en storage" (escrita
+ *   por otro módulo) y la vuelve a concatenar. Encontrado con verificación real en
+ *   Chrome (Playwright) al implementar direccionamiento por id — el delete nunca
+ *   persistía. Excluir explícitamente el id recién borrado del lado "solo en storage"
+ *   resuelve el conflicto entre las dos semánticas (preservar ajeno vs. respetar borrado propio).
  */
-function segPersistirNotas() {
+function segPersistirNotas(deletedId) {
   try {
     const enStorage = JSON.parse(localStorage.getItem('bl2_seg_notas') || '{}') || {};
-    // Merge preservando notas escritas desde CILAB u otros módulos que no están en memoria.
-    // Object.assign reemplazaría arrays enteros; acá se hace union por clave ts||texto.
     const merged = Object.assign({}, enStorage);
     Object.keys(SEG.seguimientoNotas).forEach(function(fId) {
       const storArr = enStorage[fId] || [];
       const memArr  = SEG.seguimientoNotas[fId] || [];
-      const memManualKeys = new Set();
-      const memAutoKeys  = new Set();
-      memArr.forEach(function(n) {
-        // Solo tratamos como "misma nota" a auto-notas con tandaId real —
-        // agrupar bajo '__general__' compartido borraba notas de eventos
-        // distintos sin tanda que coincidían en texto (ver segCargarNotas
-        // más abajo, mismo bug, MEJ-0010).
-        if (n.auto && n._eventType && n.tandaId) memAutoKeys.add(n._eventType + ':' + n.tandaId);
-        else memManualKeys.add(n.ts + '||' + n.texto);
-      });
+      const memIds = new Set(memArr.map(function(n) { return n.id; }).filter(Boolean));
       const soloEnStorage = storArr.filter(function(n) {
-        if (n.auto && n._eventType && n.tandaId) return !memAutoKeys.has(n._eventType + ':' + n.tandaId);
-        return !memManualKeys.has(n.ts + '||' + n.texto);
+        if (deletedId && n.id === deletedId) return false;
+        return !n.id || !memIds.has(n.id);
       });
       merged[fId] = soloEnStorage.concat(memArr);
     });
@@ -3906,9 +3921,10 @@ function segQuitarImgTemp(frmId, idx, el) {
   if (el && el.parentNode) el.parentNode.removeChild(el);
 }
 
-function segEliminarImagenNota(frmId, notaIdx, imgIdx) {
-  if (!SEG.seguimientoNotas?.[frmId]?.[notaIdx]) return;
-  const nota = SEG.seguimientoNotas[frmId][notaIdx];
+function segEliminarImagenNota(frmId, notaId, imgIdx) {
+  const notas = SEG.seguimientoNotas?.[frmId];
+  const nota = notas && notas.find(n => n.id === notaId);
+  if (!nota) return;
   if (nota.imagenes && nota.imagenes.length > imgIdx) {
     nota.imagenes.splice(imgIdx, 1);
     segRenderSeguimientoNotas(frmId);
@@ -3916,8 +3932,9 @@ function segEliminarImagenNota(frmId, notaIdx, imgIdx) {
   }
 }
 
-function segVerImagenNota(frmId, notaIdx, imgIdx) {
-  const nota = SEG.seguimientoNotas?.[frmId]?.[notaIdx];
+function segVerImagenNota(frmId, notaId, imgIdx) {
+  const notas = SEG.seguimientoNotas?.[frmId];
+  const nota = notas && notas.find(n => n.id === notaId);
   if (!nota || !nota.imagenes?.[imgIdx]) return;
   const img = nota.imagenes[imgIdx];
   const overlay = document.createElement('div');
