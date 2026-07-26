@@ -134,7 +134,6 @@ function _suGetFRMap(lote) {
 // más abajo. Mantener aquí evita ReferenceError cuando otros módulos chequean
 // window.SU en carga temprana.
 window.SU = {};
-window.SU.reNotas = window.SU.reNotas || [];
 
 // Estado compartido entre GR ↔ SU ↔ FR (espejo en memoria de localStorage)
 // ==========================================
@@ -146,8 +145,6 @@ window.SU.reNotas = window.SU.reNotas || [];
 window.SU.init = function suInit() {
     if (window.SU._initialized) return;
     window.SU._initialized = true;
-
-    window.SU.reNotas = window.SU.reNotas || [];
 
     try { cargarBibliotecaDesdeStorage(); } catch (e) { console.warn('SU.init cargarBiblioteca:', e); }
     try { cargarLotesDesdeStorage(); }     catch (e) { console.warn('SU.init cargarLotes:', e); }
@@ -161,92 +158,7 @@ window.SU.init = function suInit() {
         }
     } catch (e) { console.warn('SU.init generarId:', e); }
     try { renderizarRegistroLotes(); }     catch (e) { console.warn('SU.init renderReg:', e); }
-    try { suReRenderNotas(); }             catch (e) { console.warn('SU.init notas:', e); }
     try { cargarLoteDesdeBiblioteca(); }   catch (e) { console.warn('SU.init biblioteca:', e); }
-};
-
-// ==========================================
-// SEGUIMIENTO DE NOTAS (move arriba)
-// ==========================================
-SU.reNotas = SU.reNotas || [];
-
-function suReTimestamp() {
-    var now = new Date();
-    return now.toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-window.suReRenderNotas = function() {
-    var cont = document.getElementById('suReNotas');
-    if (!cont) return;
-    if (SU.reNotas.length === 0) {
-        cont.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">Sin notas de seguimiento</p>';
-        return;
-    }
-
-    cont.innerHTML = SU.reNotas.map(function(n) {
-        var borderColor = 'var(--border)';
-        var estadoStr = '⚪ Normal';
-        var estadoColor = 'var(--text-muted)';
-
-        if (n.estado === 'green') {
-            borderColor = '#70AD47';
-            estadoStr = '🟢 Positivo';
-            estadoColor = '#70AD47';
-        } else if (n.estado === 'yellow') {
-            borderColor = '#FFC000';
-            estadoStr = '🟡 Atención';
-            estadoColor = '#FFC000';
-        } else if (n.estado === 'red') {
-            borderColor = '#C00000';
-            estadoStr = '🔴 Peligro';
-            estadoColor = '#C00000';
-        }
-
-        var numBolsas = n.bolsas || 0;
-        var extraInfo = '';
-        if (numBolsas > 0) {
-            extraInfo = '<div style="font-size:0.85rem;color:' + estadoColor + ';margin-top:4px;font-weight:600;">' + estadoStr + ': ' + numBolsas + ' bolsa(s)</div>';
-        }
-
-        return '<div style="padding:10px 12px;margin-bottom:8px;background:var(--dark);border-left:3px solid ' + borderColor + ';border-radius:6px;">' +
-            '<div style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">' + n.ts + '</div>' +
-            '<div style="font-size:0.92rem;color:var(--text-light)">' + n.texto + '</div>' +
-            extraInfo +
-        '</div>';
-    }).join('');
-};
-
-window.suAddReNota = function() {
-    var input = document.getElementById('suReNotaInput');
-    var estadoSel = document.getElementById('suReEstado');
-    var bolsasInput = document.getElementById('suReBolsas');
-
-    if (!input) return;
-
-    var texto = (input.value || '').trim();
-    if (!texto) {
-        alert('Ingrese una nota');
-        return;
-    }
-
-    SU.reNotas.push({
-        ts: suReTimestamp(),
-        texto: texto,
-        estado: estadoSel.value,
-        bolsas: parseInt(bolsasInput.value) || 0
-    });
-
-    input.value = '';
-    estadoSel.value = 'none';
-    bolsasInput.value = '0';
-
-    window.suReRenderNotas();
 };
 
 // Canal de carga cross-vista: usa sessionStorage (no persiste entre sesiones)
@@ -1015,7 +927,6 @@ function recolectarDatosLote() {
         pesoBolsa,
         aditivos,
         pesoXBolsa: bolsas > 0 ? parseFloat((total / bolsas).toFixed(1)) : pesoBolsa,
-        reNotas: SU.reNotas,
         grProtocolo: (function() {
             // Compatibilidad histórica: guardar el primer lote GR usado en las filas.
             // La fuente de verdad real es grLoteId por fila en el array db.
@@ -1034,9 +945,6 @@ function nuevoLote() {
     loteIdEl.setAttribute('readonly', 'readonly');
     loteIdEl.title = 'El ID se genera automáticamente al seleccionar la fecha';
     document.getElementById('loteEstructura').value = '';
-
-    SU.reNotas = [];
-    window.suReRenderNotas();
 
     document.getElementById('suFibra').value = 0;
     document.getElementById('suRatio').value = 0;
@@ -1105,10 +1013,6 @@ function cargarDatosLote(lote) {
     } else {
         agregarFilaAditivo();
     }
-
-    // Cargar notas de seguimiento
-    SU.reNotas = lote.reNotas || [];
-    window.suReRenderNotas();
 
     // Cambiar modo
     cambiarModoProduccion();
