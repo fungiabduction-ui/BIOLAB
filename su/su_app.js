@@ -3172,11 +3172,16 @@ function suDbRegistrarSeguimiento(tipo, mensaje, emoji) {
     else if (emoji === '🟢') estado = 'green';
 
     SU.dbSeguimientoNotas.push({
-        ts: suDbTimestamp(),
+        id: _suNotaId(),
+        ts: new Date().toISOString(),
+        tsLegacy: null,
+        tsInferred: false,
         tipo: tipo,
         texto: mensaje,
         estado: estado,
-        auto: true
+        auto: true,
+        editedAt: null,
+        imagenes: []
     });
     window.suDbRenderSeguimientoNotas();
 }
@@ -3290,7 +3295,7 @@ window.suDbRenderSeguimientoNotas = function() {
         cont.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">Sin notas de seguimiento DB</p>';
         return;
     }
-    cont.innerHTML = SU.dbSeguimientoNotas.map(function(n, i) {
+    cont.innerHTML = SU.dbSeguimientoNotas.map(function(n) {
         var borderColor = 'var(--border)';
         var estadoStr = '⚪ Normal';
         if (n.estado === 'green') { borderColor = '#70AD47'; estadoStr = '🟢 Positivo'; }
@@ -3298,10 +3303,15 @@ window.suDbRenderSeguimientoNotas = function() {
         else if (n.estado === 'red') { borderColor = '#C00000'; estadoStr = '🔴 Peligro'; }
 
         var autoTag = n.auto ? ' · auto' : '';
+        var tsDisplay = suDbFmtTs(n.ts) + (n.tsInferred ? ' ~' : '');
+        var idAttr = suDbEscapeHtml(n.id || '');
         return '<div style="padding:10px 12px;margin-bottom:8px;background:var(--dark);border-left:3px solid ' + borderColor + ';border-radius:6px;position:relative;">'
-            + '<div style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">' + suDbEscapeHtml(n.ts) + ' · ' + estadoStr + autoTag + '</div>'
-            + '<div style="font-size:0.92rem;color:var(--text-light)">' + suDbEscapeHtml(n.texto) + '</div>'
-            + '<button onclick="window.suDbEliminarSeguimientoNota(' + i + ')" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;" title="Eliminar nota">✕</button>'
+            + '<div style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">' + tsDisplay + ' · ' + estadoStr + autoTag + '</div>'
+            + '<div style="font-size:0.92rem;color:var(--text-light)" id="su-db-seg-text-' + idAttr + '">' + suDbEscapeHtml(n.texto) + (n.editedAt ? ' <span style="opacity:.6">✦</span>' : '') + '</div>'
+            + '<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">'
+            + '<button onclick="window.suDbEditarSeguimientoNota(\'' + idAttr + '\')" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;opacity:.6" title="Editar">✏️</button>'
+            + '<button onclick="window.suDbEliminarSeguimientoNota(\'' + idAttr + '\')" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;opacity:.6" title="Eliminar nota">✕</button>'
+            + '</div>'
             + '</div>';
     }).join('');
 };
@@ -3314,10 +3324,16 @@ window.suDbAddSeguimientoNota = function() {
     if (!texto) { alert('Ingrese una nota'); return; }
 
     SU.dbSeguimientoNotas.push({
-        ts: suDbTimestamp(),
+        id: _suNotaId(),
+        ts: new Date().toISOString(),
+        tsLegacy: null,
+        tsInferred: false,
+        tipo: null,
         texto: texto,
         estado: estadoSel ? estadoSel.value : 'none',
-        auto: false
+        auto: false,
+        editedAt: null,
+        imagenes: []
     });
 
     input.value = '';
@@ -3325,11 +3341,62 @@ window.suDbAddSeguimientoNota = function() {
     window.suDbRenderSeguimientoNotas();
 };
 
-window.suDbEliminarSeguimientoNota = function(index) {
-    if (index >= 0 && index < SU.dbSeguimientoNotas.length) {
-        SU.dbSeguimientoNotas.splice(index, 1);
-        window.suDbRenderSeguimientoNotas();
-    }
+window.suDbEliminarSeguimientoNota = function(notaId) {
+    if (!SU.dbSeguimientoNotas) return;
+    SU.dbSeguimientoNotas = SU.dbSeguimientoNotas.filter(function(n) { return n.id !== notaId; });
+    window.suDbRenderSeguimientoNotas();
+};
+
+// ---------- SEGUIMIENTO (editar, patrón de closures reales — ver FR.startEditObs/fr_app.js) ----------
+window.suDbEditarSeguimientoNota = function(notaId) {
+    var txtEl = document.getElementById('su-db-seg-text-' + notaId);
+    if (!txtEl) return;
+    if (txtEl.querySelector('input')) return; // ya en edición: evita blanquear el texto en un doble click
+    // Texto original sin el marcador "✦" de editado (si estaba presente)
+    var original = '';
+    txtEl.childNodes.forEach(function(node) {
+        if (node.nodeType === Node.TEXT_NODE) original += node.textContent;
+    });
+    original = original.trim();
+
+    // Construido como elemento real (no innerHTML con texto libre interpolado en un atributo):
+    // `original` puede contener comillas/backslashes de una nota real de lab, que romperían
+    // un atributo onkeydown armado como string. onkeydown se asigna acá como función JS real
+    // (mismo patrón que FR.startEditObs en fr/fr_app.js y segEditarNota en ci/ci_app.js).
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'su-db-seg-edit-' + notaId;
+    input.value = original;
+    input.style.cssText = 'width:100%;background:var(--bg-tertiary,var(--dark));border:1px solid var(--primary);color:var(--text-light);padding:3px 6px;border-radius:4px;font-size:inherit;box-sizing:border-box';
+    input.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+            window.suDbGuardarEdicionSeguimientoNota(notaId);
+        } else if (e.key === 'Escape') {
+            window.suDbCancelarEdicionSeguimientoNota(notaId, original);
+        }
+    };
+    txtEl.innerHTML = '';
+    txtEl.appendChild(input);
+    input.focus();
+    input.select();
+};
+
+window.suDbGuardarEdicionSeguimientoNota = function(notaId) {
+    var input = document.getElementById('su-db-seg-edit-' + notaId);
+    if (!input) return;
+    var nuevo = input.value.trim();
+    if (!nuevo) return;
+    if (!SU.dbSeguimientoNotas) return;
+    var nota = SU.dbSeguimientoNotas.find(function(n) { return n.id === notaId; });
+    if (!nota) return;
+    nota.texto = nuevo;
+    nota.editedAt = new Date().toISOString();
+    window.suDbRenderSeguimientoNotas();
+};
+
+window.suDbCancelarEdicionSeguimientoNota = function(notaId, original) {
+    var txtEl = document.getElementById('su-db-seg-text-' + notaId);
+    if (txtEl) window.suDbRenderSeguimientoNotas();
 };
 
 // ---------- PERSISTENCIA: COLLECT / LOAD / RESET ----------
