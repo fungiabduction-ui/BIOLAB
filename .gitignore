@@ -17,3 +17,6 @@ docs/lab-intelligence/
 
 # Mockups temporales del skill de brainstorming (superpowers)
 .superpowers/
+
+# Skills de Claude Code — describen metodologia/workflow interno del lab, nunca al repo publico
+.claude/
