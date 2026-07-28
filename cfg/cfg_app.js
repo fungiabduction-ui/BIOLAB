@@ -123,56 +123,81 @@
     'No se puede deshacer — cualquier cambio hecho después de ese backup se pierde.\n\n' +
     '¿Continuar?';
 
-  /* ── Backup / Restore local ── */
-  function localExport() {
-    const data = bkCollectAll({ skipGh: true });
+  /* ============================================================
+     BACKUP / RESTORE UNIFICADO (2026-07-28)
+     Reemplaza los 3 botones de exportar + 2 de importar que había antes
+     (localExport/exportData/exportAll, localImport/importData/importAll —
+     ver mejoras_app.md MEJ-0026 para el diagnóstico completo). Un solo
+     flujo: captura TODO localStorage sin depender de la lista de prefijos
+     BK_PREFIXES (que puede quedar desactualizada si se agrega un módulo
+     nuevo — bkCollectAll/bkAllKeys se dejan intactas para GitHub Sync,
+     que es un flujo aparte y no se tocó), nunca incluye bl2_gh, y el
+     import soporta tanto el formato propio (valores string crudos) como
+     backups viejos en formato parseado (el que producían localExport/
+     exportData/ghBackup antes de este cambio) — mismo criterio
+     typeof v === 'string' que ya usaba bkRestoreAll, así un backup viejo
+     de cualquiera de los 3 botones anteriores se puede seguir restaurando
+     sin corromper nada.
+     ============================================================ */
+  function _bkCollectRaw() {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k === K.gh) continue;
+      data[k] = localStorage.getItem(k);
+    }
+    return data;
+  }
+
+  function exportSystem() {
+    const data = _bkCollectRaw();
+    const keys = Object.keys(data);
     data._exported = new Date().toISOString();
-    data._keys = Object.keys(data).filter(k => !k.startsWith('_'));
+    data._keys = keys;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `biolab-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    const _n = new Date();
+    const _pad = v => String(v).padStart(2, '0');
+    const _ts = _pad(_n.getDate()) + '_' + _pad(_n.getMonth() + 1) + '_' + _n.getFullYear()
+              + '_' + _pad(_n.getHours()) + _pad(_n.getMinutes()) + _pad(_n.getSeconds());
+    a.download = `biolab_full_backup - ${_ts}.json`;
+    a.click();
     URL.revokeObjectURL(a.href);
-    sN(`Backup local exportado (${data._keys.length} keys)`);
+    sN(`Backup exportado (${keys.length} keys)`);
   }
 
-  function localImport(input) {
+  function importSystem(input) {
     const file = input.files[0]; if (!file) return;
-    if (!confirm(BK_RESTORE_WARNING)) { input.value = ''; return; }
     const r = new FileReader();
     r.onload = e => {
-      try {
-        const data = JSON.parse(e.target.result);
-        const n = bkRestoreAll(data, { wipe: true });
-        sN(`Datos restaurados (${n} keys) — recargando...`);
-        setTimeout(() => location.reload(), 1200);
-      } catch (err) { sN('Error al importar: ' + err.message, true); }
+      let data;
+      try { data = JSON.parse(e.target.result); }
+      catch (err) { sN('Archivo inválido: no es un JSON válido.', true); input.value = ''; return; }
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        sN('Archivo inválido: se esperaba un backup de BioLab (objeto JSON).', true); input.value = ''; return;
+      }
+      const realKeys = Object.keys(data).filter(k => !k.startsWith('_'));
+      const pareceBackupBiolab = realKeys.some(k => BK_PREFIXES.some(p => k.startsWith(p)));
+      if (!pareceBackupBiolab) {
+        sN('Archivo inválido: no contiene ninguna key reconocible de BioLab. No se modificó nada.', true);
+        input.value = ''; return;
+      }
+      if (!confirm(BK_RESTORE_WARNING + `\n\n(${realKeys.length} keys en el archivo)`)) { input.value = ''; return; }
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k !== K.gh) localStorage.removeItem(k);
+      }
+      let count = 0;
+      realKeys.forEach(k => {
+        if (k === K.gh) return; // nunca pisar el token de GitHub con uno de un backup viejo
+        const v = data[k];
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+        count++;
+      });
+      sN(`Sistema restaurado (${count} keys) — recargando...`);
+      setTimeout(() => location.reload(), 1200);
     };
     r.readAsText(file); input.value = '';
-  }
-
-  /* ── Exportar / Importar / Reset ── */
-  function exportData() {
-    if (typeof localExport === 'function') return localExport();
-    const data = bkCollectAll();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `biolab-${Date.now()}.json`; a.click();
-    URL.revokeObjectURL(url); sN('Datos exportados');
-  }
-
-  function importData(e) {
-    const file = e.target.files[0]; if (!file) return;
-    if (!confirm(BK_RESTORE_WARNING)) { e.target.value = ''; return; }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const d = JSON.parse(ev.target.result);
-        const n = bkRestoreAll(d, { wipe: true });
-        sN(`Datos restaurados (${n} keys) — recargando...`);
-        setTimeout(() => location.reload(), 1200);
-      } catch (err) { sN('Error al importar: ' + err.message, true); }
-    };
-    reader.readAsText(file);
   }
 
   /* ============================================================
@@ -571,7 +596,10 @@
             <td style="font-size:12px;color:var(--tx2)">${kb}</td>
             <td style="font-size:11px;color:var(--tx3);font-family:monospace">${shaCorta}</td>
             <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghDiffBackupModulos(${idx}, this)">¿Qué cambió?</button></td>
-            <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button></td>
+            <td>
+              <button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghDownload('${f.path}')">⬇ Descargar</button>
+              <button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghRestore('${f.path}')">Restaurar</button>
+            </td>
           </tr>`;
         }).join('')
       }</tbody></table></div>`;
@@ -597,6 +625,25 @@
       sN(`Backup restaurado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
     } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
+  }
+
+  // Descarga un backup puntual de la lista de GitHub tal cual está guardado
+  // ahí — texto decodificado directo del blob, SIN re-parsear/re-serializar,
+  // para que el archivo bajado sea byte-a-byte el mismo que ya existe en
+  // GitHub (mismo tamaño que muestra la columna "Tamaño" de la tabla).
+  async function ghDownload(path) {
+    try {
+      const file = await ghApi('GET', path);
+      const blob = await ghApiBlob(file.sha);
+      const decoded = decodeURIComponent(escape(atob(blob.content.replace(/\n/g, ''))));
+      const blobFile = new Blob([decoded], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobFile);
+      a.download = path.split('/').pop();
+      a.click();
+      URL.revokeObjectURL(a.href);
+      sN(`Descargado: ${a.download}`);
+    } catch (e) { sN('Error al descargar: ' + e.message, true); }
   }
 
   function ghLoadCfg() {
@@ -636,64 +683,6 @@
     try { ghLoadCfg(); } catch (e) {}
   }
 
-  /* ============================================================
-     FUNCIONALIDADES AGREGADAS: BACKUP GLOBAL COMPLETO (ALL KEYS)
-     ============================================================ */
-
-  function exportAll() {
-    const backup = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key === K.gh) continue; // nunca incluir el token de GitHub en un backup
-      backup[key] = localStorage.getItem(key);
-    }
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    var _n = new Date();
-    var _pad = function(v) { return String(v).padStart(2,'0'); };
-    var _ts = _pad(_n.getDate()) + '_' + _pad(_n.getMonth()+1) + '_' + _n.getFullYear()
-            + '_' + _pad(_n.getHours()) + _pad(_n.getMinutes()) + _pad(_n.getSeconds());
-    a.download = 'biolab_full_backup - ' + _ts + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    sN('Backup global exportado con éxito');
-  }
-
-  function importAll(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      try {
-        const data = JSON.parse(e.target.result);
-        // Validación mínima antes de un wipe destructivo: un archivo cualquiera
-        // (JSON válido pero ajeno a BioLab) no debe poder vaciar todo el sistema.
-        if (!data || typeof data !== 'object' || Array.isArray(data)) {
-          sN('Archivo inválido: se esperaba un backup de BioLab (objeto JSON).', true);
-          return;
-        }
-        const pareceBackupBiolab = Object.keys(data).some(k => BK_PREFIXES.some(p => k.startsWith(p)));
-        if (!pareceBackupBiolab) {
-          sN('Archivo inválido: no contiene ninguna key reconocible de BioLab. No se modificó nada.', true);
-          return;
-        }
-        if (confirm('Esto sobreescribirá TODO el sistema. ¿Continuar?')) {
-          localStorage.clear();
-          for (const key in data) {
-            localStorage.setItem(key, data[key]);
-          }
-          sN('Sistema restaurado. Recargando...', false);
-          setTimeout(() => location.reload(), 1500);
-        }
-      } catch (err) {
-        console.error('Error al importar:', err);
-        sN('Error crítico al importar el JSON', true);
-      }
-    };
-    reader.readAsText(file);
-  }
-
   /* ── Inicializador del módulo (lo llama main.js en cada montaje) ── */
   function cfgInit() {
     // Listener delegado para cerrar modales al clickear overlay.
@@ -713,9 +702,10 @@
   window.cfgInit        = cfgInit;
   window.clearCacheOnly = clearCacheOnly;
   window.closeM         = closeM;
-  window.exportAll      = exportAll;
-  window.exportData     = exportData;
+  window.exportSystem   = exportSystem;
+  window.importSystem   = importSystem;
   window.ghBackup       = ghBackup;
+  window.ghDownload     = ghDownload;
   window.ghListBackups  = ghListBackups;
   window.ghDiffBackupModulos = ghDiffBackupModulos;
   window.ghLoadLatest   = ghLoadLatest;
@@ -723,10 +713,6 @@
   window.ghSaveCfg      = ghSaveCfg;
   window.ghTest         = ghTest;
   window.hardReset      = hardReset;
-  window.importAll      = importAll;
-  window.importData     = importData;
-  window.localExport    = localExport;
-  window.localImport    = localImport;
 
   window.onModuleUnload = function () {
   };
