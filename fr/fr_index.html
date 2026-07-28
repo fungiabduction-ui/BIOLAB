@@ -32,9 +32,9 @@
                     <button type="button" class="btn btn-secondary" onclick="FR.sync()" title="Importar bolsas nuevas desde SU">🔄 Sync desde SU</button>
                     <button type="button" class="btn btn-secondary" onclick="FR.abrirModalHuerfana()" title="Cargar bolsa sin trazabilidad SU→GR">➕ Bolsa huérfana</button>
                     <button type="button" class="btn btn-secondary" onclick="FR.abrirModalExperimento(null)" title="Registrar experimento a pequeña escala">🔬 Nuevo experimento</button>
-                    <button type="button" class="btn btn-secondary" onclick="FR.exportarJSON()" title="Exportar todas las bolsas FR a JSON">⬇ Exportar backup</button>
+                    <button type="button" class="btn btn-secondary" onclick="FR.exportarJSON()" title="Exportar todas las bolsas FR a JSON">⬇ Exportar backup de FR (bolsas)</button>
                     <label class="btn btn-secondary" title="Importar bolsas FR desde backup JSON" style="cursor:pointer;margin:0">
-                        ⬆ Importar backup
+                        ⬆ Importar backup de FR
                         <input type="file" accept=".json" style="display:none" onchange="FR.importarJSON(this)">
                     </label>
                     <button type="button" class="btn btn-danger" onclick="FR.eliminarTodo()" title="Eliminar TODOS los registros FR">🗑 Eliminar todo</button>

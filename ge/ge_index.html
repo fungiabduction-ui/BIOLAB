@@ -129,13 +129,13 @@
         <div class="card pad">
           <div class="ct">📦 Backup</div>
           <p class="ct-sub">Descarga un JSON con todos los nodos (incluyendo status) y el historial completo.</p>
-          <button class="btn btn-primary" onclick="ge.exportJSON()">⬇️ Exportar JSON</button>
+          <button class="btn btn-primary" onclick="ge.exportJSON()">⬇️ Exportar backup de GE</button>
         </div>
 
         <div class="card pad">
           <div class="ct">⬆️ Importar</div>
           <p class="ct-sub">Reemplaza <b>todos</b> los datos. Los nodos sin campo <code>status</code> recibirán <code>active</code> automáticamente.</p>
-          <button class="btn btn-secondary" onclick="document.getElementById('cfg-import').click()">⬆️ Importar JSON</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('cfg-import').click()">⬆️ Importar backup de GE</button>
           <input type="file" id="cfg-import" accept=".json,application/json" style="display:none" onchange="ge.importJSON(event)" />
         </div>
 

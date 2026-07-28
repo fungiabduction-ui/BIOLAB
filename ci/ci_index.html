@@ -65,7 +65,7 @@
       <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
         <span style="color:#00CC33">📊 Dashboard CI — Fórmulas activas</span>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-s" style="height:24px;font-size:11px;padding:0 10px;border-color:var(--er);color:var(--er)" onclick="exportData()">💾 Backup Completo</button>
+          <button class="btn btn-s" style="height:24px;font-size:11px;padding:0 10px;border-color:var(--er);color:var(--er)" onclick="exportData()" title="Backup solo de datos de CI (fórmulas, cultivos, seguimiento) — no es un backup de todo el sistema, ver CFG para eso">💾 Backup de CI</button>
         </div>
       </div>
       <p style="color:var(--tx3);font-size:13px;margin:4px 0 16px">
@@ -207,8 +207,8 @@
       <span style="color:#00CC33">📋 Fórmulas CI</span>
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="ciExportExcel()">📥 Copiar para Excel</button>
-        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="exportData()">⬇ Backup JSON</button>
-        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('ci-import-file').click()">⬆ Importar JSON</button>
+        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="exportData()">⬇ Backup de CI (JSON)</button>
+        <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('ci-import-file').click()">⬆ Importar backup de CI</button>
         <input type="file" id="ci-import-file" accept=".json" style="display:none" onchange="importData(event)">
       </div>
     </div>
@@ -287,8 +287,8 @@
   <div class="card" style="margin-top:12px">
     <div class="ct" style="color:var(--er)">💾 Datos CI</div>
     <div class="btn-row">
-      <button class="btn btn-s" onclick="exportData()">⬇ Exportar Backup JSON</button>
-      <button class="btn btn-s" onclick="document.getElementById('ci-import-file2').click()">⬆ Importar JSON</button>
+      <button class="btn btn-s" onclick="exportData()">⬇ Exportar backup de CI (JSON)</button>
+      <button class="btn btn-s" onclick="document.getElementById('ci-import-file2').click()">⬆ Importar backup de CI</button>
       <input type="file" id="ci-import-file2" accept=".json" style="display:none" onchange="importData(event)">
       <button class="btn btn-s" onclick="ciMigrarSnapshotsIngredientes()" style="border-color:var(--wn);color:var(--wn)">⚡ Migrar snapshots</button>
       <button class="btn btn-d" onclick="resetSystem()">✕ Reset módulo CI</button>

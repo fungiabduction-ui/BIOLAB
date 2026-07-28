@@ -461,8 +461,8 @@
                     <button id="btnGuardar" class="btn btn-primary">💾 Guardar Lote</button>
                     <button id="btnNuevoLote" class="btn btn-secondary" onclick="window.nuevoLote()">➕ Nuevo Lote</button>
                     <div class="export-buttons">
-                        <button id="btnExportJson" class="btn btn-export">📥 Exportar JSON</button>
-                        <button id="btnExportExcel" class="btn btn-export">📊 Exportar Excel</button>
+                        <button id="btnExportJson" class="btn btn-export">📥 Exportar backup de GR (JSON)</button>
+                        <button id="btnExportExcel" class="btn btn-export">📊 Exportar GR a Excel</button>
                     </div>
                 </div>
             </div>
@@ -501,7 +501,7 @@
 
                     <div class="import-buttons" style="margin-top:15px;display:flex;gap:10px;justify-content:center">
                         <label class="btn btn-export" style="cursor:pointer">
-                            📥 Importar JSON
+                            📥 Importar backup de GR
                             <input type="file" id="btnImportJson" accept=".json" style="display:none" onchange="importarJSON(event)">
                         </label>
                     </div>

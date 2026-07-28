@@ -299,8 +299,8 @@
                 <button id="btnGuardar" class="btn btn-su">💾 Guardar Registro</button>
                 <button id="btnNuevoLote" class="btn btn-secondary">➕ Nuevo Registro</button>
                 <div class="export-buttons">
-                    <button id="btnExportJson" class="btn btn-export">📥 Exportar JSON</button>
-                    <button id="btnExportExcel" class="btn btn-export">📊 Exportar Excel</button>
+                    <button id="btnExportJson" class="btn btn-export">📥 Exportar backup de SU (JSON)</button>
+                    <button id="btnExportExcel" class="btn btn-export">📊 Exportar SU a Excel</button>
                 </div>
             </div>
 
@@ -334,7 +334,7 @@
 
                     <div class="import-buttons" style="margin-top:15px;display:flex;gap:10px;justify-content:center">
                         <label class="btn btn-export" style="cursor:pointer">
-                            📥 Importar JSON
+                            📥 Importar backup de SU
                             <input type="file" id="btnImportJson" accept=".json" style="display:none">
                         </label>
                     </div>
@@ -474,14 +474,14 @@
                 </div>
                 <div class="section-content" id="cfgImportar">
                     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-                        <button type="button" id="btnExportJsonCfg" class="btn btn-secondary">💾 Exportar JSON</button>
-                        <button type="button" id="btnExportExcelCfg" class="btn btn-secondary">📊 Exportar Excel</button>
+                        <button type="button" id="btnExportJsonCfg" class="btn btn-secondary">💾 Exportar backup de SU (JSON)</button>
+                        <button type="button" id="btnExportExcelCfg" class="btn btn-secondary">📊 Exportar SU a Excel</button>
                         <label class="btn btn-su" style="cursor:pointer">
-                            📥 Importar JSON
+                            📥 Importar backup de SU
                             <input type="file" id="btnImportJsonCfg" accept=".json" style="display:none">
                         </label>
                         <label class="btn btn-secondary" style="cursor:pointer">
-                            📄 Importar Excel
+                            📄 Importar SU desde Excel
                             <input type="file" id="btnImportExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event)">
                         </label>
                         <button type="button" class="btn btn-secondary" onclick="cfgImportarDatos()">🔄 Reconstruir desde localStorage</button>

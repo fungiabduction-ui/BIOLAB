@@ -4246,7 +4246,7 @@ function exportData() {
   a.href = URL.createObjectURL(blob);
   a.download = `biolab-ci-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
-  sN('Backup exportado');
+  sN('Backup de CI exportado');
 }
 
 /** Exporta una sola fórmula con TODA su información relacionada (Análisis, SEG, Experimentos, Cultivos). */
