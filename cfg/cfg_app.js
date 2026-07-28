@@ -404,8 +404,15 @@
     } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
   }
 
+  // Hasta 2026-07-28 usaba bkCollectAll (valores parseados + filtro BK_PREFIXES) —
+  // eso hacía que un backup de GitHub Sync pesara ~33% más que uno local
+  // (exportSystem) con el MISMO contenido exacto, solo por indentación de
+  // JSON.stringify sobre objetos anidados en vez de strings crudas compactas.
+  // Mismo criterio que exportSystem/_bkCollectRaw ahora: sin esto, dos backups
+  // con contenido idéntico parecen tener tamaños distintos y generan alarmas
+  // de "pérdida de datos" que no son reales — ya pasó 2 veces en la misma sesión.
   function ghData() {
-    return bkCollectAll({ skipGh: true });
+    return _bkCollectRaw();
   }
 
   async function ghBackup() {
