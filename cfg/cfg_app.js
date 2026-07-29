@@ -342,7 +342,15 @@
     const f = document.getElementById('gh-file').value.trim() || 'biolab-data.json';
     if (!t || !r) return sN('Token y repo requeridos', true);
     r = r.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
-    const gc = gOb(K.gh, {}); gc.token = encToken(t); gc.repo = r; gc.file = f; sOb(K.gh, gc);
+    const gc = gOb(K.gh, {}); gc.token = encToken(t); gc.repo = r; gc.file = f;
+    // Baseline fresco al configurar (2026-07-29): recién logueado, antes de
+    // tocar nada, NO es "cambios pendientes" — ver hasUnsaved en ghLoadCfg().
+    // Sin esto, _ghHasBaseline quedaba false hasta el primer ghBackup/ghLoadLatest
+    // y el fallback trataba "recién configurado" como dirty (Guardar verde),
+    // que es exactamente el bug que el usuario reportó.
+    gc.lastBackupFp = _bkFingerprint(ghData());
+    gc.lastBackupSource = 'save';
+    sOb(K.gh, gc);
     ghLoadCfg(); sN('Configuración GitHub guardada');
   }
 
@@ -436,6 +444,7 @@
       // tocar lastSync, solo lastBackupFp (ver esas funciones).
       gc.lastSync = now();
       gc.lastBackupFp = _bkFingerprint(dataObj);
+      gc.lastBackupSource = 'save';
       sOb(K.gh, gc);
       ghLoadCfg();
       el.className = 'rbox wn'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
@@ -471,7 +480,7 @@
       // actualiza lastBackupFp — el estado local ahora coincide exactamente
       // con este archivo, que ya existe en GitHub, así que no hay "cambios
       // sin guardar" recién restaurado.
-      gc.lastBackupFp = _bkFingerprint(ghData()); sOb(K.gh, gc);
+      gc.lastBackupFp = _bkFingerprint(ghData()); gc.lastBackupSource = 'load'; sOb(K.gh, gc);
       el.className = 'rbox'; el.innerHTML = `✓ Cargado <code>${esc(latest.name)}</code> (${n} keys) — recargando...`;
       sN(`Backup más reciente cargado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
@@ -627,7 +636,7 @@
       // nada), sí actualiza lastBackupFp — el estado local coincide con este
       // backup puntual, que ya existe en GitHub.
       const gc = gOb(K.gh, {});
-      gc.lastBackupFp = _bkFingerprint(ghData()); sOb(K.gh, gc);
+      gc.lastBackupFp = _bkFingerprint(ghData()); gc.lastBackupSource = 'load'; sOb(K.gh, gc);
       el.className = 'rbox'; el.innerHTML = `✓ Backup restaurado (${n} keys) — recargando...`;
       sN(`Backup restaurado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
@@ -677,13 +686,32 @@
     const hasUnsaved = _ghHasBaseline ? (_bkFingerprint(ghData()) !== gc.lastBackupFp) : true;
     const unsavedEl = document.getElementById('gh-unsaved');
     if (unsavedEl) unsavedEl.style.display = (_ghHasBaseline && hasUnsaved) ? 'block' : 'none';
+    // gc.lastBackupSource distingue CÓMO se llegó al baseline actual ('save':
+    // ghSaveCfg()/ghBackup() — Cargar es la acción sana siguiente; 'load':
+    // ghLoadLatest()/ghRestore() — ya se cargó, recargar de nuevo sin cambios
+    // de por medio es redundante). Default 'save' para configs pre-existentes
+    // a este fix, que tienen lastBackupFp sin este campo.
+    const _source = gc.lastBackupSource || 'save';
     const btnGuardar = document.getElementById('gh-btn-guardar');
     // Sin token/repo configurado ninguno de los 2 botones puede hacer nada
-    // real todavía (ambos tiran "⚠ No configurado" al click) — gris/gris,
-    // no verde/rojo, hasta que haya una config real contra la que evaluar.
-    if (btnGuardar) btnGuardar.className = 'btn ' + (!_ghConfigurado ? 'btn-s' : (hasUnsaved ? 'btn-wn' : 'btn-s'));
+    // real todavía (ambos tiran "⚠ No configurado" al click) — gris/gris y
+    // deshabilitados, no verde/rojo, hasta que haya una config real contra
+    // la que evaluar.
+    if (btnGuardar) {
+      btnGuardar.className = 'btn ' + (!_ghConfigurado ? 'btn-s' : (hasUnsaved ? 'btn-wn' : 'btn-s'));
+      btnGuardar.disabled = !_ghConfigurado || !hasUnsaved;
+    }
     const btnCargar = document.getElementById('gh-btn-cargar');
-    if (btnCargar) btnCargar.className = 'btn ' + (!_ghConfigurado ? 'btn-s' : (hasUnsaved ? 'btn-d' : 'btn-wn'));
+    if (btnCargar) {
+      // Rojo+deshabilitado SOLO en el caso puntual "ya cargué y nada cambió
+      // desde entonces" — evita recargar exactamente lo mismo que ya está en
+      // pantalla. Dirty (hasUnsaved) siempre lo deja habilitado: cargar para
+      // descartar cambios locales sigue siendo una acción válida (con su
+      // propio confirm() de advertencia en ghLoadLatest/ghRestore).
+      const _cargarRojo = _ghConfigurado && _source === 'load';
+      btnCargar.className = 'btn ' + (!_ghConfigurado ? 'btn-s' : (_cargarRojo ? 'btn-d' : 'btn-wn'));
+      btnCargar.disabled = !_ghConfigurado || (!hasUnsaved && _cargarRojo);
+    }
     const hdr = document.getElementById('gh-hdr-status');
     if (hdr) hdr.innerHTML = gc.token && gc.repo
       ? `☁ GitHub: <b style="color:var(--ac)">${esc(gc.repo)}</b> · <span style="color:var(--tx3)">${gc.lastSync ? fDate(gc.lastSync) : 'sin sync'}</span>`
