@@ -668,15 +668,19 @@
     // último backup exitoso (ghBackup()/ghLoadLatest()/ghRestore() son los 3
     // únicos que tocan lastBackupFp). Sin token/repo configurado, o sin ningún
     // backup todavía, no hay nada contra qué comparar — no se muestra nada.
+    const _ghHasBaseline = !!(gc.token && gc.repo && gc.lastBackupFp);
+    // 2026-07-29, a pedido del usuario: mismo fingerprint también colorea los
+    // botones de Guardar/Cargar, no solo el aviso de texto de abajo. Sin
+    // baseline (nunca se hizo backup, o falta config) se trata como "hay algo
+    // pendiente" — mismo criterio conservador que el coloreado estático que
+    // tenían los botones antes de este cambio (verde Guardar / rojo Cargar).
+    const hasUnsaved = _ghHasBaseline ? (_bkFingerprint(ghData()) !== gc.lastBackupFp) : true;
     const unsavedEl = document.getElementById('gh-unsaved');
-    if (unsavedEl) {
-      if (gc.token && gc.repo && gc.lastBackupFp) {
-        const currentFp = _bkFingerprint(ghData());
-        unsavedEl.style.display = (currentFp !== gc.lastBackupFp) ? 'block' : 'none';
-      } else {
-        unsavedEl.style.display = 'none';
-      }
-    }
+    if (unsavedEl) unsavedEl.style.display = (_ghHasBaseline && hasUnsaved) ? 'block' : 'none';
+    const btnGuardar = document.getElementById('gh-btn-guardar');
+    if (btnGuardar) btnGuardar.className = 'btn ' + (hasUnsaved ? 'btn-wn' : 'btn-s');
+    const btnCargar = document.getElementById('gh-btn-cargar');
+    if (btnCargar) btnCargar.className = 'btn ' + (hasUnsaved ? 'btn-d' : 'btn-wn');
     const hdr = document.getElementById('gh-hdr-status');
     if (hdr) hdr.innerHTML = gc.token && gc.repo
       ? `☁ GitHub: <b style="color:var(--ac)">${esc(gc.repo)}</b> · <span style="color:var(--tx3)">${gc.lastSync ? fDate(gc.lastSync) : 'sin sync'}</span>`
