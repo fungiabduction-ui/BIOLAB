@@ -1,5 +1,7 @@
 # GR — Deuda técnica confirmada por auditoría Implementation Plan
 
+> **✅ COMPLETO (confirmado 2026-07-29).** Las 14 tareas de este plan ya estaban aplicadas en `gr/gr_app.js`/`gr/gr_index.html` — verificado por grep contra cada patrón "Buscar" de cada task, sin excepción. Los checkboxes individuales de abajo nunca se marcaron en su momento (probablemente se ejecutó en la misma sesión del 2026-07-10 sin cerrar el plan formalmente), pero el código real ya refleja el estado final descrito en cada task. Ver `CLAUDE.md`, sección "AUDITORÍA COMPLETA DEL SISTEMA", para la corrección de la nota que todavía las listaba como pendientes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Corregir seis clases de deuda técnica confirmada por auditoría en el módulo GR — pérdida de datos en importación de biblioteca, dos handlers rotos referenciados desde el HTML, una migración reactiva innecesaria que enmascara un bug de escritura, una inconsistencia de fórmula entre KPI y registro, y una lista de código muerto con riesgo real (funciones de demo expuestas en `window`) — sin tocar CSS, sin tocar `grNormSources()`, y sin implementar la feature "Cerrar Protocolo".
