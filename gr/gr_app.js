@@ -3078,10 +3078,10 @@ window.grEliminarRegistro = grEliminarRegistro;
 // ==========================================
 // NAVEGACIÓN (encapsulada para integración futura)
 // ==========================================
-GR.goToConfig = window.goToConfig = function goToConfig() {
+GR.goToBiblioteca = window.goToBiblioteca = function goToBiblioteca() {
     // Si existe el sub-panel embebido, usar tab switching en lugar de navegar
-    if (document.getElementById('gr-sub-cfg')) {
-        GR.subTab('cfg');
+    if (document.getElementById('gr-sub-bib')) {
+        GR.subTab('bib');
         return;
     }
 };
@@ -3094,7 +3094,7 @@ GR.goToIndex = window.goToIndex = function goToIndex() {
     window.location.href = 'gr_index.html';
 };
 
-// Sub-tab switcher (Formulación <-> Registro <-> Config)
+// Sub-tab switcher (Formulación <-> Registro <-> Biblioteca)
 GR.subTab = window.grSubTab = function grSubTab(t) {
     var tabs = document.querySelectorAll('.gr-subtab');
     tabs.forEach(function(tb) { tb.classList.remove('active'); });
@@ -3103,7 +3103,7 @@ GR.subTab = window.grSubTab = function grSubTab(t) {
 
     var pMain = document.getElementById('gr-sub-main');
     var pReg  = document.getElementById('gr-sub-reg');
-    var pCfg  = document.getElementById('gr-sub-cfg');
+    var pBib  = document.getElementById('gr-sub-bib');
     var pKnow = document.getElementById('gr-sub-know');
 
     if (pMain) {
@@ -3115,11 +3115,11 @@ GR.subTab = window.grSubTab = function grSubTab(t) {
         if (t === 'reg') pReg.classList.add('active'); else pReg.classList.remove('active');
     }
     if (t === 'reg') grRenderizarRegistroLotes();
-    if (pCfg) {
-        pCfg.style.display = (t === 'cfg') ? 'flex' : 'none';
-        if (t === 'cfg') pCfg.classList.add('active'); else pCfg.classList.remove('active');
+    if (pBib) {
+        pBib.style.display = (t === 'bib') ? 'flex' : 'none';
+        if (t === 'bib') pBib.classList.add('active'); else pBib.classList.remove('active');
     }
-    if (t === 'cfg' && typeof renderizarBibliotecaEnConfig === 'function') renderizarBibliotecaEnConfig();
+    if (t === 'bib' && typeof renderizarBibliotecaEnConfig === 'function') renderizarBibliotecaEnConfig();
     if (pKnow) {
         pKnow.style.display = (t === 'know') ? 'flex' : 'none';
         if (t === 'know') pKnow.classList.add('active'); else pKnow.classList.remove('active');
