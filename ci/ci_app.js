@@ -658,6 +658,19 @@ function ciRenderFormulasList() {
     const ratioCol = ratio === null ? 'var(--tx3)'
       : ratio >= 80 ? 'var(--ac)' : ratio >= 50 ? 'var(--wn)' : 'var(--er)';
 
+    // Chips de genéticas usadas — vistazo rápido sin entrar a la fórmula (2026-08-04,
+    // pedido tras el incidente R244/244 en CI-0012: un error de carga de genética
+    // debería poder detectarse desde afuera, no solo abriendo cada fórmula).
+    const geneticasUnicas = [...new Set(segsF.map(s => s.genetica).filter(Boolean))];
+    const geneticasChipsHtml = geneticasUnicas.length ? `
+        <div class="ci-dash-gen-chips">
+          ${geneticasUnicas.map(gid => {
+            const snap = _ciResolverGeneticaSnapshot(gid);
+            const lbl = snap ? _segAbreviarEspecie(snap.label) : gid;
+            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(lbl)}">🧬 ${esc(lbl)}</span>`;
+          }).join('')}
+        </div>` : '';
+
     const tileIdDate = (() => {
       const seg = segsF.filter(s => s.colonizacion)
         .sort((a, b) => new Date(b.colonizacion) - new Date(a.colonizacion))[0];
@@ -697,6 +710,7 @@ function ciRenderFormulasList() {
         </div>
         <div class="ci-dash-tile-id">${f.id} · ${tileIdDate}</div>
         ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
+        ${geneticasChipsHtml}
         <div class="ci-dash-metrics">
           <div class="ci-dash-metric">
             <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>
@@ -1802,7 +1816,11 @@ function segRemoveRow(btn) {
   if (frmId) {
     segActualizarTotales(frmId);
     segActualizarResumen(frmId);
-    segGuardarTandas(frmId);   // auto-persistir al eliminar fila
+    // permitirVacio=true: si esta era la última fila de la fórmula, 0 filas es el
+    // resultado correcto de un borrado deliberado, no la race condition que el
+    // guard anti-corrupción de segGuardarTandas está pensado para prevenir.
+    segGuardarTandas(frmId, false, true);   // auto-persistir al eliminar fila
+    segRenderSeguimientoNotas(frmId);   // MEJ-0029: refrescar panel de cards, quedaba con datos de la fila borrada
   }
 }
 
@@ -2440,7 +2458,18 @@ function segInicializarGeneticas(frmId) {
     // por lo que siempre tiene el valor correcto aunque el select aún esté vacío.
     const row  = sel.closest('tr');
     const prev = (row && row.dataset.geneticaId) || sel.value || '';
-    sel.innerHTML = optsHtml;
+    let html = optsHtml;
+    // Bug encontrado 2026-08-04: si la genética asignada a esta fila fue archivada en GE,
+    // getSelectableGenetics() la excluye de optsHtml y el select queda vacío aunque el
+    // dato subyacente (prev) siga intacto — visualmente parece que se perdió, y puede
+    // llevar a borrar la fila por error. Inyectar la opción archivada si falta.
+    if (prev && !genetics.some(g => g.id === prev)) {
+      const snap = _ciResolverGeneticaSnapshot(prev);
+      if (snap) {
+        html += `<option value="${esc(prev)}">${esc(_segAbreviarEspecie(snap.label))} (archivada)</option>`;
+      }
+    }
+    sel.innerHTML = html;
     if (prev) sel.value = prev;
   });
 }
@@ -2460,8 +2489,13 @@ function _segConfirmarInoculacion(row, frmId) {
   if (fechaInp && !fechaInp.value) {
     fechaInp.value = new Date().toISOString().slice(0, 16);
   }
-  // inoculoTs como timestamp de auditoría (derivado de inoculoFecha, sellado una sola vez)
-  if (!row.dataset.inoculoTs) {
+  // inoculoTs como timestamp de auditoría (derivado de inoculoFecha, sellado una sola vez).
+  // yaSellado distingue "primera confirmación" (recién se completa placas+genética)
+  // de "corrección tardía" (ej. genética mal cargada, corregida semanas después) —
+  // MEJ-0028: en el segundo caso la nota de Inoculación debe seguir mostrando la
+  // fecha REAL del inóculo, no la fecha de la corrección.
+  const yaSellado = !!row.dataset.inoculoTs;
+  if (!yaSellado) {
     const fv = fechaInp?.value;
     row.dataset.inoculoTs = fv ? _segParseDate(fv).toISOString() : new Date().toISOString();
   }
@@ -2470,10 +2504,12 @@ function _segConfirmarInoculacion(row, frmId) {
   const tanda       = row.querySelector('.seg-tanda')?.value || '—';
   const geneticaSel = row.querySelector('.seg-genetica');
   const geneticaLbl = geneticaSel?.options[geneticaSel.selectedIndex]?.textContent?.trim() || geneticaId;
-  const ts          = segTimestamp();
+  const tsDate      = yaSellado ? new Date(row.dataset.inoculoTs) : new Date();
+  const ts          = tsDate.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   segEmitirNotaAuto(frmId, 'green',
     `🟢 Inoculación — ${ts} — ${placas} placa${placas !== 1 ? 's' : ''} · ${geneticaLbl} [${tanda}]`,
-    tanda !== '—' ? tanda : null);
+    tanda !== '—' ? tanda : null,
+    yaSellado ? row.dataset.inoculoTs : null);
 }
 
 function segOnChangeGenetica(sel) {
@@ -2618,7 +2654,7 @@ function _segSafeTandaId(tandaId) {
  * @param {string} texto
  * @param {string|null} tandaId  ID de tanda asociada (null = General)
  */
-function segEmitirNotaAuto(frmId, estado, texto, tandaId = null) {
+function segEmitirNotaAuto(frmId, estado, texto, tandaId = null, tsOverride = null) {
   if (!SEG.seguimientoNotas) SEG.seguimientoNotas = {};
   if (!SEG.seguimientoNotas[frmId]) SEG.seguimientoNotas[frmId] = [];
   const eventType = texto.split(' — ')[0];
@@ -2628,7 +2664,9 @@ function segEmitirNotaAuto(frmId, estado, texto, tandaId = null) {
   const existingIdx = arr.findIndex(n => n.auto && n.tipo === eventType && n.tandaId === tId);
   const newNota = {
     id: existingIdx >= 0 ? arr[existingIdx].id : _ciNotaId(),
-    ts: new Date().toISOString(),
+    // tsOverride: permite a un caller que regenera una nota para un evento pasado
+    // (ej. corrección de genética, MEJ-0028) sellar el ts real en vez de "ahora".
+    ts: tsOverride || new Date().toISOString(),
     tsLegacy: null,
     tsInferred: false,
     texto, estado, auto: true,
@@ -2733,7 +2771,7 @@ function segActualizarResumen(frmId) {
  * el save se aborta — el DOM puede estar vacío por una race condition entre
  * el autosave timer y la carga asíncrona de filas (segCargarTandas usa setTimeout 100ms).
  */
-function segGuardarTandas(frmId, silencioso = false) {
+function segGuardarTandas(frmId, silencioso = false, permitirVacio = false) {
   const tbodys = _segGetSectionTbodys(frmId);
   if (!tbodys.length) return;
 
@@ -2779,7 +2817,12 @@ function segGuardarTandas(frmId, silencioso = false) {
   // Si el DOM reporta 0 filas pero storage tiene datos para este frmId,
   // el save se aborta. Esto previene la race condition donde el autosave timer
   // dispara sobre tbodys vacíos (render sin segCargarTandas completado).
-  if (filas.length === 0) {
+  // permitirVacio=true bypasea esto — lo usa segRemoveRow cuando el usuario borra
+  // deliberadamente la última fila de la fórmula: ahí 0 filas es el resultado
+  // correcto, no una race condition, y el guard bloqueaba el borrado en silencio
+  // (bug real encontrado 2026-08-04: la fila desaparecía del DOM pero bl2_seg
+  // nunca se actualizaba, dejando el dato "borrado" reviviendo en cada reload).
+  if (filas.length === 0 && !permitirVacio) {
     const filasEnStorage = gDB(K.seg).filter(s => s.formula_id === frmId);
     if (filasEnStorage.length > 0) {
       console.warn('[CI] segGuardarTandas: DOM vacío pero storage tiene', filasEnStorage.length,
@@ -4884,6 +4927,20 @@ function _ciSyncCultivosFromSeg(frmId) {
         }
         changed = true;
       }
+      // Bug encontrado 2026-08-04: si la genética de la fila SEG de origen se corrige
+      // DESPUÉS de que el cultivo ya fue promovido (ya tenía colonización cargada), el
+      // cultivo quedaba huérfano con el geneticaId viejo para siempre — este sync solo
+      // tocaba cantidad/estado. Mantener el cultivo alineado a la fila SEG mientras no
+      // haya sido consumido por GR con datos distintos (no hay otra fuente legítima de
+      // divergencia: el cultivo nace y vive como espejo de su fila SEG).
+      if (c.geneticaId !== geneticaId) {
+        const snapshot = _ciResolverGeneticaSnapshot(geneticaId);
+        if (snapshot) {
+          c.geneticaId = geneticaId;
+          c.geneticaSnapshot = snapshot;
+          changed = true;
+        }
+      }
     }
   });
 
@@ -5342,6 +5399,21 @@ function ciRenderDashboard() {
         <div style="height:100%;width:${ratio}%;background:${ratioCol};border-radius:2px;transition:width .4s"></div>
       </div>` : '';
 
+    // Chips de genéticas usadas — vistazo rápido sin entrar a la fórmula (2026-08-04,
+    // pedido tras el incidente R244/244 en CI-0012). Este es el grid real que ve el
+    // usuario por defecto (#ci-dashboard-grid) — ciRenderFormulasList() construye un
+    // tile casi idéntico pero para #ci-formulas-list, un contenedor secundario; el
+    // mismo bloque se duplicó ahí también para no dejar uno de los dos desactualizado.
+    const geneticasUnicas2 = [...new Set(segsF.map(s => s.genetica).filter(Boolean))];
+    const geneticasChipsHtml2 = geneticasUnicas2.length ? `
+        <div class="ci-dash-gen-chips">
+          ${geneticasUnicas2.map(gid => {
+            const snap = _ciResolverGeneticaSnapshot(gid);
+            const lbl = snap ? _segAbreviarEspecie(snap.label) : gid;
+            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(lbl)}">🧬 ${esc(lbl)}</span>`;
+          }).join('')}
+        </div>` : '';
+
     return `
       <div class="ci-dash-tile" onclick="ciDashOpenFormula('${f.id}')">
         <div class="ci-dash-tile-top">
@@ -5350,6 +5422,7 @@ function ciRenderDashboard() {
         </div>
         <div class="ci-dash-tile-id">${f.id} · ${tileIdDate2}</div>
         ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
+        ${geneticasChipsHtml2}
         <div class="ci-dash-metrics">
           <div class="ci-dash-metric">
             <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>
@@ -5483,6 +5556,16 @@ function ciDashRenderDetalle(frmId) {
     setTimeout(() => {
       try { segInicializarGeneticas(f.id); } catch (e) {}
       try { segRenderSeguimientoNotas(f.id); } catch (e) {}
+      // Bug real encontrado 2026-08-04 (fórmulas con varios frascos de experimento,
+      // ej. CI-0009): el setTimeout(220) interno de segCargarTandas (que restaura
+      // sel.value y llama segActualizarResumen) puede disparar ANTES que esta Pasada 2
+      // cuando el renderizado de la lista de experimentos alarga el tramo síncrono de
+      // Pasada 1 — en ese caso segActualizarResumen lee selects todavía sin opciones
+      // (sel.value="") y el "RESUMEN POR GENÉTICA" queda congelado agrupando TODAS las
+      // placas bajo "—" para siempre, porque nada lo vuelve a llamar después. Repetir la
+      // llamada acá, después de que segInicializarGeneticas garantiza selects poblados,
+      // asegura al menos un cómputo correcto sin importar qué timer ganó la carrera.
+      try { segActualizarResumen(f.id); } catch (e) {}
     }, 100);
   }, 100);
 
