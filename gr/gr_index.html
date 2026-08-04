@@ -478,10 +478,6 @@
                     <span class="toggle-icon">▼</span>
                 </div>
                 <div class="section-content" id="registro">
-                    <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;">
-                        <button type="button" id="btnEditRegistros" class="btn btn-secondary" onclick="grToggleEdicionRegistros()">✏️ Edit</button>
-                        <button type="button" class="btn btn-secondary" onclick="grLimpiezaProfunda()" title="Elimina lotes sin unidades ni peso registrado" style="color:#FF6B6B;border-color:#FF6B6B;">🧹 Limpiar inválidos</button>
-                    </div>
                     <div id="grRegKpiBar" class="gr-kpi-bar" style="display:none"></div>
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
                         <select id="grSortSelect" onchange="grSetSort(this.value)" style="font-size:11px;background:#1a1a1a;color:#ccc;border:1px solid #444;border-radius:6px;padding:4px 8px">
@@ -491,6 +487,7 @@
                             <option value="disp_desc">Disponibles ↓</option>
                             <option value="nombre">Nombre (A→Z)</option>
                         </select>
+                        <button type="button" id="btnEditRegistros" class="btn-edit-toggle" onclick="grToggleEdicionRegistros()">✏️ Edit</button>
                     </div>
                     <div id="registroLotesBody" class="gr-cards-list">
                         <!-- Se llena con JS -->
@@ -499,11 +496,12 @@
                         No hay registros guardados aún.
                     </p>
 
-                    <div class="import-buttons" style="margin-top:15px;display:flex;gap:10px;justify-content:center">
+                    <div class="import-buttons" style="margin-top:15px;display:flex;gap:10px;justify-content:center;align-items:center">
                         <label class="btn btn-export" style="cursor:pointer">
                             📥 Importar backup de GR
                             <input type="file" id="btnImportJson" accept=".json" style="display:none" onchange="importarJSON(event)">
                         </label>
+                        <button type="button" class="btn-small" onclick="grLimpiezaProfunda()" title="Elimina lotes sin unidades ni peso registrado" style="background:var(--dark-tertiary);color:#FF6B6B;border:1px solid var(--border);opacity:.75">🧹 Limpiar inválidos</button>
                     </div>
                 </div>
             </section>

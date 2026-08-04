@@ -1065,12 +1065,10 @@ function grToggleEdicionRegistros() {
     if (btnEdit) {
         if (GR.modoEdicionRegistro) {
             btnEdit.textContent = '💾 Save';
-            btnEdit.classList.remove('btn-secondary');
-            btnEdit.classList.add('btn-primary');
+            btnEdit.classList.add('is-editing');
         } else {
             btnEdit.textContent = '✏️ Edit';
-            btnEdit.classList.remove('btn-primary');
-            btnEdit.classList.add('btn-secondary');
+            btnEdit.classList.remove('is-editing');
         }
     }
     grRenderizarRegistroLotes();
