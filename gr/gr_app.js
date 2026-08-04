@@ -2080,41 +2080,131 @@ window.grEliminarRegistro = grEliminarRegistro;
         GR.biblioteca = bib;
     }
 
-    function guardarBibliotecaEnStorage() {
-        // Blindaje: getBiblioteca() garantiza shape antes de mutar.
+    // Estado de edición independiente por tabla — evita que editar Agentes
+    // deje Granos/Aditivos en modo edición por compartir un flag global
+    // (bug real: el editMode único de antes le ponía .modo-edicion a #config,
+    // padre de las 3 tablas a la vez, aunque solo una estuviera visible).
+    const editModeByTipo = { agentes: false, aditivos: false, granos: false };
+
+    const _GR_BIB_TABLA_ID = { agentes: 'configAgentesTable', aditivos: 'configAditivosTable', granos: 'configGranosTable' };
+    const _GR_BIB_BTN_ID   = { agentes: 'btnEditAgentes',    aditivos: 'btnEditAditivos',    granos: 'btnEditGranos' };
+
+    function _grActualizarSelectorGranosCT(bib) {
+        document.querySelectorAll('.ct-comp').forEach(select => {
+            select.innerHTML = '<option value="">-- Seleccionar grano --</option>' +
+                bib.granos.map(gr =>
+                    `<option value="${gr.nombre}" data-densidad="${gr.densidadTipica}">${gr.nombre} - ${(Number(gr.densidadTipica)||0).toFixed(3).replace('.', ',')} g/ml</option>`
+                ).join('');
+        });
+    }
+
+    function _grActualizarSelectorAditivosDG(bib) {
+        const opcionesAditivos = bib.aditivos.map(a =>
+            `<option value="${a.nombre}">${a.nombre}</option>`
+        ).join('');
+        GR.opcionesAditivosDG = window.opcionesAditivosDG = opcionesAditivos;
+        document.querySelectorAll('#dgTable .dg-biblioteca').forEach(select => {
+            select.innerHTML = '<option value="">-- Seleccionar --</option>' + opcionesAditivos;
+        });
+    }
+
+    // Renderiza UNA tabla (agentes/aditivos/granos) en modo lectura o edición
+    // según editModeByTipo[tipo]. Nunca toca las otras 2 tablas.
+    function renderizarTablaEnConfig(tipo) {
         const bib = getBiblioteca();
+        const editando = !!editModeByTipo[tipo];
+        const tbody = document.getElementById(_GR_BIB_TABLA_ID[tipo]);
+        if (!tbody) return;
 
-        // Recolectar valores editados
-        document.querySelectorAll('#configAgentesTable tr').forEach((tr, i) => {
-            if (bib.agentes[i]) {
-                const nombreInput = tr.querySelector('.edit-nombre');
+        if (tipo === 'agentes') {
+            tbody.innerHTML = bib.agentes.map((ag, i) => `<tr>
+                <td>${ag.id}</td>
+                <td>${editando ? `<input type="text" class="edit-nombre" value="${ag.nombre}">` : ag.nombre}</td>
+                <td>${editando ? `<input type="number" step="0.1" class="edit-conc" value="${ag.concDefault}">` : (ag.concDefault || 0)}</td>
+                <td>${editando ? `<input type="number" step="1" class="edit-vol" value="${ag.volumenTipico || 0}">` : (ag.volumenTipico || '-')}</td>
+                <td>${editando ? `<input type="text" class="edit-notas" value="${ag.notas || ''}">` : (ag.notas || '-')}</td>
+                <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('agentes', ${i})">✕</button></td>
+            </tr>`).join('');
+        } else if (tipo === 'aditivos') {
+            tbody.innerHTML = bib.aditivos.map((ad, i) => `<tr>
+                <td>${ad.id}</td>
+                <td>${editando ? `<input type="text" class="edit-nombre" value="${ad.nombre}">` : ad.nombre}</td>
+                <td>${editando ? `<select class="edit-tipo"><option value="Estructurante" ${ad.tipo==='Estructurante'?'selected':''}>Estructurante</option><option value="Corrector pH" ${ad.tipo==='Corrector pH'?'selected':''}>Corrector pH</option><option value="Nutriente" ${ad.tipo==='Nutriente'?'selected':''}>Nutriente</option></select>` : ad.tipo}</td>
+                <td>${editando ? `<input type="text" class="edit-notas" value="${ad.notas || ''}">` : (ad.notas || '-')}</td>
+                <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('aditivos', ${i})">✕</button></td>
+            </tr>`).join('');
+        } else if (tipo === 'granos') {
+            tbody.innerHTML = bib.granos.map((gr, i) => {
+                const dens = Number(gr.densidadTipica) || 0;
+                return `<tr>
+                    <td>${gr.id}</td>
+                    <td>${editando ? `<input type="text" class="edit-nombre" value="${gr.nombre}">` : gr.nombre}</td>
+                    <td>${editando ? `<input type="number" step="0.001" class="edit-densidad" value="${dens.toFixed(3)}">` : dens.toFixed(3).replace('.', ',') + ' g/ml'}</td>
+                    <td>${editando ? `<input type="text" class="edit-granulo" value="${gr.granulometria || ''}">` : (gr.granulometria || '-')}</td>
+                    <td>${editando ? `<input type="text" class="edit-notas" value="${gr.notas || ''}">` : (gr.notas || '-')}</td>
+                    <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('granos', ${i})">✕</button></td>
+                </tr>`;
+            }).join('');
+        }
+    }
+
+    // Lee los inputs de UNA tabla y persiste solo bib[tipo]. Llamado al
+    // apagar el modo edición de esa tabla (click en "Save").
+    function guardarTablaEnStorage(tipo) {
+        const bib = getBiblioteca();
+        const arr = bib[tipo];
+        const tbody = document.getElementById(_GR_BIB_TABLA_ID[tipo]);
+        if (!tbody || !Array.isArray(arr)) return;
+
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            const item = arr[i];
+            if (!item) return;
+            const nombreInput = tr.querySelector('.edit-nombre');
+            if (nombreInput) item.nombre = nombreInput.value;
+            const notasInput = tr.querySelector('.edit-notas');
+            if (notasInput) item.notas = notasInput.value;
+
+            if (tipo === 'agentes') {
                 const concInput = tr.querySelector('.edit-conc');
-                if (nombreInput) bib.agentes[i].nombre = nombreInput.value;
-                if (concInput) bib.agentes[i].concDefault = parseFloat(concInput.value) || 0;
-            }
-        });
-
-        document.querySelectorAll('#configAditivosTable tr').forEach((tr, i) => {
-            if (bib.aditivos[i]) {
-                const nombreInput = tr.querySelector('.edit-nombre');
+                const volInput = tr.querySelector('.edit-vol');
+                if (concInput) item.concDefault = parseFloat(concInput.value) || 0;
+                if (volInput) item.volumenTipico = parseFloat(volInput.value) || 0;
+            } else if (tipo === 'aditivos') {
                 const tipoInput = tr.querySelector('.edit-tipo');
-                if (nombreInput) bib.aditivos[i].nombre = nombreInput.value;
-                if (tipoInput) bib.aditivos[i].tipo = tipoInput.value;
-            }
-        });
-
-        document.querySelectorAll('#configGranosTable tr').forEach((tr, i) => {
-            if (bib.granos[i]) {
-                const nombreInput = tr.querySelector('.edit-nombre');
+                if (tipoInput) item.tipo = tipoInput.value;
+            } else if (tipo === 'granos') {
+                const densInput = tr.querySelector('.edit-densidad');
                 const granuloInput = tr.querySelector('.edit-granulo');
-                if (nombreInput) bib.granos[i].nombre = nombreInput.value;
-                if (granuloInput) bib.granos[i].granulometria = granuloInput.value;
+                if (densInput) item.densidadTipica = parseFloat(densInput.value) || 0;
+                if (granuloInput) item.granulometria = granuloInput.value;
             }
         });
 
         localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
-        renderizarBibliotecaEnConfig();
+        GR.biblioteca = bib;
+        renderizarTablaEnConfig(tipo);
+        if (tipo === 'granos') _grActualizarSelectorGranosCT(bib);
+        if (tipo === 'aditivos') _grActualizarSelectorAditivosDG(bib);
     }
+
+    // Toggle Edit/Save de UNA tabla puntual (Agentes, Aditivos o Granos).
+    // Reemplaza el toggleEdicionBiblioteca() global anterior.
+    GR.toggleEdicionTabla = window.toggleEdicionTabla = function(tipo) {
+        if (!_GR_BIB_TABLA_ID[tipo]) return;
+        editModeByTipo[tipo] = !editModeByTipo[tipo];
+        const btn = document.getElementById(_GR_BIB_BTN_ID[tipo]);
+        const tbody = document.getElementById(_GR_BIB_TABLA_ID[tipo]);
+
+        if (editModeByTipo[tipo]) {
+            if (btn) { btn.textContent = '💾 Save'; btn.classList.add('is-editing'); }
+            if (tbody) tbody.classList.add('modo-edicion');
+            renderizarTablaEnConfig(tipo);
+        } else {
+            if (btn) { btn.textContent = '✏️ Edit'; btn.classList.remove('is-editing'); }
+            if (tbody) tbody.classList.remove('modo-edicion');
+            guardarTablaEnStorage(tipo); // ya vuelve a renderizar en modo lectura
+        }
+    };
 
     // Cambiar panel visible en CONFIG (Agentes / Aditivos / Granos)
     GR.mostrarPanelConfig = window.mostrarPanelConfig = function(tab) {
@@ -2149,13 +2239,15 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'AG-' + String(bib.agentes.length + 1).padStart(2, '0'),
             nombre: nombre.toUpperCase(), concDefault: conc, volumenTipico: vol, notas: notas
         });
+        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        GR.biblioteca = bib;
 
         document.getElementById('configAgenteNombre').value = '';
         document.getElementById('configAgenteConc').value = 0;
         document.getElementById('configAgenteVol').value = 0;
         document.getElementById('configAgenteNotas').value = '';
 
-        guardarBibliotecaEnStorage();
+        renderizarTablaEnConfig('agentes');
     };
 
     // Guardar aditivo desde CONFIG
@@ -2171,12 +2263,15 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'AD-' + String(bib.aditivos.length + 1).padStart(2, '0'),
             nombre: nombre, tipo: tipo, notas: notas
         });
+        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        GR.biblioteca = bib;
 
         document.getElementById('configAditivoNombre').value = '';
         document.getElementById('configAditivoTipo').value = 'Estructurante';
         document.getElementById('configAditivoNotas').value = '';
 
-        guardarBibliotecaEnStorage();
+        renderizarTablaEnConfig('aditivos');
+        _grActualizarSelectorAditivosDG(bib);
     };
 
     // Guardar grano desde CONFIG
@@ -2196,6 +2291,8 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'GR-' + String(bib.granos.length + 1).padStart(2, '0'),
             nombre: nombre, densidadTipica: parseFloat(densidad.toFixed(3)), granulometria: granulometria, notas: notas
         });
+        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        GR.biblioteca = bib;
 
         document.getElementById('configGranoNombre').value = '';
         document.getElementById('configGranoVolumen').value = 0;
@@ -2204,7 +2301,8 @@ window.grEliminarRegistro = grEliminarRegistro;
         document.getElementById('configGranoGranulo').value = '';
         document.getElementById('configGranoNotas').value = '';
 
-        guardarBibliotecaEnStorage();
+        renderizarTablaEnConfig('granos');
+        _grActualizarSelectorGranosCT(bib);
     };
 
     // Calcular densidad grano automáticamente
@@ -2232,78 +2330,20 @@ window.grEliminarRegistro = grEliminarRegistro;
         const bib = getBiblioteca();
         if (!Array.isArray(bib[tipo])) { console.warn('[GR] tipo no soportado:', tipo); return; }
         bib[tipo].splice(index, 1);
-        guardarBibliotecaEnStorage();
+        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        GR.biblioteca = bib;
+        renderizarTablaEnConfig(tipo);
+        if (tipo === 'granos') _grActualizarSelectorGranosCT(bib);
+        if (tipo === 'aditivos') _grActualizarSelectorAditivosDG(bib);
     };
 
-    // Renderizar biblioteca en CONFIG
-    let editMode = false;
-
-    GR.toggleEdicionBiblioteca = window.toggleEdicionBiblioteca = function() {
-        editMode = !editMode;
-        const btn = document.getElementById('btnEditBiblioteca');
-        const configContent = document.getElementById('config');
-        
-        if (editMode) {
-            btn.textContent = 'Save';
-            btn.classList.add('modo-edicion');
-            configContent.classList.add('modo-edicion');
-        } else {
-            btn.textContent = 'Edit';
-            btn.classList.remove('modo-edicion');
-            configContent.classList.remove('modo-edicion');
-            guardarBibliotecaEnStorage();
-        }
-    };
-
+    // Re-renderiza las 3 tablas de la Biblioteca, salteando las que estén
+    // en edición (no pisar inputs sin guardar de una tabla al refrescar
+    // otra — ver toggleEdicionTabla / guardarTablaEnStorage).
     function renderizarBibliotecaEnConfig() {
-        // Blindaje: asegurar que la biblioteca esté hidratada y con shape válido
-        // antes de leer .agentes / .aditivos / .granos.
-        const bib = getBiblioteca();
-
-        const agentesTable = document.getElementById('configAgentesTable');
-        if (agentesTable) {
-            agentesTable.innerHTML = bib.agentes.map((ag, i) =>
-                `<tr><td>${ag.id}</td><td><input type="text" class="edit-nombre" data-tipo="agentes" data-idx="${i}" value="${ag.nombre}"></td><td><input type="number" class="edit-conc" data-tipo="agentes" data-idx="${i}" value="${ag.concDefault}"></td><td>${ag.volumenTipico || '-'}</td><td>${ag.notas || '-'}</td><td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('agentes', ${i})">✕</button></td></tr>`
-            ).join('');
-        }
-
-        const aditivosTable = document.getElementById('configAditivosTable');
-        if (aditivosTable) {
-            aditivosTable.innerHTML = bib.aditivos.map((ad, i) =>
-                `<tr><td>${ad.id}</td><td><input type="text" class="edit-nombre" data-tipo="aditivos" data-idx="${i}" value="${ad.nombre}"></td><td><select class="edit-tipo" data-tipo="aditivos" data-idx="${i}"><option value="Estructurante" ${ad.tipo==='Estructurante'?'selected':''}>Estructurante</option><option value="Corrector pH" ${ad.tipo==='Corrector pH'?'selected':''}>Corrector pH</option><option value="Nutriente" ${ad.tipo==='Nutriente'?'selected':''}>Nutriente</option></select></td><td>${ad.notas || '-'}</td><td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('aditivos', ${i})">✕</button></td></tr>`
-            ).join('');
-        }
-
-        const granosTable = document.getElementById('configGranosTable');
-        if (granosTable) {
-            granosTable.innerHTML = bib.granos.map((gr, i) =>
-                `<tr><td>${gr.id}</td><td><input type="text" class="edit-nombre" data-tipo="granos" data-idx="${i}" value="${gr.nombre}"></td><td>${(Number(gr.densidadTipica)||0).toFixed(3).replace('.', ',')} g/ml</td><td><input type="text" class="edit-granulo" data-tipo="granos" data-idx="${i}" value="${gr.granulometria || ''}"></td><td>${gr.notas || '-'}</td><td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('granos', ${i})">✕</button></td></tr>`
-            ).join('');
-        }
-
-        // Actualizar selector de granos en CT (select con características)
-        document.querySelectorAll('.ct-comp').forEach(select => {
-            select.innerHTML = '<option value="">-- Seleccionar grano --</option>' +
-                bib.granos.map(gr =>
-                    `<option value="${gr.nombre}" data-densidad="${gr.densidadTipica}">${gr.nombre} - ${(Number(gr.densidadTipica)||0).toFixed(3).replace('.', ',')} g/ml</option>`
-                ).join('');
+        ['agentes', 'aditivos', 'granos'].forEach(function(tipo) {
+            if (!editModeByTipo[tipo]) renderizarTablaEnConfig(tipo);
         });
-
-        // Actualizar selector de aditivos en DG (para filas nuevas y existentes)
-        const opcionesAditivos = bib.aditivos.map(a =>
-            `<option value="${a.nombre}">${a.nombre}</option>`
-        ).join('');
-
-        // Guardar para filas nuevas
-        GR.opcionesAditivosDG = window.opcionesAditivosDG = opcionesAditivos;
-
-        // Actualizar todos los selectores .dg-biblioteca existentes en la tabla
-        document.querySelectorAll('#dgTable .dg-biblioteca').forEach(select => {
-            select.innerHTML = '<option value="">-- Seleccionar --</option>' + opcionesAditivos;
-        });
-
-        // Actualizar selectors de HM también
-
     }
 
     // Exponer función a window para uso externo

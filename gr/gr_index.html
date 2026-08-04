@@ -522,7 +522,6 @@
                         <button type="button" class="config-tab active" data-tab="agentes" onclick="mostrarPanelConfig('agentes')">Agentes</button>
                         <button type="button" class="config-tab" data-tab="aditivos" onclick="mostrarPanelConfig('aditivos')">Aditivos</button>
                         <button type="button" class="config-tab" data-tab="granos" onclick="mostrarPanelConfig('granos')">Granos</button>
-                        <button type="button" id="btnEditBiblioteca" class="config-tab" onclick="toggleEdicionBiblioteca()">Edit</button>
                     </div>
 
                     <!-- Panel Agentes -->
@@ -547,7 +546,7 @@
                         </div>
                         <button type="button" class="btn btn-primary" onclick="guardarAgenteConfig()">+ Agregar Agente</button>
 
-                        <h4 class="config-list-title">Agentes registrados:</h4>
+                        <h4 class="config-list-title">Agentes registrados: <button type="button" id="btnEditAgentes" class="btn-edit-toggle" onclick="toggleEdicionTabla('agentes')">✏️ Edit</button></h4>
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -586,7 +585,7 @@
                         </div>
                         <button type="button" class="btn btn-primary" onclick="guardarAditivoConfig()">+ Agregar Aditivo</button>
 
-                        <h4 class="config-list-title">Aditivos registrados:</h4>
+                        <h4 class="config-list-title">Aditivos registrados: <button type="button" id="btnEditAditivos" class="btn-edit-toggle" onclick="toggleEdicionTabla('aditivos')">✏️ Edit</button></h4>
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -633,7 +632,7 @@
                         </div>
                         <button type="button" class="btn btn-primary" onclick="guardarGranoConfig()">+ Agregar Grano</button>
 
-                        <h4 class="config-list-title">Granos registrados:</h4>
+                        <h4 class="config-list-title">Granos registrados: <button type="button" id="btnEditGranos" class="btn-edit-toggle" onclick="toggleEdicionTabla('granos')">✏️ Edit</button></h4>
                         <table class="data-table">
                             <thead>
                                 <tr>
