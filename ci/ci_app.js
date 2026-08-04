@@ -208,6 +208,20 @@ function _segParseDate(val) {
   return new Date(val.length === 10 ? val + 'T12:00:00' : val);
 }
 
+// Contraparte de _segParseDate: formatea un Date como 'YYYY-MM-DDTHH:MM' en
+// hora LOCAL — el formato que espera el .value de un <input type="datetime-local">.
+// Bug real encontrado 2026-08-04: usar Date.toISOString().slice(0,16) para esto
+// (dos call sites lo hacían) siembra la hora en UTC dentro de un campo de semántica
+// local — en UTC-3 esto adelanta el campo 3hs sin que el usuario lo note, y esa
+// hora "futura" se guarda como inoculoTs si no la corrige a mano. Consecuencia
+// verificada: el badge D+ de una fórmula recién inoculada desaparece (_segFmtDias
+// ve ms<0 y devuelve '—') hasta que el reloj real alcanza la hora falsa guardada.
+function _segToLocalDatetimeValue(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 // ── Notificación toast ──
 let _notifTimer = null;
 function sN(msg, isErr) {
@@ -804,7 +818,7 @@ function buildFrmBodyHTML(f) {
           </div>
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;grid-column:span 2">
             <div style="font-size:9px;color:var(--tx3);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Fecha</div>
-            <input type="datetime-local" value="${f.fecha ? new Date(f.fecha).toISOString().slice(0,16) : ''}" style="width:100%;background:transparent;border:none;color:var(--tx);font-size:12px;outline:none" onclick="event.stopPropagation()" onchange="frmEditField('${f.id}','fecha',new Date(this.value).toISOString())">
+            <input type="datetime-local" value="${f.fecha ? _segToLocalDatetimeValue(new Date(f.fecha)) : ''}" style="width:100%;background:transparent;border:none;color:var(--tx);font-size:12px;outline:none" onclick="event.stopPropagation()" onchange="frmEditField('${f.id}','fecha',new Date(this.value).toISOString())">
           </div>
           <div style="background:var(--bg);border:1px solid var(--ac);border-radius:4px;padding:10px;display:flex;flex-direction:column;justify-content:center;align-items:center">
             <div style="font-size:9px;color:var(--ac);letter-spacing:1px;margin-bottom:2px">ID</div>
@@ -2487,7 +2501,7 @@ function _segConfirmarInoculacion(row, frmId) {
   // Auto-completar la fecha de inóculo si el usuario no la ingresó aún
   const fechaInp = row.querySelector('.seg-inoculo-fecha');
   if (fechaInp && !fechaInp.value) {
-    fechaInp.value = new Date().toISOString().slice(0, 16);
+    fechaInp.value = _segToLocalDatetimeValue(new Date());
   }
   // inoculoTs como timestamp de auditoría (derivado de inoculoFecha, sellado una sola vez).
   // yaSellado distingue "primera confirmación" (recién se completa placas+genética)
