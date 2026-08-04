@@ -2108,6 +2108,14 @@ window.grEliminarRegistro = grEliminarRegistro;
         });
     }
 
+    // Escapa texto para interpolación segura en innerHTML (atributos value="..."
+    // y texto plano). Mismo patrón que cfgEscapeHtml en su/su_app.js — cada
+    // módulo mantiene su propia copia (IIFEs separadas, sin acoplar GR a SU).
+    function _grEscHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     // Renderiza UNA tabla (agentes/aditivos/granos) en modo lectura o edición
     // según editModeByTipo[tipo]. Nunca toca las otras 2 tablas.
     function renderizarTablaEnConfig(tipo) {
@@ -2119,18 +2127,18 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (tipo === 'agentes') {
             tbody.innerHTML = bib.agentes.map((ag, i) => `<tr>
                 <td>${ag.id}</td>
-                <td>${editando ? `<input type="text" class="edit-nombre" value="${ag.nombre}">` : ag.nombre}</td>
+                <td>${editando ? `<input type="text" class="edit-nombre" value="${_grEscHtml(ag.nombre)}">` : _grEscHtml(ag.nombre)}</td>
                 <td>${editando ? `<input type="number" step="0.1" class="edit-conc" value="${ag.concDefault}">` : (ag.concDefault || 0)}</td>
                 <td>${editando ? `<input type="number" step="1" class="edit-vol" value="${ag.volumenTipico || 0}">` : (ag.volumenTipico || '-')}</td>
-                <td>${editando ? `<input type="text" class="edit-notas" value="${ag.notas || ''}">` : (ag.notas || '-')}</td>
+                <td>${editando ? `<input type="text" class="edit-notas" value="${_grEscHtml(ag.notas || '')}">` : _grEscHtml(ag.notas || '-')}</td>
                 <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('agentes', ${i})">✕</button></td>
             </tr>`).join('');
         } else if (tipo === 'aditivos') {
             tbody.innerHTML = bib.aditivos.map((ad, i) => `<tr>
                 <td>${ad.id}</td>
-                <td>${editando ? `<input type="text" class="edit-nombre" value="${ad.nombre}">` : ad.nombre}</td>
-                <td>${editando ? `<select class="edit-tipo"><option value="Estructurante" ${ad.tipo==='Estructurante'?'selected':''}>Estructurante</option><option value="Corrector pH" ${ad.tipo==='Corrector pH'?'selected':''}>Corrector pH</option><option value="Nutriente" ${ad.tipo==='Nutriente'?'selected':''}>Nutriente</option></select>` : ad.tipo}</td>
-                <td>${editando ? `<input type="text" class="edit-notas" value="${ad.notas || ''}">` : (ad.notas || '-')}</td>
+                <td>${editando ? `<input type="text" class="edit-nombre" value="${_grEscHtml(ad.nombre)}">` : _grEscHtml(ad.nombre)}</td>
+                <td>${editando ? `<select class="edit-tipo"><option value="Estructurante" ${ad.tipo==='Estructurante'?'selected':''}>Estructurante</option><option value="Corrector pH" ${ad.tipo==='Corrector pH'?'selected':''}>Corrector pH</option><option value="Nutriente" ${ad.tipo==='Nutriente'?'selected':''}>Nutriente</option></select>` : _grEscHtml(ad.tipo)}</td>
+                <td>${editando ? `<input type="text" class="edit-notas" value="${_grEscHtml(ad.notas || '')}">` : _grEscHtml(ad.notas || '-')}</td>
                 <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('aditivos', ${i})">✕</button></td>
             </tr>`).join('');
         } else if (tipo === 'granos') {
@@ -2138,20 +2146,23 @@ window.grEliminarRegistro = grEliminarRegistro;
                 const dens = Number(gr.densidadTipica) || 0;
                 return `<tr>
                     <td>${gr.id}</td>
-                    <td>${editando ? `<input type="text" class="edit-nombre" value="${gr.nombre}">` : gr.nombre}</td>
+                    <td>${editando ? `<input type="text" class="edit-nombre" value="${_grEscHtml(gr.nombre)}">` : _grEscHtml(gr.nombre)}</td>
                     <td>${editando ? `<input type="number" step="0.001" class="edit-densidad" value="${dens.toFixed(3)}">` : dens.toFixed(3).replace('.', ',') + ' g/ml'}</td>
-                    <td>${editando ? `<input type="text" class="edit-granulo" value="${gr.granulometria || ''}">` : (gr.granulometria || '-')}</td>
-                    <td>${editando ? `<input type="text" class="edit-notas" value="${gr.notas || ''}">` : (gr.notas || '-')}</td>
+                    <td>${editando ? `<input type="text" class="edit-granulo" value="${_grEscHtml(gr.granulometria || '')}">` : _grEscHtml(gr.granulometria || '-')}</td>
+                    <td>${editando ? `<input type="text" class="edit-notas" value="${_grEscHtml(gr.notas || '')}">` : _grEscHtml(gr.notas || '-')}</td>
                     <td class="col-editar"><button type="button" class="btn-delete" onclick="eliminarIngredienteConfig('granos', ${i})">✕</button></td>
                 </tr>`;
             }).join('');
         }
     }
 
-    // Lee los inputs de UNA tabla y persiste solo bib[tipo]. Llamado al
-    // apagar el modo edición de esa tabla (click en "Save").
-    function guardarTablaEnStorage(tipo) {
-        const bib = getBiblioteca();
+    // Lee los <input>/<select> de edición actualmente en el DOM de una tabla y
+    // los vuelca sobre bib[tipo] (por posición, fila i ↔ bib[tipo][i]). Si la
+    // tabla no está en modo edición, los selectores .edit-* simplemente no
+    // existen en el DOM y esto es un no-op seguro — por eso se puede llamar
+    // incondicionalmente antes de cualquier mutación de bib[tipo] (agregar,
+    // eliminar) sin chequear editModeByTipo primero.
+    function _grScrapeTablaDesdeDOM(tipo, bib) {
         const arr = bib[tipo];
         const tbody = document.getElementById(_GR_BIB_TABLA_ID[tipo]);
         if (!tbody || !Array.isArray(arr)) return;
@@ -2179,6 +2190,13 @@ window.grEliminarRegistro = grEliminarRegistro;
                 if (granuloInput) item.granulometria = granuloInput.value;
             }
         });
+    }
+
+    // Lee los inputs de UNA tabla y persiste solo bib[tipo]. Llamado al
+    // apagar el modo edición de esa tabla (click en "Save").
+    function guardarTablaEnStorage(tipo) {
+        const bib = getBiblioteca();
+        _grScrapeTablaDesdeDOM(tipo, bib);
 
         localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
         GR.biblioteca = bib;
@@ -2235,6 +2253,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (!nombre) { alert('Ingrese nombre del agente'); return; }
 
         const bib = getBiblioteca();
+        _grScrapeTablaDesdeDOM('agentes', bib); // preservar ediciones sin guardar de otras filas antes de agregar
         bib.agentes.push({
             id: 'AG-' + String(bib.agentes.length + 1).padStart(2, '0'),
             nombre: nombre.toUpperCase(), concDefault: conc, volumenTipico: vol, notas: notas
@@ -2259,6 +2278,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (!nombre) { alert('Ingrese nombre del aditivo'); return; }
 
         const bib = getBiblioteca();
+        _grScrapeTablaDesdeDOM('aditivos', bib); // preservar ediciones sin guardar de otras filas antes de agregar
         bib.aditivos.push({
             id: 'AD-' + String(bib.aditivos.length + 1).padStart(2, '0'),
             nombre: nombre, tipo: tipo, notas: notas
@@ -2287,6 +2307,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         const densidad = vol > 0 ? peso / vol : 0;
 
         const bib = getBiblioteca();
+        _grScrapeTablaDesdeDOM('granos', bib); // preservar ediciones sin guardar de otras filas antes de agregar
         bib.granos.push({
             id: 'GR-' + String(bib.granos.length + 1).padStart(2, '0'),
             nombre: nombre, densidadTipica: parseFloat(densidad.toFixed(3)), granulometria: granulometria, notas: notas
@@ -2329,6 +2350,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (!confirm('¿Eliminar este ingrediente?')) return;
         const bib = getBiblioteca();
         if (!Array.isArray(bib[tipo])) { console.warn('[GR] tipo no soportado:', tipo); return; }
+        _grScrapeTablaDesdeDOM(tipo, bib); // preservar ediciones sin guardar de las otras filas antes de eliminar la target
         bib[tipo].splice(index, 1);
         localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
         GR.biblioteca = bib;
