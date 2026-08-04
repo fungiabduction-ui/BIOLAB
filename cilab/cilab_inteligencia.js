@@ -1321,6 +1321,14 @@ function buildModel() {
   };
 
   _modelWrite(model);
+  // MEJ-0002: recomputar el cache del FI Engine encadenado — antes quedaba stale
+  // hasta que el usuario volviera a abrir ese panel manualmente (podían pasar días
+  // con coefs OLS más nuevos que los que experimentAdvice/routeAttribution seguían
+  // usando). buildFormulaIntel() ya tiene su propio guard _fiBuilding y su propio
+  // typeof guard acá — si el módulo no cargó, esto no hace nada.
+  if (window.cilabFI && typeof window.cilabFI.buildFormulaIntel === 'function') {
+    try { window.cilabFI.buildFormulaIntel(); } catch(e) {}
+  }
   return model;
   } finally {
     _building = false;
