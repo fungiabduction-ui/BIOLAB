@@ -944,6 +944,36 @@ body {
     margin: 20px 0 10px;
     padding-top: 15px;
     border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* ========================================
+   TOGGLE EDIT/SAVE — botón chico de 2 estados.
+   Usado en Biblioteca (uno por tabla) y en Registro.
+   ======================================== */
+.btn-edit-toggle {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--dark-tertiary);
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.btn-edit-toggle:hover {
+    background: #454545;
+}
+
+.btn-edit-toggle.is-editing {
+    background: var(--highlight);
+    border-color: var(--highlight);
+    color: white;
 }
 
 /* ========================================
