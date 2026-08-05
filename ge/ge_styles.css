@@ -648,7 +648,10 @@ body {
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.7);
-  backdrop-filter: blur(3px);
+  /* backdrop-filter: blur(3px) removido 2026-08-04 — forzaba recálculo de blur en
+     toda la pantalla en cada repintado (cursor titilando al tipear), medido ~2x más
+     lento por caracter en #mf-name con el blur puesto. El oscurecido (rgba .7) ya
+     alcanza para separar visualmente el modal del fondo. */
   display: flex;
   align-items: center;
   justify-content: center;
