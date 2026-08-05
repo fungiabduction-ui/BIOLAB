@@ -1535,7 +1535,10 @@ header {
 .clab-opt-bg {
   position: absolute; inset: 0;
   background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(3px);
+  /* backdrop-filter: blur(3px) removido 2026-08-04 — mismo patrón que causaba lag
+     de tipeo en GE (ver MEJ-0038); acá el modal (Explorador de Variantes) no tiene
+     inputs de texto así que el síntoma exacto no se reproduce, pero el costo de
+     recalcular blur en cada repintado de fondo sigue siendo el mismo desperdicio. */
 }
 .clab-opt-dlg {
   position: relative;
