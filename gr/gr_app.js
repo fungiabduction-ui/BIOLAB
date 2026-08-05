@@ -1889,6 +1889,17 @@ window.grEliminarRegistro = grEliminarRegistro;
     // ==========================================
 
     function cargarDatosLote(lote) {
+        // Cargar notas ANTES que cualquier otra cosa — deben quedar scopeadas al lote
+        // correcto desde el primer instante. Si esto corre al final (como estaba antes),
+        // cualquier handler disparado durante la carga (ej. grDgOnChangeGenetica al
+        // restaurar los <select> de género de cada tanda) todavía mutaría la referencia
+        // del LOTE ANTERIOR (la que dejó cargarDatosLote() de la vez pasada), filtrando
+        // notas fantasma entre lotes distintos — causa raíz confirmada de por qué
+        // GR273 tenía notas de "203a/203b" (tandas de GR203) en su propio historial.
+        // Ver MEJ-0037 en docs/lab-intelligence/mejoras_app.md.
+        GR.protoNotas = lote.protoNotas || [];
+        GR.seguimientoNotas = lote.seguimientoNotas || [];
+
         // Datos básicos
         const idInput = document.getElementById('loteId');
         const tieneTandas = Array.isArray(lote.dg) && lote.dg.length > 0;
@@ -2006,7 +2017,9 @@ window.grEliminarRegistro = grEliminarRegistro;
                     }
                 }
                 // Actualizar label de genética CI al cargar
-                if (typeof grDgOnChangeGenetica === 'function') grDgOnChangeGenetica(sel);
+                // isLoad:true evita que la restauración pise fechaInoculacion con "hoy"
+                // y evita loggear una nota de "inoculación" fantasma en cada apertura del lote.
+                if (typeof grDgOnChangeGenetica === 'function') grDgOnChangeGenetica(sel, { isLoad: true });
             }
 
             // Restaurar placas usadas (campo universal único).
@@ -2049,10 +2062,7 @@ window.grEliminarRegistro = grEliminarRegistro;
             });
         }
 
-        // Cargar Notas
-        GR.protoNotas = lote.protoNotas || [];
-        GR.seguimientoNotas = lote.seguimientoNotas || [];
-        
+        // Renderizar notas (ya cargadas al inicio de esta función — ver comentario ahí)
         if (typeof grRenderNotas === 'function') grRenderNotas();
         if (typeof window.grRenderSeguimientoNotas === 'function') window.grRenderSeguimientoNotas();
     }
@@ -2927,9 +2937,10 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (labelEl) { labelEl.textContent = ''; }
     };
 
-    window.grDgOnChangeGenetica = function(selectEl) {
+    window.grDgOnChangeGenetica = function(selectEl, opts) {
         const row = selectEl.closest('.dg-row');
         if (!row) return;
+        opts = opts || {};
 
         const tanda = row.querySelector('.dg-tanda').value;
         const genetica = selectEl.value;
@@ -2937,7 +2948,9 @@ window.grEliminarRegistro = grEliminarRegistro;
 
         // Siempre registrar fecha de inoculación al seleccionar genética,
         // incluso si aún no hay frascos/tanda (fix: no bloquear colonización luego).
-        if (genetica && !row.querySelector('.dg-fecha-inoculo')?.value) {
+        // isLoad=true = esto es una restauración programática de un lote guardado, no una
+        // selección real del usuario — nunca hay que inventar "hoy" en ese caso (MEJ-0037).
+        if (!opts.isLoad && genetica && !row.querySelector('.dg-fecha-inoculo')?.value) {
             row.dataset.fechaInoculacion = new Date().toISOString().split('T')[0];
         }
 
@@ -2975,7 +2988,9 @@ window.grEliminarRegistro = grEliminarRegistro;
             }
         }
 
-        if (!tanda || !genetica || frascos === 0) return;
+        // isLoad=true: no loggear nota de inoculación al simplemente abrir el lote —
+        // solo debe registrarse ante una selección real del usuario (mismo motivo de arriba).
+        if (opts.isLoad || !tanda || !genetica || frascos === 0) return;
 
         grRegistrarSeguimiento(
             'inoculacion',
@@ -3035,6 +3050,23 @@ window.grEliminarRegistro = grEliminarRegistro;
             const d1 = new Date(fechaInoculacion);
             const d2 = new Date(fechaColonizacion);
             dias = Math.floor((d2 - d1) / 86400000);
+        }
+
+        // Guardia de invariante biológico: no se puede colonizar antes de inocular.
+        // Alertar de inmediato en vez de dejarlo en silencio en el dato — así se detectó
+        // tarde MEJ-0037 (14 tandas de abril 2026 con "colonización en -N días" durante
+        // meses sin que nadie lo notara, hasta una auditoría manual del backup).
+        if (dias !== null && dias < 0) {
+            const guardarIgual = confirm(
+                `⚠ La fecha de colonización (${fechaColonizacion}) es ANTERIOR a la fecha ` +
+                `de inoculación (${fechaInoculacion}) — biológicamente imposible.\n\n` +
+                `Aceptar = guardar igual (solo si estás seguro de que la fecha de INOCULACIÓN es la que está mal, no esta).\n` +
+                `Cancelar = borrar esta fecha de colonización para corregirla.`
+            );
+            if (!guardarIgual) {
+                inputEl.value = '';
+                return;
+            }
         }
 
         if (dias !== null) row.dataset.diasColonizacion = dias;
