@@ -229,7 +229,11 @@
   function canHaveChildOfType(parentNode, childType) {
     if (!parentNode)                     return childType === 'species';
     if (parentNode.type === 'species')   return childType === 'strain';
-    if (parentNode.type === 'strain')    return childType === 'phenotype';
+    // Cepa → Fenotipo (expresión observada de esa cepa) o Cepa (bifurcación genética
+    // real por recombinación meiótica directo de otra cepa — caso real 2026-08-05:
+    // R1, recomposición multiesporal de Hillbilly, forzada a Fenotipo hasta este fix
+    // porque el árbol no tenía forma de representar una cepa naciendo de otra cepa).
+    if (parentNode.type === 'strain')    return childType === 'phenotype' || childType === 'strain';
     if (parentNode.type === 'phenotype') return childType === 'phenotype' || childType === 'strain';
     return false;
   }
@@ -525,6 +529,7 @@
       b.push(`<button class="mini-btn" title="Añadir cepa" onclick="event.stopPropagation();ge.openCreate('strain','${node.id}')">+ CE.</button>`);
     } else if (node.type === 'strain') {
       b.push(`<button class="mini-btn" title="Añadir fenotipo" onclick="event.stopPropagation();ge.openCreate('phenotype','${node.id}')">+ FT.</button>`);
+      b.push(`<button class="mini-btn alt" title="Derivar cepa" onclick="event.stopPropagation();ge.openCreate('strain','${node.id}')">+ CE.</button>`);
     } else if (node.type === 'phenotype') {
       b.push(`<button class="mini-btn"     title="Sub-fenotipo" onclick="event.stopPropagation();ge.openCreate('phenotype','${node.id}')">+ FT.</button>`);
       b.push(`<button class="mini-btn alt" title="Derivar cepa" onclick="event.stopPropagation();ge.openCreate('strain','${node.id}')">+ CE.</button>`);
@@ -697,8 +702,10 @@
     if (!isArchived) {
       if (node.type === 'species')
         actionBtns.push(`<button class="btn btn-primary btn-sm" onclick="ge.openCreate('strain','${node.id}')">➕ Añadir cepa</button>`);
-      if (node.type === 'strain')
+      if (node.type === 'strain') {
         actionBtns.push(`<button class="btn btn-primary btn-sm" onclick="ge.openCreate('phenotype','${node.id}')">➕ Añadir fenotipo</button>`);
+        actionBtns.push(`<button class="btn btn-primary btn-sm" onclick="ge.openCreate('strain','${node.id}')">➕ Derivar cepa</button>`);
+      }
       if (node.type === 'phenotype') {
         actionBtns.push(`<button class="btn btn-primary btn-sm" onclick="ge.openCreate('phenotype','${node.id}')">➕ Sub-fenotipo</button>`);
         actionBtns.push(`<button class="btn btn-primary btn-sm" onclick="ge.openCreate('strain','${node.id}')">➕ Derivar cepa</button>`);
