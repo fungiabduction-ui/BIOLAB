@@ -2367,8 +2367,15 @@ function _ciDashDiasDesdeInoculacion(segsF) {
     .sort((a, b) => b.d - a.d);
   if (!conIno.length) return null;
   const { s, d } = conIno[0];
-  const inoTs = s.inoculoTs || d.toISOString();
-  const txt = _segFmtDias(inoTs, s.colonizacion);
+  // Bug real encontrado 2026-08-05: acá decía `s.inoculoTs || d.toISOString()` —
+  // invertía la prioridad que la línea de arriba ya calculó bien (preferir
+  // inoculoFecha). Si inoculoTs quedó desincronizado de inoculoFecha (datos
+  // viejos/migrados, ej. CI-0001/CI-0002/CI-0008: inoculoFecha real de abril
+  // 2026 pero inoculoTs sellado en una fecha muchísimo más tardía), el cálculo
+  // daba un delta negativo contra colonizacion y el badge D+ desaparecía. `d`
+  // ya es exactamente "inoculoFecha si existe, si no inoculoTs" — mismo criterio
+  // que ya usa correctamente segActualizarDias() para la columna D+ de la tabla.
+  const txt = _segFmtDias(d.toISOString(), s.colonizacion);
   return (txt && txt !== '—') ? txt : null;
 }
 
