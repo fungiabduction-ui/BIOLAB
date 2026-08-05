@@ -343,10 +343,28 @@
         n[k] = changes[k];
       }
     }
+
+    // Cambio de tipo Cepa<->Fenotipo (2026-08-05) — el id nunca cambia, así que
+    // ninguna referencia cross-módulo por id (bl2_seg.genetica, gr_lotes[].dg[].fen_id,
+    // fr_bolsas.fenId, bl2_cultivos.geneticaId, etc.) queda huérfana. Nunca se permite
+    // mover a/desde 'species' (raíz estructuralmente distinta, no tiene sentido acá).
+    // Se valida contra el padre actual con la misma regla que createNode(); los hijos
+    // existentes nunca invalidan el cambio porque Cepa y Fenotipo admiten hoy
+    // exactamente los mismos tipos de hijo (ver canHaveChildOfType, MEJ-0039).
+    if (changes.type !== undefined && changes.type !== n.type) {
+      if (changes.type !== 'strain' && changes.type !== 'phenotype')
+        throw new Error(`No se puede cambiar a tipo '${changes.type}'`);
+      const parent = n.parentId ? getNode(n.parentId) : null;
+      if (!canHaveChildOfType(parent, changes.type))
+        throw new Error(`'${typeLabel(changes.type)}' no es válido bajo '${parent ? typeLabel(parent.type) : 'raíz'}'`);
+      applied.type = { from: n.type, to: changes.type };
+      n.type = changes.type;
+      statsCache = null; // los conteos por tipo del header cambiaron
+    }
+
     n.updatedAt = nowIso();
     if (Object.keys(applied).length) logRecord('UPDATE', n, { changes: applied });
-    // Sin rebuildAllIndexes(): parentId no cambió.
-    // Sin statsCache=null: nombre/color/desc no cambian conteos del header.
+    // Sin rebuildAllIndexes(): parentId no cambió (los índices no están keyeados por type).
     save();
     return n;
   }
@@ -959,7 +977,10 @@
     const node   = isEdit ? getNode(cfg.nodeId) : null;
     if (isEdit && !node) return;
     const type   = isEdit ? node.type : cfg.type;
-    const parent = !isEdit && cfg.parentId ? getNode(cfg.parentId) : null;
+    const parent = isEdit
+      ? (node.parentId ? getNode(node.parentId) : null)
+      : (cfg.parentId  ? getNode(cfg.parentId)  : null);
+    const typeEditable = isEdit && (node.type === 'strain' || node.type === 'phenotype');
 
     let crumbPath = [];
     if (isEdit)      crumbPath = resolveLineage(node.id).path.slice(0, -1);
@@ -973,19 +994,31 @@
         <div class="modal" onclick="event.stopPropagation()">
           <div class="modal-head">
             <div>
-              <div class="modal-kicker">${isEdit ? 'Editar' : 'Crear'} · <span class="node-type-chip chip-${type}">${typeLabel(type)}</span></div>
+              <div class="modal-kicker">${isEdit ? 'Editar' : 'Crear'} · ${
+                typeEditable
+                  ? `<select id="mf-type" class="node-type-chip chip-${type}" style="border:none;font:inherit;cursor:pointer" onchange="this.className='node-type-chip chip-'+this.value">
+                       <option value="strain"    ${node.type === 'strain'    ? 'selected' : ''}>${typeLabel('strain')}</option>
+                       <option value="phenotype" ${node.type === 'phenotype' ? 'selected' : ''}>${typeLabel('phenotype')}</option>
+                     </select>`
+                  : `<span class="node-type-chip chip-${type}">${typeLabel(type)}</span>`
+              }</div>
               <div class="modal-crumb">${renderBreadcrumb(crumbPath)}${isEdit ? '' : '<span class="bc-sep">›</span><span class="bc-seg bc-new">nuevo</span>'}</div>
             </div>
             <button class="icon-btn" onclick="ge.closeModal()">✕</button>
           </div>
           <div class="modal-body">
+            ${typeEditable ? `
+              <div class="modal-hint">
+                ℹ️ Cambiar Cepa ↔ Fenotipo conserva el id del nodo — ninguna referencia en CI/CILAB/GR/SU
+                queda huérfana. Solo se valida contra el padre actual (<b>${esc(parent ? parent.name : 'raíz')}</b>).
+              </div>` : ''}
             <div class="fg">
               <label>Nombre *</label>
               <input type="text" id="mf-name" value="${isEdit ? esc(node.name) : ''}" placeholder="${placeholderFor(type)}" onkeydown="if(event.key==='Enter')ge.modalSave()" />
             </div>
             <div class="fg">
               <label>Descripción breve <span style="color:var(--tx3);font-weight:400;text-transform:none">(aparece en el árbol como ↳)</span></label>
-              <textarea id="mf-desc" rows="3" placeholder="ej: derivación directa por recomposición epigenética&#10;registro: 9.000 esporas" style="resize:vertical">${isEdit ? esc(node.descripcion || '') : ''}</textarea>
+              <textarea id="mf-desc" rows="3" placeholder="ej: derivación directa por recombinación meiótica&#10;registro: 9.000 esporas" style="resize:vertical">${isEdit ? esc(node.descripcion || '') : ''}</textarea>
             </div>
             <div class="fr2">
               <div class="fg">
@@ -1042,7 +1075,9 @@
         renderAll();
         toast(`${typeLabel(m.type)} creada`, 'ok');
       } else {
-        updateNode(m.nodeId, { name, icon, color, descripcion });
+        const typeSel = document.getElementById('mf-type');
+        const type    = typeSel ? typeSel.value : undefined; // undefined = no tocar type
+        updateNode(m.nodeId, { name, icon, color, descripcion, type });
         closeModal();
         renderStats();
         renderTree();
