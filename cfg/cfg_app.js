@@ -140,12 +140,20 @@
      sin corromper nada.
      ============================================================ */
   function _bkCollectRaw() {
-    const data = {};
+    // Orden de claves determinístico: localStorage.key(i) no garantiza orden
+    // estable entre sesiones — dos backups con el MISMO contenido exacto podían
+    // serializarse con distinto orden de claves, dando un SHA distinto en
+    // GitHub y una falsa alarma de "cambió algo" (confirmado con un usuario
+    // real: dos backups de la misma sesión, 0 diffs de contenido, SHA distinto).
+    const keys = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k || k === K.gh) continue;
-      data[k] = localStorage.getItem(k);
+      keys.push(k);
     }
+    keys.sort();
+    const data = {};
+    keys.forEach(k => { data[k] = localStorage.getItem(k); });
     return data;
   }
 
@@ -358,12 +366,15 @@
     const gc = gOb(K.gh, {}); if (!gc.token || !gc.repo) throw new Error('GitHub no configurado');
     const url = `https://api.github.com/repos/${gc.repo}/contents/${path}`;
     const headers = { 'Authorization': 'token ' + decToken(gc.token), 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' };
+    // cache:'no-store' — sin esto, un GET (ej. listar backups) justo después de
+    // un PUT (guardar backup) puede servirse desde la caché HTTP del navegador
+    // y mostrar el estado viejo hasta un refresh/limpieza de caché manual.
     let resp;
     try {
-      resp = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      resp = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
     } catch {
       const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      resp = await fetch(proxyUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      resp = await fetch(proxyUrl, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
     }
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
@@ -383,10 +394,10 @@
     const headers = { 'Authorization': 'token ' + decToken(gc.token), 'Accept': 'application/vnd.github.v3+json' };
     let resp;
     try {
-      resp = await fetch(url, { headers });
+      resp = await fetch(url, { headers, cache: 'no-store' });
     } catch {
       const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      resp = await fetch(proxyUrl, { headers });
+      resp = await fetch(proxyUrl, { headers, cache: 'no-store' });
     }
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
