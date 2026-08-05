@@ -680,8 +680,9 @@ function ciRenderFormulasList() {
         <div class="ci-dash-gen-chips">
           ${geneticasUnicas.map(gid => {
             const snap = _ciResolverGeneticaSnapshot(gid);
-            const lbl = snap ? _segAbreviarEspecie(snap.label) : gid;
-            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(lbl)}">🧬 ${esc(lbl)}</span>`;
+            const full  = snap ? _segAbreviarEspecie(snap.label) : gid;
+            const corto = snap ? _segSoloUltimoSegmento(snap.label) : gid;
+            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(full)}">🧬 ${esc(corto)}</span>`;
           }).join('')}
         </div>` : '';
 
@@ -2224,6 +2225,19 @@ function _segAbreviarEspecie(label) {
   return resto.length ? [abrev, ...resto].join(' / ') : abrev;
 }
 
+// Devuelve solo el último segmento de un label "Especie / Cepa / Fenotipo" (o
+// cualquier cadena más corta) — para vistas compactas (chips de dashboard, resumen
+// por genética) donde el árbol completo no aporta y ocupa espacio. 2026-08-05,
+// pedido explícito del usuario. Nota: si dos genéticas distintas compartieran el
+// mismo nombre de hoja (ej. mismo fenotipo bajo especies distintas), esta vista
+// las mostraría igual — no pasa hoy en los datos reales, pero es la razón de no
+// usar esto en ningún lugar que necesite desambiguar (selects de asignación).
+function _segSoloUltimoSegmento(label) {
+  if (!label) return '?';
+  const partes = label.split(' / ');
+  return partes[partes.length - 1].trim();
+}
+
 /**
  * Construye la etiqueta legible de un cultivo CI para los selects de Inoculo trace.
  * Formato: "Tiamina complex - CI-0003 - PC / APE / 244 · PLACA · 12 disp."
@@ -2735,7 +2749,7 @@ function segActualizarResumen(frmId) {
     // no el value (que es el ID de nodo interno).
     const genVal = sel?.value || '';
     const genLbl = genVal
-      ? (sel.options[sel.selectedIndex]?.textContent?.trim() || genVal)
+      ? _segSoloUltimoSegmento(sel.options[sel.selectedIndex]?.textContent?.trim() || genVal)
       : '—';
     const placas = parseInt(row.querySelector('.seg-placas')?.value) || 0;
     const conta  = parseInt(row.querySelector('.seg-contaminados')?.value) || 0;
@@ -5423,8 +5437,9 @@ function ciRenderDashboard() {
         <div class="ci-dash-gen-chips">
           ${geneticasUnicas2.map(gid => {
             const snap = _ciResolverGeneticaSnapshot(gid);
-            const lbl = snap ? _segAbreviarEspecie(snap.label) : gid;
-            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(lbl)}">🧬 ${esc(lbl)}</span>`;
+            const full  = snap ? _segAbreviarEspecie(snap.label) : gid;
+            const corto = snap ? _segSoloUltimoSegmento(snap.label) : gid;
+            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(full)}">🧬 ${esc(corto)}</span>`;
           }).join('')}
         </div>` : '';
 
