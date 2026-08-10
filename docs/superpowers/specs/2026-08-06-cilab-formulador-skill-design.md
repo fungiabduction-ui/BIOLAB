@@ -1,4 +1,4 @@
-# Skill `cilab-formulador` — diseño
+# Skill `cilab-meta-inteligencia` — diseño
 
 **Fecha:** 2026-08-06
 **Contexto de origen:** sesión de trabajo sobre `CI-0013`/`CI-0014` (carbonato de calcio vs fosfato monopotásico, B-complex, velocidad de reactivación de biopsias de `Clon 320`). El usuario notó que la conversación ya tenía el patrón que quiere formalizar: investigar literatura real cuando el dato de la app no alcanza, y quedó la pregunta de dónde queda registrado ese conocimiento para no perderlo y, eventualmente, usarlo para mejorar el motor de inteligencia de CILAB.
@@ -53,7 +53,7 @@ El usuario cuenta un resultado nuevo (como hoy: "obtuve 21 gramos secos", "las p
 3. Razona explícitamente separando velocidad de estructura (sección 2).
 4. Si corresponde, registra o actualiza una entrada en `proyecciones.md` (sección 6.1) y/o `propuestas_motor.md` (sección 6.3).
 
-## 6. Archivos (`docs/lab-intelligence/cilab-formulador/`)
+## 6. Archivos (`docs/lab-intelligence/cilab-meta-inteligencia/`)
 
 ### 6.1 `proyecciones.md` — tracking de predicciones
 
