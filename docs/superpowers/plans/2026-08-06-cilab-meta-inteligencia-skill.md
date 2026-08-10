@@ -4,7 +4,7 @@
 
 **Goal:** Crear la skill `cilab-meta-inteligencia` — un sistema de investigación conversacional para CI/CILAB que trackea predicciones de rizomorfismo, acumula literatura externa, y mantiene un backlog de candidatos a mejora del motor de inteligencia — junto con su auditoría inicial ya corrida contra el backup real.
 
-**Architecture:** Un único `SKILL.md` (mismo patrón que `.claude/skills/biolab-analyst/SKILL.md`, se commitea a git) más 3 archivos vivos en `docs/lab-intelligence/cilab-meta-inteligencia/` (gitignoreados, datos propietarios de lab) que la skill lee/escribe en cada conversación: `proyecciones.md`, `conocimiento_externo.md`, `propuestas_motor.md`. Un script reusable `audit_motor.js` (gitignoreado también, vive junto a los otros 3) mecaniza el cruce `bl2_ings` × `bl2_inteligencia_model` que alimenta la auditoría inicial y las corridas futuras.
+**Architecture:** Un único `SKILL.md` (mismo patrón que `.claude/skills/biolab-analyst/SKILL.md` — **corrección post-Task 2:** `.claude/` está completamente gitignoreado en este repo, `.gitignore:22`, "Skills de Claude Code — describen metodologia/workflow interno del lab, nunca al repo publico" — ninguna de las dos SKILL.md se commitea, ambas quedan solo locales) más 3 archivos vivos en `docs/lab-intelligence/cilab-meta-inteligencia/` (gitignoreados, datos propietarios de lab) que la skill lee/escribe en cada conversación: `proyecciones.md`, `conocimiento_externo.md`, `propuestas_motor.md`. Un script reusable `audit_motor.js` (gitignoreado también, vive junto a los otros 3) mecaniza el cruce `bl2_ings` × `bl2_inteligencia_model` que alimenta la auditoría inicial y las corridas futuras.
 
 **Tech Stack:** Markdown (contenido de la skill y los 3 archivos vivos), Node.js sin dependencias (script de auditoría, mismo patrón que `docs/lab-intelligence/diff_backups.js`).
 
@@ -478,45 +478,24 @@ Expected: `OK`
 
 ---
 
-### Task 6: Confirmar que `docs/lab-intelligence/` sigue gitignoreado y commitear solo el `SKILL.md`
+### Task 6: Confirmar que todo quedó gitignoreado correctamente (sin commit — corregido tras Task 2)
+
+**Corrección sobre la versión original de este task:** el spec-reviewer de la Task 2 encontró que `.claude/` está completamente gitignoreado en este repo (`.gitignore:22`, comentario explícito: "Skills de Claude Code — describen metodologia/workflow interno del lab, nunca al repo publico"). El `SKILL.md` de `biolab-analyst` (la skill hermana que se usó como referencia) **nunca estuvo en git** — el supuesto original de este plan estaba mal. Ningún archivo de esta skill se commitea: ni el `SKILL.md` ni los 3 archivos vivos ni `audit_motor.js`. Todo queda local, igual que `biolab-analyst`.
 
 **Files:**
-- Modify: ninguno (solo verificación + commit)
+- Modify: ninguno (solo verificación, sin `git add`/`git commit`)
 
-- [ ] **Step 1: Verificar que los 3 archivos vivos no aparecen como trackeables**
+- [ ] **Step 1: Verificar que los 3 archivos vivos + `audit_motor.js` no aparecen como trackeables**
 
 Run: `git status --short docs/lab-intelligence/cilab-meta-inteligencia/`
-Expected: sin salida (carpeta ignorada por el patrón `docs/lab-intelligence/` en `.gitignore`) — si aparece algo, DETENERSE, no seguir al siguiente step, revisar `.gitignore` antes de cualquier `git add`.
+Expected: sin salida (carpeta ignorada por el patrón `docs/lab-intelligence/` en `.gitignore:16`).
 
-- [ ] **Step 2: Confirmar que el `SKILL.md` sí aparece como untracked**
+- [ ] **Step 2: Verificar que todo `.claude/skills/cilab-meta-inteligencia/` está ignorado (no solo untracked)**
 
-Run: `git status --short .claude/skills/cilab-meta-inteligencia/`
-Expected: `?? .claude/skills/cilab-meta-inteligencia/SKILL.md`
+Run: `git check-ignore -v ".claude/skills/cilab-meta-inteligencia/SKILL.md"`
+Expected: una línea apuntando a `.gitignore:22:.claude/` — confirma que el archivo está intencionalmente ignorado, mismo tratamiento que `.claude/skills/biolab-analyst/SKILL.md` (verificable con el mismo comando sobre esa ruta, para comparar).
 
-- [ ] **Step 3: Commit**
-
-```bash
-git add .claude/skills/cilab-meta-inteligencia/SKILL.md
-git commit -m "$(cat <<'EOF'
-feat: agrega skill cilab-meta-inteligencia
-
-Sistema conversacional para CI/CILAB: trackea predicciones de
-rizomorfismo antes del resultado real (proyecciones.md), acumula
-literatura externa investigada activamente cuando el motor interno no
-alcanza (conocimiento_externo.md), y mantiene un backlog de candidatos
-a cambio en el motor de inteligencia (propuestas_motor.md) — sin
-tocar nunca bio.contribuciones/rutas sin confirmación explícita.
-Separada de biolab-analyst; lee sus archivos, nunca escribe en ellos.
-
-Spec: docs/superpowers/specs/2026-08-06-cilab-formulador-skill-design.md
-EOF
-)"
-```
-
-- [ ] **Step 4: Verificar el commit**
-
-Run: `git log --oneline -1 -- .claude/skills/cilab-meta-inteligencia/SKILL.md`
-Expected: una línea con el commit recién creado.
+- [ ] **Step 3: NO hacer `git add` ni `git commit` de nada de esto.** Esta skill entera (código + archivos vivos) es contenido local del lab, nunca va al repo. No hay commit que crear en esta task — si algún paso previo del plan generó una sugerencia de commit para estos archivos, ignorarla.
 
 ---
 
