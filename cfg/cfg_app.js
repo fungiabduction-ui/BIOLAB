@@ -617,10 +617,15 @@
         files.map((f, idx) => {
           const fecha = _bkKeyToDisplay(_bkParseFileTs(f.name));
           const kb = f.size != null ? (f.size / 1024).toFixed(1) + ' KB' : '—';
+          const anterior = files[idx + 1]; // guardado justo antes en el tiempo (lista ya ordenada mas-nuevo-primero)
+          let kbColor = 'var(--tx2)';
+          if (anterior && f.size != null && anterior.size != null) {
+            kbColor = f.size > anterior.size ? 'var(--wn)' : (f.size === anterior.size ? 'var(--warning)' : 'var(--er)');
+          }
           const shaCorta = f.sha ? f.sha.slice(0, 7) : '—';
           return `<tr>
             <td style="font-size:12px;color:var(--tx2)" title="${esc(f.name)}">${esc(fecha)}</td>
-            <td style="font-size:12px;color:var(--tx2)">${kb}</td>
+            <td style="font-size:12px;color:${kbColor}">${kb}</td>
             <td style="font-size:11px;color:var(--tx3);font-family:monospace">${shaCorta}</td>
             <td><button class="btn btn-s" style="height:26px;font-size:10px" onclick="ghDiffBackupModulos(${idx}, this)">¿Qué cambió?</button></td>
             <td>
