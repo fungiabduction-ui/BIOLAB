@@ -15,6 +15,11 @@ biolab_full_backup*.json
 # Bitacora de inteligencia de laboratorio — datos propietarios, nunca al repo publico
 docs/lab-intelligence/
 
+# Evidencia fotografica de ensayos de laboratorio — datos reales, nunca al repo publico
+# (2026-08-17: confirmado que nunca se subio a GitHub — ver git log/ls-tree completo,
+# pero quedaba sin protegerse contra un git add -A futuro)
+cilab/CILAB_EVIDENCIA/
+
 # Mockups temporales del skill de brainstorming (superpowers)
 .superpowers/
 
