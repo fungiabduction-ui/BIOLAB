@@ -157,6 +157,18 @@
     return data;
   }
 
+  // Descarga a disco la misma foto que se acaba de subir a GitHub en ghBackup()
+  // — segunda copia sin red, sin token, sin depender de que GitHub responda.
+  function _localDownloadCopy(dataObj, ts) {
+    try {
+      const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = `biolab-autobackup-${ts}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { console.warn('[CFG] fallo la copia local del backup:', e); }
+  }
+
   function exportSystem() {
     const data = _bkCollectRaw();
     const keys = Object.keys(data);
@@ -347,10 +359,9 @@
   function ghSaveCfg() {
     const t = document.getElementById('gh-token').value.trim();
     let r = document.getElementById('gh-repo').value.trim();
-    const f = document.getElementById('gh-file').value.trim() || 'biolab-data.json';
     if (!t || !r) return sN('Token y repo requeridos', true);
     r = r.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
-    const gc = gOb(K.gh, {}); gc.token = encToken(t); gc.repo = r; gc.file = f;
+    const gc = gOb(K.gh, {}); gc.token = encToken(t); gc.repo = r;
     // Baseline fresco al configurar (2026-07-29): recién logueado, antes de
     // tocar nada, NO es "cambios pendientes" — ver hasUnsaved en ghLoadCfg().
     // Sin esto, _ghHasBaseline quedaba false hasta el primer ghBackup/ghLoadLatest
@@ -448,6 +459,12 @@
       const dataObj = ghData();
       const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj, null, 2))));
       await ghApi('PUT', path, { message: `BIOLAB backup · ${ts}`, content });
+      // Segunda copia a disco, en el mismo momento del backup manual (2026-08-17,
+      // a pedido explícito del usuario) — mismo dataObj que se acaba de subir, no
+      // una captura aparte. Cero dependencia de red: si GitHub falla más tarde,
+      // esto ya se guardó. Nunca automático/por tiempo — el usuario lo pidió así
+      // a propósito, para no arriesgar guardar un estado a medio editar.
+      _localDownloadCopy(dataObj, ts);
       // MEJ-0020 (2026-07-24): ghPush/ghPull (sync de archivo unico mutable)
       // se eliminaron — redundantes con este backup inmutable, que ademas
       // nunca se pisa. gh-last refleja EXCLUSIVAMENTE el último backup
@@ -699,10 +716,8 @@
     const gc = gOb(K.gh, {});
     const elT = document.getElementById('gh-token');
     const elR = document.getElementById('gh-repo');
-    const elF = document.getElementById('gh-file');
     if (elT && gc.token) elT.value = decToken(gc.token);
     if (elR && gc.repo) elR.value = gc.repo;
-    if (elF && gc.file) elF.value = gc.file;
     const ls = document.getElementById('gh-last');
     if (ls) ls.textContent = gc.lastSync ? 'Último backup: ' + fDate(gc.lastSync) : 'Sin backups todavía';
     // Aviso de cambios sin guardar (2026-07-24, a pedido del usuario): compara
