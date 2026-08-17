@@ -193,6 +193,9 @@
        ══════════════════════════════════════════════════════════ -->
   <!-- Store reactivo compartido — debe cargar ANTES de main.js y cualquier módulo -->
   <script src="shared/ing_store.js"></script>
+  <!-- Registro de fallos de guardado/operación (window.BioLog) — debe cargar
+       ANTES de main.js y cualquier módulo, mismo criterio que ing_store.js. -->
+  <script src="shared/error_log.js"></script>
   <script src="main.js"></script>
 
   <script>

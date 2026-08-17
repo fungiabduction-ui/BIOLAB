@@ -61,6 +61,9 @@
     // ======================================================
     function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
     function int(v) { var n = parseInt(v); return isNaN(n) ? 0 : n; }
+    function slugify(s) {
+        return String(s).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    }
     function esc(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -233,7 +236,15 @@
         try {
             localStorage.setItem(FR_KEY, JSON.stringify(bolsas));
         } catch (e) {
-            console.error('[FR] save error:', e);
+            // 2026-08-17 (MEJ-0046): antes solo console.error — el funnel de
+            // guardado de TODAS las bolsas/cosechas/notas de FR podía fallar
+            // (ej. localStorage lleno) sin que el usuario se enterara nunca,
+            // aunque la UI siguiera mostrando el cambio como si se hubiera
+            // guardado. Ahora queda en window.BioLog (shared/error_log.js,
+            // sobrevive al cierre de la pestaña, viaja con cualquier backup)
+            // y se avisa visiblemente, no solo en consola.
+            if (window.BioLog) window.BioLog.logError('FR', 'saveBolsas', e);
+            if (typeof _frToast === 'function') _frToast('⚠ No se pudo guardar — ¿localStorage lleno? Revisá antes de seguir.', 'warn');
         }
     }
     function getSULotes() {
@@ -3719,7 +3730,11 @@
     function saveExperimentos() {
         try {
             localStorage.setItem(FR_EX_KEY, JSON.stringify(experimentos));
-        } catch(e) { console.warn('[FR-EX] saveExperimentos:', e); }
+        } catch(e) {
+            // 2026-08-17 (MEJ-0046): antes solo console.warn.
+            if (window.BioLog) window.BioLog.logError('FR', 'saveExperimentos', e);
+            if (typeof _frToast === 'function') _frToast('⚠ No se pudo guardar el experimento — ¿localStorage lleno?', 'warn');
+        }
     }
 
     // ID: EX + dia2d + mes. Colisión → sufijo b, c, d...
@@ -4806,6 +4821,43 @@
         return 'insuficiente';
     }
 
+    // Aditivos reales de SU para una bolsa (con % de fibra y bucket bajo/medio/alto) —
+    // SSoT compartida entre _frCalBuildIntel (estadisticas globales bySuAditivo) y
+    // _frCalAnomalyAlert (filtrar candidatos de anomalia a los que la bolsa realmente
+    // tiene, MEJ-0044 2026-08-17 — antes cada uno recalculaba esto por su lado y
+    // _frCalAnomalyAlert directamente no lo hacia, mostrando candidatos ajenos a la bolsa).
+    function _frCalBolsaAditivos(b, suMap) {
+        var suLote = b.suLoteId ? suMap[b.suLoteId] : null;
+        var aditivos = [];
+        if (suLote && Array.isArray(suLote.aditivos) && num(suLote.fibra) > 0) {
+            suLote.aditivos.forEach(function(a) {
+                if (!a.nombre || !a.cantidad) return;
+                var pct = (num(a.cantidad) / num(suLote.fibra)) * 100;
+                if (!pct || isNaN(pct)) return;
+                var bucket = pct <= 4 ? 'bajo' : pct <= 8 ? 'medio' : 'alto';
+                aditivos.push({
+                    nombre: a.nombre,
+                    pct:    pct,
+                    bucket: bucket,
+                    // Preferir a.id (catálogo su_biblioteca.materiales, ver prerequisito
+                    // MEJ-0006 en SU) como clave de agrupamiento — evita que dos productos
+                    // distintos tipeados con el mismo texto se mezclen en la correlación.
+                    // Fallback a slug por nombre para aditivos legacy sin id (nunca excluye).
+                    slug:   (a.id || slugify(a.nombre)) + '_' + bucket
+                });
+            });
+        }
+        return aditivos;
+    }
+
+    // Componentes reales de grano (GR) para una bolsa — misma razón de ser que
+    // _frCalBolsaAditivos de arriba, ver comentario ahí (MEJ-0044).
+    function _frCalBolsaGrComponentes(b, grLoteCompMap) {
+        var lote = b.grLoteId ? grLoteCompMap[b.grLoteId] : null;
+        if (!lote || !Array.isArray(lote.componentes)) return [];
+        return lote.componentes.map(function(c) { return c.nombre; }).filter(Boolean);
+    }
+
     // Construye el cache fr_cal_intel leyendo fr_bolsas + su_lotes.
     // Solo lectura de SU — no escribe en ellos.
     function _frCalBuildIntel() {
@@ -4824,9 +4876,6 @@
                            .filter(function(v) { return v != null && !isNaN(v); });
             return vals.length ? mean(vals) : null;
         }
-        function slugify(s) {
-            return String(s).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-        }
 
         var grLotesAll = [];
         try { grLotesAll = JSON.parse(localStorage.getItem(GR_KEY) || '[]'); } catch(e) {}
@@ -4837,27 +4886,7 @@
         bolsas.forEach(function(b) {
             if (!Array.isArray(b.flushes)) return;
             var suLote = b.suLoteId ? suMap[b.suLoteId] : null;
-
-            var aditivos = [];
-            if (suLote && Array.isArray(suLote.aditivos) && num(suLote.fibra) > 0) {
-                suLote.aditivos.forEach(function(a) {
-                    if (!a.nombre || !a.cantidad) return;
-                    var pct = (num(a.cantidad) / num(suLote.fibra)) * 100;
-                    if (!pct || isNaN(pct)) return;
-                    var bucket = pct <= 4 ? 'bajo' : pct <= 8 ? 'medio' : 'alto';
-                    aditivos.push({
-                        nombre: a.nombre,
-                        pct:    pct,
-                        bucket: bucket,
-                        // Preferir a.id (catálogo su_biblioteca.materiales, ver prerequisito
-                        // MEJ-0006 en SU) como clave de agrupamiento — evita que dos productos
-                        // distintos tipeados con el mismo texto se mezclen en la correlación.
-                        // Fallback a slug por nombre para aditivos legacy sin id (nunca excluye).
-                        slug:   (a.id || slugify(a.nombre)) + '_' + bucket
-                    });
-                });
-            }
-
+            var aditivos = _frCalBolsaAditivos(b, suMap);
             var grLote = b.grLoteId ? grLoteCompMap[b.grLoteId] : null;
             b.flushes.forEach(function(f, flushIdx) {
                 if (!f.calidad) return;
@@ -5095,10 +5124,27 @@
         if (!activas.length) return null;
         if (!intel || !intel.anomalyRanking) return { anomalias: activas, candidatos: [] };
 
+        // Composición real de ESTA bolsa (MEJ-0044, 2026-08-17) — anomalyRanking es un
+        // ranking GLOBAL del dataset entero; sin este filtro se le atribuía a cualquier
+        // bolsa anómala el top global aunque nunca hubiera usado ese aditivo/componente
+        // (caso real encontrado: "Maíz" sugerido como candidato en una bolsa 100% avena).
+        var suMap = {};
+        getSULotes().forEach(function(l) { if (l.id) suMap[l.id] = l; });
+        var grLotesAll = [];
+        try { grLotesAll = JSON.parse(localStorage.getItem(GR_KEY) || '[]'); } catch(e) {}
+        var grLoteCompMap = {};
+        grLotesAll.forEach(function(l) { if (l.id) grLoteCompMap[l.id] = l; });
+        var suLabelsBolsa = {};
+        _frCalBolsaAditivos(b, suMap).forEach(function(a) { suLabelsBolsa[a.nombre + ' (' + a.bucket + ')'] = true; });
+        var grLabelsBolsa = {};
+        _frCalBolsaGrComponentes(b, grLoteCompMap).forEach(function(nombre) { grLabelsBolsa[nombre] = true; });
+
         var candidatos = [];
         var seen = {};
         activas.forEach(function(dim) {
             (intel.anomalyRanking[dim] || []).forEach(function(c) {
+                var enEstaBolsa = c.fuente === 'SU' ? !!suLabelsBolsa[c.label] : !!grLabelsBolsa[c.label];
+                if (!enEstaBolsa) return;
                 var key = c.fuente + '|' + c.label;
                 if (!seen[key]) {
                     seen[key] = true;

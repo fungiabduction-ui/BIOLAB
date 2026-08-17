@@ -73,6 +73,9 @@ function _save(links) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
     return true;
   } catch (err) {
+    // 2026-08-17 (MEJ-0046): fuente de verdad de stock CI↔GR — un fallo acá
+    // sin registrar deja el stock desincronizado entre módulos sin rastro.
+    if (window.BioLog) window.BioLog.logError('shared', 'CiGrLinks._save', err);
     console.error('[CiGrLinks] _save falló (cuota?):', err);
     return false;
   }

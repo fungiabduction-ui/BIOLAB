@@ -343,8 +343,17 @@ function creRead() {
 }
 
 function creWrite(arr) {
+  // 2026-08-17 (MEJ-0046): antes solo console.warn — este es el ÚNICO punto
+  // de escritura normal de bl2_crec (ver CLAUDE.md), la fuente de TODO el
+  // modelo OLS/FI Engine. Un fallo silencioso acá (ej. localStorage lleno)
+  // significaba perder un ensayo recién cerrado sin que el usuario se
+  // enterara nunca — justo el dato más caro de reproducir en el lab.
   try { localStorage.setItem(K_CREC, JSON.stringify(arr)); }
-  catch (e) { console.warn('[CREC] write failed', e); return; }
+  catch (e) {
+    if (window.BioLog) window.BioLog.logError('CILAB', 'creWrite', e);
+    alert('⚠ No se pudo guardar el ensayo (¿localStorage lleno?). Este resultado NO se guardó — no cierres la pestaña, liberá espacio (ej. borrá backups viejos) y volvé a intentarlo.');
+    return;
+  }
   try { localStorage.removeItem('bl2_inteligencia_model'); } catch(e) {}
   try { localStorage.removeItem('bl2_formula_intel'); } catch(e) {}
 }
@@ -607,14 +616,22 @@ function creDeleteFormula(formulaId) {
   var prefix = formulaId + '__';
   // bl2_crec
   creWrite(creRead().filter(function(r) { return r.formulaId !== formulaId; }));
-  // bl2_crec_fases
-  var allFases = JSON.parse(localStorage.getItem(K_CREC_FASES_KEY) || '{}') || {};
-  Object.keys(allFases).forEach(function(k) { if (k.indexOf(prefix) === 0) delete allFases[k]; });
-  localStorage.setItem(K_CREC_FASES_KEY, JSON.stringify(allFases));
-  // bl2_crec_notas
-  var allNotas = JSON.parse(localStorage.getItem(K_CREC_NOTAS_KEY) || '{}') || {};
-  Object.keys(allNotas).forEach(function(k) { if (k.indexOf(prefix) === 0) delete allNotas[k]; });
-  localStorage.setItem(K_CREC_NOTAS_KEY, JSON.stringify(allNotas));
+  // 2026-08-17 (MEJ-0046): antes sin try/catch — un fallo acá dejaba el borrado
+  // a medio hacer (fases sí, notas no, o viceversa) sin ningún aviso.
+  try {
+    // bl2_crec_fases
+    var allFases = JSON.parse(localStorage.getItem(K_CREC_FASES_KEY) || '{}') || {};
+    Object.keys(allFases).forEach(function(k) { if (k.indexOf(prefix) === 0) delete allFases[k]; });
+    localStorage.setItem(K_CREC_FASES_KEY, JSON.stringify(allFases));
+    // bl2_crec_notas
+    var allNotas = JSON.parse(localStorage.getItem(K_CREC_NOTAS_KEY) || '{}') || {};
+    Object.keys(allNotas).forEach(function(k) { if (k.indexOf(prefix) === 0) delete allNotas[k]; });
+    localStorage.setItem(K_CREC_NOTAS_KEY, JSON.stringify(allNotas));
+  } catch (e) {
+    if (window.BioLog) window.BioLog.logError('CILAB', 'creDeleteFormula', e, { formulaId });
+    notif('⚠ Borrado incompleto — revisar (¿localStorage lleno?)', 'err');
+    return;
+  }
   // No setear tombstone aquí: fases y score son ortogonales.
   // Después de borrar score, auto-fill reconstruye fases desde CI correctamente.
   rizoLearnInvalidate();
@@ -1389,12 +1406,22 @@ function _creRegenFaseLogs() {
 }
 
 function creRepararDatosDeExperimentos() {
-  var backfilled = _creFrascoBackfill();
-  var extras     = _creExtrasBackfill();
-  var extrasV2   = _creExtrasBackfillV2();
-  var regenCount = _creRegenScoreLogs();
-  var faseFixed  = _creRegenFaseLogs();
-  notif('✓ ' + backfilled + ' frascoId asignados · ' + extras + ' snapshot(s) procesados · ' + extrasV2 + ' re-normalizados (V2) · ' + regenCount + ' score logs · ' + faseFixed + ' fase logs reparados', 'ok');
+  // 2026-08-17 (MEJ-0046): las 5 funciones de abajo escriben localStorage
+  // internamente sin try/catch propio — antes, un fallo en cualquiera
+  // abortaba la cadena entera sin ningún aviso (el notif de éxito de abajo
+  // nunca corría, y el usuario no tenía forma de saber qué pasó).
+  try {
+    var backfilled = _creFrascoBackfill();
+    var extras     = _creExtrasBackfill();
+    var extrasV2   = _creExtrasBackfillV2();
+    var regenCount = _creRegenScoreLogs();
+    var faseFixed  = _creRegenFaseLogs();
+    notif('✓ ' + backfilled + ' frascoId asignados · ' + extras + ' snapshot(s) procesados · ' + extrasV2 + ' re-normalizados (V2) · ' + regenCount + ' score logs · ' + faseFixed + ' fase logs reparados', 'ok');
+  } catch (e) {
+    if (window.BioLog) window.BioLog.logError('CILAB', 'creRepararDatosDeExperimentos', e);
+    notif('⚠ Reparación incompleta — revisar (¿localStorage lleno?)', 'err');
+    return;
+  }
   if (_sp.formulaId) {
     var dw = document.getElementById('cre-detalle-wrap');
     if (dw && dw.style.display !== 'none') dw.innerHTML = _creScoringPanelHTML(_sp.formulaId, null);

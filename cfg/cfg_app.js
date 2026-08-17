@@ -15,9 +15,20 @@
     ci_nodes: 'bl2_ci_nodes', ci_notes: 'bl2_ci_notes'
   };
   const gDB = k => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } };
-  const sDB = (k, d) => localStorage.setItem(k, JSON.stringify(d));
+  // sDB/sOb — antes un solo setItem sin try/catch (2026-08-17, ver MEJ-0046):
+  // si localStorage tira (ej. lleno), la excepción quedaba sin capturar en
+  // el único punto de escritura usado por TODO el módulo CFG, incluyendo el
+  // token/config de GitHub Sync. Ahora se loggea con contexto completo
+  // (window.BioLog, shared/error_log.js) y devuelve false en vez de tirar.
+  const sDB = (k, d) => {
+    try { localStorage.setItem(k, JSON.stringify(d)); return true; }
+    catch (e) { window.BioLog && window.BioLog.logError('CFG', 'sDB:' + k, e); return false; }
+  };
   const gOb = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k)); return v || def; } catch { return def; } };
-  const sOb = (k, d) => localStorage.setItem(k, JSON.stringify(d));
+  const sOb = (k, d) => {
+    try { localStorage.setItem(k, JSON.stringify(d)); return true; }
+    catch (e) { window.BioLog && window.BioLog.logError('CFG', 'sOb:' + k, e); return false; }
+  };
 
   const DEF_NTYPES = {
     CI: { label: 'Cultivo In Vitro', icon: '🧫' },
@@ -108,13 +119,30 @@
       });
     }
     let count = 0;
+    // 2026-08-17 (MEJ-0046): antes este setItem no tenía try/catch — si tiraba
+    // a mitad del loop (ej. localStorage lleno), el wipe de arriba YA había
+    // corrido pero la restauración quedaba a medio camino, y la excepción se
+    // propagaba sin decir CUÁLES keys sí se restauraron y cuáles no. Ahora se
+    // seguimos escribiendo lo que se pueda y se reporta el detalle completo —
+    // el caller (ghLoadLatest/ghRestore) ya muestra e.message al usuario.
+    const fallidas = [];
     Object.entries(data).forEach(([k, v]) => {
       if (k.startsWith('_')) return;
       if (BK_EXCLUDE.includes(k)) return;
       if (!BK_PREFIXES.some(p => k.startsWith(p))) return;
-      localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-      count++;
+      try {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+        count++;
+      } catch (e) {
+        fallidas.push(k);
+        window.BioLog && window.BioLog.logError('CFG', 'bkRestoreAll:' + k, e, { wipe: !!opts.wipe });
+      }
     });
+    if (fallidas.length) {
+      const err = new Error(`Restauración INCOMPLETA — ${fallidas.length} de ${count + fallidas.length} keys no se pudieron escribir (¿localStorage lleno?): ${fallidas.join(', ')}. El estado actual quedó a medio camino — no confíes en lo que ves hasta liberar espacio y reintentar.`);
+      err.fallidas = fallidas; err.count = count;
+      throw err;
+    }
     return count;
   }
 
@@ -207,13 +235,34 @@
         const k = localStorage.key(i);
         if (k && k !== K.gh) localStorage.removeItem(k);
       }
+      // 2026-08-17 (MEJ-0046) — EL HALLAZGO MÁS SERIO DE LA AUDITORÍA: esto
+      // borraba TODO localStorage arriba y después escribía en un forEach SIN
+      // try/catch. Si un solo setItem tiraba (localStorage lleno, el caso más
+      // probable justo DESPUÉS de importar un backup completo), la excepción
+      // quedaba sin capturar, el reload de abajo nunca corría, y el usuario se
+      // quedaba con la app viva sobre un localStorage a medio borrar/medio
+      // restaurar — sin ni un solo mensaje de que algo salió mal. Ahora se seguimos
+      // escribiendo lo que se pueda, y si algo falla se corta ACÁ con un aviso
+      // imposible de ignorar en vez de seguir como si nada.
       let count = 0;
+      const fallidas = [];
       realKeys.forEach(k => {
         if (k === K.gh) return; // nunca pisar el token de GitHub con uno de un backup viejo
         const v = data[k];
-        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-        count++;
+        try {
+          localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+          count++;
+        } catch (err) {
+          fallidas.push(k);
+          window.BioLog && window.BioLog.logError('CFG', 'importSystem:' + k, err);
+        }
       });
+      if (fallidas.length) {
+        window.BioLog && window.BioLog.logError('CFG', 'importSystem', new Error('Restauración incompleta'), { count, fallidas, total: realKeys.length });
+        alert(`⚠ RESTAURACIÓN INCOMPLETA — ${fallidas.length} de ${realKeys.length} keys no se pudieron escribir (probablemente localStorage lleno).\n\nKeys que fallaron: ${fallidas.join(', ')}\n\nEl estado actual quedó a MEDIO CAMINO entre lo viejo (ya borrado) y el backup nuevo. NO sigas usando la app así — liberá espacio (borrá backups viejos, datos que no necesites) y volvé a importar este mismo archivo antes de continuar, o vas a perder datos reales. Quedó registrado en localStorage['biolab_error_log'] para revisar con Claude Code.`);
+        input.value = '';
+        return; // no recargar — dejar el estado a la vista, no ocultar el problema con un reload
+      }
       sN(`Sistema restaurado (${count} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
     };
@@ -373,6 +422,59 @@
     ghLoadCfg(); sN('Configuración GitHub guardada');
   }
 
+  // Mensaje de red compartido por ghApi/ghApiBlob/ghTest — ver nota de
+  // _ghNetworkError más abajo para la investigación completa (2026-08-17).
+  function _ghNetworkError(netErr) {
+    const e = new Error('No se pudo conectar a api.github.com después de 3 intentos (' + ((netErr && netErr.message) || 'error de red') + '). Probablemente tu conexión, un firewall/VPN, o un bloqueador de anuncios/privacidad del navegador filtrando la petición — no es un problema de configuración de GitHub. Probá de nuevo en unos segundos; si persiste, probá con el bloqueador de anuncios desactivado para este sitio.');
+    e.cause = netErr;
+    return e;
+  }
+
+  // Reintento acotado SOLO ante fallo de RED (fetch() tirando excepción —
+  // DNS, conexión rechazada, hiccup momentáneo de wifi/ISP), nunca ante una
+  // respuesta HTTP real (4xx/5xx) — eso no lo arregla un retry, y reintentar
+  // un 401/403 solo quema rate limit contra GitHub para nada. 2026-08-17:
+  // reemplaza al viejo fallback silencioso a un proxy de terceros (ver nota
+  // de ghApi) — mismo endpoint confiable de siempre (api.github.com), nunca
+  // un tercero, así que un blip momentáneo (la causa más común y más benigna
+  // de "Failed to fetch") se resuelve solo sin exponer el token a nada nuevo.
+  async function _ghFetchWithRetry(url, opts) {
+    var TRIES = 3, DELAY_MS = 700;
+    var lastErr;
+    for (var i = 0; i < TRIES; i++) {
+      try {
+        return await fetch(url, opts);
+      } catch (netErr) {
+        lastErr = netErr;
+        if (i < TRIES - 1) await new Promise(function(r) { setTimeout(r, DELAY_MS * (i + 1)); });
+      }
+    }
+    throw lastErr;
+  }
+
+  // 2026-08-17 — investigación de raíz de "✕ Failed to fetch" al usar GitHub Sync:
+  // hasta hoy, si el fetch directo a api.github.com fallaba (por lo que sea:
+  // hiccup de red, extensión del navegador, firewall), el código reintentaba EN
+  // SILENCIO vía un proxy CORS público de terceros (api.allorigins.win), sin
+  // try/catch propio alrededor de ese segundo intento. Dos problemas reales,
+  // no teóricos, confirmados en esta sesión:
+  // 1. El proxy está caído/inestable (probado con curl real: 500 en la raíz,
+  //    502/522 en requests reales) — cuando el directo fallaba, el "fallback"
+  //    fallaba también, y el usuario veía "Failed to fetch" sin ninguna pista
+  //    de qué pasó ni por qué (la excepción del proxy, sin catch, se propagaba
+  //    tal cual hasta la UI).
+  // 2. La API de GitHub soporta CORS directo COMPLETO para este caso exacto
+  //    (probado con un preflight OPTIONS real: Access-Control-Allow-Origin:*,
+  //    access-control-allow-methods incluye PUT, allow-headers incluye
+  //    Authorization+Content-Type) — el proxy nunca debería hacer falta en un
+  //    escenario normal. Y como el proxy no es de GitHub, cada intento le
+  //    mandaba el token de acceso a un servidor de terceros no afiliado sin
+  //    necesidad real — riesgo de exposición de credencial que no se justifica
+  //    si el camino directo ya funciona.
+  // Fix de raíz: se saca el fallback silencioso a un proxy no confiable. Si el
+  // fetch directo falla, se informa con un mensaje honesto (ver
+  // _ghNetworkError) en vez de encadenar un segundo fallo opaco contra un
+  // servicio que ni siquiera está arriba.
   async function ghApi(method, path, body) {
     const gc = gOb(K.gh, {}); if (!gc.token || !gc.repo) throw new Error('GitHub no configurado');
     const url = `https://api.github.com/repos/${gc.repo}/contents/${path}`;
@@ -382,10 +484,9 @@
     // y mostrar el estado viejo hasta un refresh/limpieza de caché manual.
     let resp;
     try {
-      resp = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
-    } catch {
-      const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      resp = await fetch(proxyUrl, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+      resp = await _ghFetchWithRetry(url, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    } catch (netErr) {
+      throw _ghNetworkError(netErr);
     }
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
@@ -405,10 +506,9 @@
     const headers = { 'Authorization': 'token ' + decToken(gc.token), 'Accept': 'application/vnd.github.v3+json' };
     let resp;
     try {
-      resp = await fetch(url, { headers, cache: 'no-store' });
-    } catch {
-      const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      resp = await fetch(proxyUrl, { headers, cache: 'no-store' });
+      resp = await _ghFetchWithRetry(url, { headers, cache: 'no-store' });
+    } catch (netErr) {
+      throw _ghNetworkError(netErr);
     }
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
@@ -426,12 +526,16 @@
       const gc = gOb(K.gh, {});
       if (!gc.token || !gc.repo) { el.className = 'rbox er'; el.innerHTML = '⚠ Guardá configuración primero'; return; }
       const url = `https://api.github.com/repos/${gc.repo}`;
-      let r = await fetch(url, { headers: { 'Authorization': 'token ' + decToken(gc.token) } }).catch(() => null);
-      if (!r) r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { headers: { 'Authorization': 'token ' + decToken(gc.token) } });
+      let r;
+      try {
+        r = await _ghFetchWithRetry(url, { headers: { 'Authorization': 'token ' + decToken(gc.token) } });
+      } catch (netErr) {
+        throw _ghNetworkError(netErr);
+      }
       const d = await r.json();
       if (r.ok) { el.className = 'rbox'; el.innerHTML = `✓ Conectado · <b style="color:var(--ac)">${d.full_name}</b> · ${d.private ? 'privado' : 'público'}`; }
       else { el.className = 'rbox er'; el.innerHTML = '✕ ' + d.message; }
-    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
+    } catch (e) { window.BioLog && window.BioLog.logError('CFG', 'ghTest', e); el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
   }
 
   // Hasta 2026-07-28 usaba bkCollectAll (valores parseados + filtro BK_PREFIXES) —
@@ -477,7 +581,7 @@
       ghLoadCfg();
       el.className = 'rbox wn'; el.innerHTML = `✓ Backup guardado en <code>${path}</code>`;
       sN('Backup guardado');
-    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
+    } catch (e) { window.BioLog && window.BioLog.logError('CFG', 'ghBackup', e); el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
   }
 
   // Carga siempre el backup MAS RECIENTE — reemplaza al viejo ghPull (que
@@ -522,7 +626,7 @@
       el.className = 'rbox'; el.innerHTML = `✓ Cargado <code>${esc(latest.name)}</code> (${n} keys) — recargando...`;
       sN(`Backup más reciente cargado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
-    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
+    } catch (e) { window.BioLog && window.BioLog.logError('CFG', 'ghLoadLatest', e); el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; sN('Error: ' + e.message, true); }
   }
 
   // Extrae un key YYYYMMDDHHMMSS ordenable, en HORA LOCAL, de un nombre de
@@ -690,7 +794,7 @@
       el.className = 'rbox'; el.innerHTML = `✓ Backup restaurado (${n} keys) — recargando...`;
       sN(`Backup restaurado (${n} keys) — recargando...`);
       setTimeout(() => location.reload(), 1200);
-    } catch (e) { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
+    } catch (e) { window.BioLog && window.BioLog.logError('CFG', 'ghRestore', e, { path }); el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; }
   }
 
   // Descarga un backup puntual de la lista de GitHub tal cual está guardado
@@ -748,6 +852,12 @@
     if (btnGuardar) {
       btnGuardar.className = 'btn ' + (!_ghConfigurado ? 'btn-s' : (hasUnsaved ? 'btn-wn' : 'btn-s'));
       btnGuardar.disabled = !_ghConfigurado || !hasUnsaved;
+      // 2026-08-17: el botón se deshabilitaba sin ninguna pista visible de por
+      // qué — un click "no hacía nada" y era indistinguible de estar roto.
+      // Título explícito para que el estado se entienda sin tener que preguntar.
+      btnGuardar.title = !_ghConfigurado
+        ? 'Configurá token y repo primero'
+        : (hasUnsaved ? '' : 'Ya está todo guardado en GitHub — no hay cambios nuevos desde el último backup' + (gc.lastSync ? ' (' + fDate(gc.lastSync) + ')' : ''));
     }
     const btnCargar = document.getElementById('gh-btn-cargar');
     if (btnCargar) {

@@ -1010,7 +1010,18 @@ function actualizarSelectoresCT() {
     }
 
     function guardarEnStorage() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
+        // 2026-08-17 (MEJ-0046): antes sin try/catch — un QuotaExceededError acá
+        // tiraba sin capturar en pleno click del usuario, dejando el lote sin
+        // guardar y sin ningún aviso. Ahora queda registrado (window.BioLog,
+        // shared/error_log.js) y se avisa con alert() — mismo patrón ya usado
+        // en este archivo para errores reales de import (ver importarJSON()).
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(lotesData));
+        } catch (e) {
+            if (window.BioLog) window.BioLog.logError('GR', 'guardarEnStorage', e);
+            alert('⚠ No se pudo guardar el lote (¿localStorage lleno?). Los cambios de esta pantalla NO se guardaron. Revisá el espacio disponible antes de seguir.');
+            return;
+        }
         actualizarSelectorLotes();
     }
 
@@ -2200,13 +2211,31 @@ window.grEliminarRegistro = grEliminarRegistro;
         });
     }
 
+    // Persiste la biblioteca completa (agentes/aditivos/granos) — SSoT de
+    // escritura para los 5 call sites que antes hacían el mismo
+    // localStorage.setItem(BIBLIOTECA_KEY, ...) sin protección cada uno por
+    // su lado (2026-08-17, MEJ-0046: un QuotaExceededError en cualquiera de
+    // los 5 tiraba sin capturar en pleno click del usuario). Devuelve
+    // true/false — los callers que necesitan abortar el resto de su lógica
+    // (limpiar inputs, re-renderizar) en caso de fallo deben chequearlo.
+    function _grGuardarBiblioteca(bib) {
+        try {
+            localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+            return true;
+        } catch (e) {
+            if (window.BioLog) window.BioLog.logError('GR', '_grGuardarBiblioteca', e);
+            alert('⚠ No se pudo guardar la biblioteca (¿localStorage lleno?). El cambio NO se guardó. Revisá el espacio disponible antes de seguir.');
+            return false;
+        }
+    }
+
     // Lee los inputs de UNA tabla y persiste solo bib[tipo]. Llamado al
     // apagar el modo edición de esa tabla (click en "Save").
     function guardarTablaEnStorage(tipo) {
         const bib = getBiblioteca();
         _grScrapeTablaDesdeDOM(tipo, bib);
 
-        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        if (!_grGuardarBiblioteca(bib)) return;
         GR.biblioteca = bib;
         renderizarTablaEnConfig(tipo);
         if (tipo === 'granos') _grActualizarSelectorGranosCT(bib);
@@ -2266,7 +2295,7 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'AG-' + String(bib.agentes.length + 1).padStart(2, '0'),
             nombre: nombre.toUpperCase(), concDefault: conc, volumenTipico: vol, notas: notas
         });
-        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        if (!_grGuardarBiblioteca(bib)) return;
         GR.biblioteca = bib;
 
         document.getElementById('configAgenteNombre').value = '';
@@ -2291,7 +2320,7 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'AD-' + String(bib.aditivos.length + 1).padStart(2, '0'),
             nombre: nombre, tipo: tipo, notas: notas
         });
-        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        if (!_grGuardarBiblioteca(bib)) return;
         GR.biblioteca = bib;
 
         document.getElementById('configAditivoNombre').value = '';
@@ -2320,7 +2349,7 @@ window.grEliminarRegistro = grEliminarRegistro;
             id: 'GR-' + String(bib.granos.length + 1).padStart(2, '0'),
             nombre: nombre, densidadTipica: parseFloat(densidad.toFixed(3)), granulometria: granulometria, notas: notas
         });
-        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        if (!_grGuardarBiblioteca(bib)) return;
         GR.biblioteca = bib;
 
         document.getElementById('configGranoNombre').value = '';
@@ -2360,7 +2389,7 @@ window.grEliminarRegistro = grEliminarRegistro;
         if (!Array.isArray(bib[tipo])) { console.warn('[GR] tipo no soportado:', tipo); return; }
         _grScrapeTablaDesdeDOM(tipo, bib); // preservar ediciones sin guardar de las otras filas antes de eliminar la target
         bib[tipo].splice(index, 1);
-        localStorage.setItem(BIBLIOTECA_KEY, JSON.stringify(bib));
+        if (!_grGuardarBiblioteca(bib)) return;
         GR.biblioteca = bib;
         renderizarTablaEnConfig(tipo);
         if (tipo === 'granos') _grActualizarSelectorGranosCT(bib);

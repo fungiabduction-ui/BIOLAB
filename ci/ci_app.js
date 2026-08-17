@@ -82,6 +82,13 @@ function sDB(k, d) {
     localStorage.setItem(k, JSON.stringify(d));
     return true;
   } catch (e) {
+    // 2026-08-17 (MEJ-0046): antes solo console.error — este es el funnel de
+    // guardado central de CI (fórmulas, tandas, cultivos, notas), y nada
+    // avisaba al usuario cuando fallaba. Ahora queda en window.BioLog
+    // (shared/error_log.js) + toast visible, sin bloquear con alert() porque
+    // sDB/sOb se llaman muy seguido (autosave) y un alert() ahí se apila.
+    if (window.BioLog) window.BioLog.logError('CI', 'sDB:' + k, e);
+    if (typeof sN === 'function') sN('⚠ No se pudo guardar (¿localStorage lleno?)', true);
     console.error('[CI] sDB: fallo al guardar "' + k + '":', e);
     return false;
   }
@@ -97,6 +104,8 @@ function sOb(k, d) {
     localStorage.setItem(k, JSON.stringify(d));
     return true;
   } catch (e) {
+    if (window.BioLog) window.BioLog.logError('CI', 'sOb:' + k, e);
+    if (typeof sN === 'function') sN('⚠ No se pudo guardar (¿localStorage lleno?)', true);
     console.error('[CI] sOb: fallo al guardar "' + k + '":', e);
     return false;
   }
@@ -1823,12 +1832,22 @@ function _segNewRowInnerHTML(frmId, tandaAuto, rowId) {
 function segRemoveRow(btn) {
   const row = btn.closest('tr'); if (!row) return;
   const tbody = row.closest('tbody');
+  const rowId = row.dataset.rowId || '';
   // Eliminar también el drawer de notas inline que sigue a esta fila
   const drawerTr = row.nextElementSibling;
   if (drawerTr && drawerTr.classList.contains('seg-note-drawer')) drawerTr.remove();
   row.remove();
   const frmId = _segFrmIdFromTbodyId(tbody?.id || '');
   if (frmId) {
+    // 2026-08-17 (MEJ-0046, hallazgo real: CI-0001 tenía 144.8KB de foto
+    // huérfana): borrar la fila NUNCA limpiaba SEG.rowImagenes[rowId] — la
+    // foto quedaba en bl2_seg_rowimgs_<frmId> para siempre, sin ninguna fila
+    // viva que la referencie, sin forma de volver a verla nunca. Cada ciclo
+    // foto+borrado de fila era una fuga de espacio permanente.
+    if (rowId && SEG.rowImagenes && SEG.rowImagenes[rowId]) {
+      delete SEG.rowImagenes[rowId];
+      segPersistirRowImgs(frmId);
+    }
     segActualizarTotales(frmId);
     segActualizarResumen(frmId);
     // permitirVacio=true: si esta era la última fila de la fórmula, 0 filas es el
@@ -3446,7 +3465,12 @@ function segPersistirRowImgs(frmId) {
   // Clave: bl2_seg_rowimgs_<frmId>
   try {
     localStorage.setItem('bl2_seg_rowimgs_' + frmId, JSON.stringify(SEG.rowImagenes || {}));
-  } catch(e) { console.warn('[CI] localStorage lleno al guardar fotos'); }
+  } catch(e) {
+    // 2026-08-17 (MEJ-0046): fotos son dato real e irrepetible (evidencia
+    // fotográfica de una tanda) — antes solo console.warn.
+    if (window.BioLog) window.BioLog.logError('CI', 'segPersistirRowImgs', e, { frmId });
+    if (typeof sN === 'function') sN('⚠ No se pudo guardar la foto (¿localStorage lleno?)', true);
+  }
 }
 
 function segCargarRowImgs(frmId) {
@@ -3968,7 +3992,9 @@ function segPersistirNotas(deletedId) {
     localStorage.setItem('bl2_seg_notas', JSON.stringify(merged));
     SEG.seguimientoNotas = merged;
   } catch (e) {
-    console.warn('[CI] segPersistirNotas: error al persistir notas:', e);
+    // 2026-08-17 (MEJ-0046): notas de seguimiento son dato real — antes solo console.warn.
+    if (window.BioLog) window.BioLog.logError('CI', 'segPersistirNotas', e, { deletedId });
+    if (typeof sN === 'function') sN('⚠ No se pudo guardar la nota (¿localStorage lleno?)', true);
   }
 }
 

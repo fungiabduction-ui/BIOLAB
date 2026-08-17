@@ -606,7 +606,14 @@ function cargarBibliotecaDesdeStorage() {
 }
 
 function guardarBiblioteca() {
-    localStorage.setItem(SU_BIBLIOTECA_KEY, JSON.stringify(biblioteca));
+    // 2026-08-17 (MEJ-0046): antes sin try/catch — ver nota igual en
+    // guardarEnStorage() más abajo.
+    try {
+        localStorage.setItem(SU_BIBLIOTECA_KEY, JSON.stringify(biblioteca));
+    } catch (e) {
+        if (window.BioLog) window.BioLog.logError('SU', 'guardarBiblioteca', e);
+        alert('⚠ No se pudo guardar la biblioteca de SU (¿localStorage lleno?). El cambio NO se guardó.');
+    }
 }
 
 // ==========================================
@@ -767,7 +774,16 @@ function cargarLotesDesdeStorage() {
 }
 
 function guardarEnStorage() {
-    localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
+    // 2026-08-17 (MEJ-0046): antes sin try/catch — un QuotaExceededError acá
+    // tiraba sin capturar en pleno click del usuario (guardar un lote de
+    // sustrato), dejando el lote sin persistir y sin ningún aviso.
+    try {
+        localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
+    } catch (e) {
+        if (window.BioLog) window.BioLog.logError('SU', 'guardarEnStorage', e);
+        alert('⚠ No se pudo guardar el lote (¿localStorage lleno?). Los cambios de esta pantalla NO se guardaron. Revisá el espacio disponible antes de seguir.');
+        return;
+    }
     try { if (typeof window.suRecomputeGrUsadosPush === 'function') window.suRecomputeGrUsadosPush(); } catch (e) {}
     actualizarSelectorLotes();
 }
@@ -3678,7 +3694,13 @@ function _suPropagarRenameFR(suUuid, idAnterior, idNuevo) {
             // Notificar a FR si está montado en la misma pestaña
             try { window.dispatchEvent(new Event('su-lote-guardado')); } catch (e) {}
         }
-    } catch (e) { console.warn('[SU] _suPropagarRenameFR error:', e); }
+    } catch (e) {
+        // 2026-08-17 (MEJ-0046): esto propaga un rename de SU hacia fr_bolsas —
+        // si falla en silencio, las bolsas FR quedan con un suLoteId viejo,
+        // referencia rota sin que nadie se entere (antes solo console.warn).
+        if (window.BioLog) window.BioLog.logError('SU', '_suPropagarRenameFR', e, { suUuid, idAnterior, idNuevo });
+        alert('⚠ El lote SU se renombró pero NO se pudo actualizar la referencia en las bolsas FR asociadas (¿localStorage lleno?). Revisá manualmente el suLoteId en FR para "' + idNuevo + '".');
+    }
 }
 
 // ==========================================

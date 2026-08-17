@@ -253,6 +253,9 @@
         }
       }));
     } catch (e) {
+      // 2026-08-17 (MEJ-0046): ya avisaba visiblemente (toast) — se suma
+      // el registro persistente para poder auditar después con Claude Code.
+      if (window.BioLog) window.BioLog.logError('GE', 'save', e);
       console.warn('[GE] save() falló:', e);
       toast('No se pudo guardar (¿localStorage lleno?)', 'err');
     }
