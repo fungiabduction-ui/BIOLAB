@@ -474,7 +474,17 @@
     try {
       const gc = gOb(K.gh, {});
       if (!gc.token || !gc.repo) { el.className = 'rbox er'; el.innerHTML = '⚠ No configurado'; return; }
-      const files = await ghApi('GET', 'backups').catch(() => []);
+      let files;
+      try { files = await ghApi('GET', 'backups'); }
+      catch (e) {
+        // 404 real (carpeta backups/ no existe todavía) = "sin backups" genuino.
+        // Cualquier otro error (rate limit, fallo de red/proxy) NO es lo mismo —
+        // antes ambos casos se tragaban igual y mostraban el mismo mensaje
+        // engañoso aunque el repo sí tuviera backups (bug reportado 2026-08-17:
+        // "Ver backups" los listaba bien mientras "Cargar" decía "sin backups").
+        if (e.status === 404) { files = []; }
+        else { el.className = 'rbox er'; el.innerHTML = '✕ ' + e.message; return; }
+      }
       if (!files.length) { el.className = 'rbox er'; el.innerHTML = '⚠ Sin backups todavía — usá "Guardar backup ahora" primero'; return; }
       files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name)));
       const latest = files[0];
@@ -604,7 +614,14 @@
     try {
       const gc = gOb(K.gh, {});
       if (!gc.token || !gc.repo) { el.innerHTML = 'No configurado'; return; }
-      const files = await ghApi('GET', 'backups').catch(() => []);
+      let files;
+      try { files = await ghApi('GET', 'backups'); }
+      catch (e) {
+        // Mismo criterio que ghLoadLatest(): 404 real = repo sin backups todavía;
+        // cualquier otro error se muestra tal cual, no se disfraza de "vacío".
+        if (e.status === 404) { files = []; }
+        else { el.innerHTML = '✕ Error: ' + esc(e.message); return; }
+      }
       if (!files.length) { el.innerHTML = '<div class="empty">Sin backups todavía</div>'; return; }
       files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name))); // más nuevo primero
       _bkListaOrdenada = files;
