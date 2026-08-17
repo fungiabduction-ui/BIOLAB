@@ -14,17 +14,17 @@ echo  %ROOT%
 echo ==========================================
 echo.
 
-REM Si quedo un servidor viejo colgado en el puerto 8000 (por ejemplo, una
+REM Si quedo un servidor viejo colgado en el puerto 8734 (por ejemplo, una
 REM ventana cerrada sin terminar el proceso), lo cerramos antes de arrancar
 REM para evitar "address already in use" o quedar pegado a la version vieja.
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (
-    echo Cerrando proceso viejo en el puerto 8000 ^(PID %%p^)...
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8734" ^| findstr "LISTENING"') do (
+    echo Cerrando proceso viejo en el puerto 8734 ^(PID %%p^)...
     taskkill /F /PID %%p >nul 2>&1
 )
 
-echo Iniciando servidor en http://localhost:8000 ...
+echo Iniciando servidor en http://localhost:8734 ...
 echo ^(Ctrl+C para detener^)
 echo.
-python -m http.server 8000
+python -m http.server 8734
 
 endlocal

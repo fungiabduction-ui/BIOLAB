@@ -14,7 +14,7 @@ echo   BIOLAB ENGINE v3 - servidor local
 echo  ===============================================
 echo.
 echo   Carpeta:  %CD%
-echo   URL:      http://localhost:8000
+echo   URL:      http://localhost:8734
 echo.
 echo   Presiona CTRL+C para detener.
 echo  ===============================================
@@ -23,24 +23,24 @@ echo.
 REM ── 1) Intentar con Python 3 ────────────────────────────────
 python --version >nul 2>&1
 if %ERRORLEVEL%==0 (
-    start "" "http://localhost:8000"
-    python -m http.server 8000
+    start "" "http://localhost:8734"
+    python -m http.server 8734
     goto :eof
 )
 
 REM ── 2) Fallback: Python Launcher ────────────────────────────
 py -3 --version >nul 2>&1
 if %ERRORLEVEL%==0 (
-    start "" "http://localhost:8000"
-    py -3 -m http.server 8000
+    start "" "http://localhost:8734"
+    py -3 -m http.server 8734
     goto :eof
 )
 
 REM ── 3) Fallback: Node.js (npx http-server) ──────────────────
 where node >nul 2>&1
 if %ERRORLEVEL%==0 (
-    start "" "http://localhost:8000"
-    npx --yes http-server -p 8000 -c-1 .
+    start "" "http://localhost:8734"
+    npx --yes http-server -p 8734 -c-1 .
     goto :eof
 )
 

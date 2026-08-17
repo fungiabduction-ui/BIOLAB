@@ -635,19 +635,19 @@ function showFileProtocolHelp() {
         <li>
           Doble-click en <code style="color:var(--ac)">serve.bat</code>
           (si está en la carpeta del proyecto). Abre
-          <code>http://localhost:8000</code>.
+          <code>http://localhost:8734</code>.
         </li>
         <li>
           Desde PowerShell en la carpeta:
           <code style="color:var(--ac);display:block;margin:6px 0;padding:6px 10px;background:var(--bg-deep);border-radius:4px">
-            python -m http.server 8000
+            python -m http.server 8734
           </code>
-          Luego abrí <code style="color:var(--ac)">http://localhost:8000</code>.
+          Luego abrí <code style="color:var(--ac)">http://localhost:8734</code>.
         </li>
         <li>
           Con Node instalado:
           <code style="color:var(--ac);display:block;margin:6px 0;padding:6px 10px;background:var(--bg-deep);border-radius:4px">
-            npx http-server -p 8000
+            npx http-server -p 8734
           </code>
         </li>
         <li>
