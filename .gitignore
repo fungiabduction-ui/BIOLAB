@@ -11,6 +11,10 @@ CHANGELOG.md
 biolab-backup-*.json
 biolab-ci-backup-*.json
 biolab_full_backup*.json
+# Copia local automatica que ghBackup() descarga a disco en cada backup manual
+# (agregado 2026-08-17 en cfg_app.js/_localDownloadCopy — no estaba cubierto,
+# encontrado sin trackear en la raiz del repo el 2026-08-18 antes del proximo push)
+biolab-autobackup-*.json
 
 # Bitacora de inteligencia de laboratorio — datos propietarios, nunca al repo publico
 docs/lab-intelligence/
@@ -25,3 +29,7 @@ cilab/CILAB_EVIDENCIA/
 
 # Skills de Claude Code — describen metodologia/workflow interno del lab, nunca al repo publico
 .claude/
+
+# Postmortems/incidentes internos de sesiones de Claude Code — mismo criterio que
+# CLAUDE.md/BIOLAB_SYSTEM.md/CHANGELOG.md, nunca al repo publico
+docs/incidentes/
