@@ -2973,7 +2973,14 @@ window.suDbPoblarGranoSelectSource = function(sourceRow, grLoteId) {
     window.suDbActualizarDisponiblesSource(sourceRow);
 };
 
-/** Actualiza el chip de disponibles en una source row. */
+/**
+ * Actualiza el chip de disponibles en una source row.
+ * suGrDisponiblesDeTanda(..., excludeRow=sourceRow) da el margen SIN la propia
+ * fila — correcto para el tope de validación en suDbOnChangeUsadosSource, pero
+ * el chip debe mostrar el pool real restante, así que acá se le resta además
+ * lo que esta misma fila ya tiene tipeado (si no, el chip queda fijo en el
+ * margen y nunca refleja lo que el usuario está escribiendo en su propia fila).
+ */
 window.suDbActualizarDisponiblesSource = function(sourceRow) {
     if (!sourceRow) return;
     var chip = sourceRow.querySelector('.db-grano-disp');
@@ -2983,10 +2990,12 @@ window.suDbActualizarDisponiblesSource = function(sourceRow) {
     if (!grLote || !grTanda) { chip.textContent = ''; chip.removeAttribute('data-state'); return; }
     var suLoteActual = (document.getElementById('loteId') || {}).value || '';
     var info = window.suGrDisponiblesDeTanda(grLote, grTanda, suLoteActual, sourceRow);
-    chip.textContent = 'disp: ' + info.disponibles;
-    if      (info.disponibles === 0) chip.setAttribute('data-state', 'empty');
-    else if (info.disponibles < 5)   chip.setAttribute('data-state', 'low');
-    else                              chip.setAttribute('data-state', 'ok');
+    var propioUsados = parseInt((sourceRow.querySelector('.db-source-usados') || {}).value) || 0;
+    var dispMostrado = Math.max(0, info.disponibles - propioUsados);
+    chip.textContent = 'disp: ' + dispMostrado;
+    if      (dispMostrado === 0) chip.setAttribute('data-state', 'empty');
+    else if (dispMostrado < 5)   chip.setAttribute('data-state', 'low');
+    else                          chip.setAttribute('data-state', 'ok');
 };
 
 /** Refresca chips de disponibles en todas las source rows del form. */
@@ -3128,7 +3137,9 @@ window.suDbOnChangeUsadosSource = function(inputEl) {
     }
 
     inputEl.dataset.prevUsados = String(val);
-    window.suDbActualizarDisponiblesSource(sourceRow);
+    // Refresca TODAS las source rows, no solo esta — si hay otra fila apuntando
+    // al mismo lote/tanda GR, su chip de disponibles también debe moverse en vivo.
+    window.suDbRefrescarDisponiblesVivos();
     if (mainRow) window.suDbUpdateSummaryChips(mainRow);
     window.suRecomputeGrUsadosPush();
     window.suDbActualizarTotalUsados();

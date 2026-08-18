@@ -49,6 +49,12 @@
         cosecha: { key: 'ult_cosecha', dir: 'desc' },
         archivo: { key: 'arch_fecha',  dir: 'desc' }
     };
+    // Borrador (solo DOM/memoria, nunca persistido) de "fecha real de armado" por
+    // bolsa pendiente, keyed por _frUuid. renderPendientes() reconstruye TODAS las
+    // filas con innerHTML en cualquier renderAll() (confirmar/cancelar OTRA bolsa,
+    // sync con SU/GR, evento storage cross-tab) — sin este borrador, cualquiera de
+    // esos triggers pisa lo que el usuario tecleó en una fila que todavía no confirmó.
+    var _frFechaArmadoDrafts = {};
 
     // Helpers semánticos para el campo pendienteConfirmacion.
     // pendienteConfirmacion:true = bolsa aún no sellada (sync puede modificarla)
@@ -1094,6 +1100,7 @@
         b.pendienteConfirmacion = false;
         b.estado = computeEstado(b);
         addObsTo(b, 'Armado de bolsa confirmado. ID asignado: ' + idNuevo + '.', 'auto', 'green');
+        delete _frFechaArmadoDrafts[frUuid];
         saveBolsas();
         // Notificar a SU para que refresque el badge (pasa de PENDIENTE a ID real)
         try { window.dispatchEvent(new Event('fr-bolsa-renombrada')); } catch (e) {}
@@ -1132,6 +1139,7 @@
         b.fechaCancelacion = hoy;
         b.estado = computeEstado(b);
         addObsTo(b, 'Bolsa descartada antes de confirmar el armado. Archivada para trazabilidad.', 'auto', 'red');
+        delete _frFechaArmadoDrafts[frUuid];
         saveBolsas();
         try { window.dispatchEvent(new Event('fr-bolsa-renombrada')); } catch (e) {}
         renderAll();
@@ -2846,13 +2854,17 @@
         var grTxt = _grTxtFromBolsa(b);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
         var uuid  = esc(b._frUuid || '');
-        var fechaVal = b.fechaInicio ? esc(b.fechaInicio) : '';
+        // Default = hoy (día en que se confirma el armado), no b.fechaInicio (que en una
+        // bolsa todavía pendiente es siempre la fecha del lote SU, no la de hoy — puede
+        // quedar vieja si SU se cargó días antes de pasar por FR a confirmar). Si el
+        // usuario ya tecleó algo en esta fila en un render anterior, se respeta ese borrador.
+        var fechaVal = _frFechaArmadoDrafts.hasOwnProperty(b._frUuid) ? _frFechaArmadoDrafts[b._frUuid] : hoyISO();
         return '<tr class="fr-row fr-row-pendiente">'
             + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
             + '<td>' + esc(ge) + '</td>'
             + '<td><span class="fr-traza">' + esc(suTxt) + '</span></td>'
             + '<td><span class="fr-traza">' + esc(grTxt) + '</span></td>'
-            + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + fechaVal + '" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
+            + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + esc(fechaVal) + '" oninput="FR._draftFechaArmado(\'' + uuid + '\', this.value)" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
             + '<td class="fr-num">' + seco + '</td>'
             + '<td class="fr-acciones" style="white-space:nowrap">'
             +   '<button class="fr-btn-confirmar" onclick="FR.confirmarBolsa(\'' + uuid + '\', this.closest(\'tr\').querySelector(\'.fr-fecha-armado-input\').value)" title="Confirmar armado — genera el ID definitivo">✅ Confirmar</button>'
@@ -2861,8 +2873,26 @@
             + '</tr>';
     }
 
+    /** Guarda en memoria (nunca en storage) la fecha de armado que el usuario está
+     *  tecleando en una fila pendiente, para que sobreviva a un renderAll() disparado
+     *  por otra fila/otro módulo antes de que esta se confirme. */
+    FR._draftFechaArmado = function(frUuid, value) {
+        if (!frUuid) return;
+        if (value) _frFechaArmadoDrafts[frUuid] = value;
+        else delete _frFechaArmadoDrafts[frUuid];
+    };
+
     function renderPendientes() {
         var pendientes = bolsas.filter(esPendiente);
+
+        // Poda defensiva: si una bolsa dejó de estar pendiente por una vía distinta
+        // a confirmarBolsa/cancelarBolsa (import de backup, restore, migración), su
+        // borrador de fecha quedaría huérfano en memoria para siempre si no se limpia acá.
+        var _pendUuids = {};
+        pendientes.forEach(function(b) { if (b._frUuid) _pendUuids[b._frUuid] = true; });
+        Object.keys(_frFechaArmadoDrafts).forEach(function(u) {
+            if (!_pendUuids[u]) delete _frFechaArmadoDrafts[u];
+        });
 
         var seccion = document.getElementById('frSeccionPendientes');
 
