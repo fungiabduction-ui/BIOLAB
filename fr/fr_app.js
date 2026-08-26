@@ -5053,7 +5053,13 @@
                     aditivos:           aditivos,
                     scoreAuto:          cal.scoreAuto,
                     scorePersonal:      cal.scorePersonal,
-                    beOleada:           num(f.beOleada),
+                    // (code review 2026-08-26) num() forzaba null/undefined a 0 -- un flush sin
+                    // peso seco registrado (BE aún no calculado) quedaba indistinguible de un
+                    // flush con BE confirmado en 0% (fracaso real), contaminando doseResponse y
+                    // byGrProtocolo.beMean con ceros falsos. Este mismo archivo ya distingue
+                    // f.beOleada == null de === 0 en otro lado (_frCalBuildObsText, ~línea 5371)
+                    // — se preserva null acá para no perder esa distinción real.
+                    beOleada:           (f.beOleada != null && !isNaN(parseFloat(f.beOleada))) ? parseFloat(f.beOleada) : null,
                     pctDominante:       cal.pctDominante || 0,
                     pctHegemonico:      cal.pctHegemonico || 0,
                     pctAbortos:         cal.pctAbortos || 0,
