@@ -4886,6 +4886,49 @@
         return 'insuficiente';
     }
 
+    // Comparacion candidatos-vs-baseline robusta a confusion temporal (MEJ-0003).
+    // Ver docs/superpowers/specs/2026-08-26-fr-cal-estabilidad-temporal-design.md.
+    // Mismo principio que el bootstrap CI90 de cilab_inteligencia.js: si excluir un solo mes
+    // del historial puede producir un swing grande relativo al efecto reportado, el efecto
+    // no es atribuible de forma robusta al candidato -- es sensible a que mes esta presente
+    // en la muestra (cubre tanto confusion estacional como un evento de cosecha en lote).
+    // Umbral calibrado por TDD: rango > abs(deltaGlobal) no detectaba el caso estacional real.
+    function _frCalDeltaConLOO(candRecs, baseRecs, field, minN) {
+        function meanOf(recs) {
+            var vals = recs.map(function(r) { return r[field]; }).filter(function(v) { return v != null && !isNaN(v); });
+            return vals.length ? vals.reduce(function(s, v) { return s + v; }, 0) / vals.length : null;
+        }
+        function mesDe(r) { return r.fecha ? String(r.fecha).slice(0, 7) : null; }
+
+        var gMean = meanOf(candRecs);
+        var bMean = meanOf(baseRecs);
+        if (gMean == null || bMean == null) return { deltaGlobal: null, establidadTemporal: 'no-evaluable' };
+        var deltaGlobal = Math.round((gMean - bMean) * 10) / 10;
+
+        var mesesSet = {};
+        candRecs.concat(baseRecs).forEach(function(r) { var m = mesDe(r); if (m) mesesSet[m] = true; });
+        var mesesList = Object.keys(mesesSet);
+        if (mesesList.length < 3) return { deltaGlobal: deltaGlobal, establidadTemporal: 'no-evaluable' };
+
+        var deltasLOO = [];
+        mesesList.forEach(function(mExcl) {
+            var cand2 = candRecs.filter(function(r) { return mesDe(r) !== mExcl; });
+            var base2 = baseRecs.filter(function(r) { return mesDe(r) !== mExcl; });
+            if (cand2.length < minN || base2.length < minN) return;
+            var g2 = meanOf(cand2), b2 = meanOf(base2);
+            if (g2 == null || b2 == null) return;
+            deltasLOO.push(g2 - b2);
+        });
+
+        if (deltasLOO.length < 2) return { deltaGlobal: deltaGlobal, establidadTemporal: 'no-evaluable' };
+
+        var deltaLooMin = Math.round(Math.min.apply(null, deltasLOO) * 10) / 10;
+        var deltaLooMax = Math.round(Math.max.apply(null, deltasLOO) * 10) / 10;
+        var rango = deltaLooMax - deltaLooMin;
+        var establidadTemporal = rango > 0.5 * Math.abs(deltaGlobal) ? 'inestable' : 'estable';
+        return { deltaGlobal: deltaGlobal, establidadTemporal: establidadTemporal, deltaLooMin: deltaLooMin, deltaLooMax: deltaLooMax };
+    }
+
     // Aditivos reales de SU para una bolsa (con % de fibra y bucket bajo/medio/alto) —
     // SSoT compartida entre _frCalBuildIntel (estadisticas globales bySuAditivo) y
     // _frCalAnomalyAlert (filtrar candidatos de anomalia a los que la bolsa realmente

@@ -66,12 +66,14 @@ si deltasLOO.length < 2:
     return { deltaGlobal, establidadTemporal: 'no-evaluable' }
 
 rango = max(deltasLOO) - min(deltasLOO)
-establidadTemporal = rango > abs(deltaGlobal) ? 'inestable' : 'estable'
+establidadTemporal = rango > 0.5 * abs(deltaGlobal) ? 'inestable' : 'estable'
 return { deltaGlobal, establidadTemporal, deltaLooMin: min(deltasLOO), deltaLooMax: max(deltasLOO) }
 ```
 
-Regla de inestabilidad: si excluir un solo mes puede producir un swing tan grande o más grande que
-el efecto reportado, el efecto no es atribuible de forma robusta al ingrediente — es sensible a
+Regla de inestabilidad (calibrada por TDD, ver plan de implementación — el umbral inicial
+`rango > abs(deltaGlobal)` no detectaba el caso estacional real hasta bajarlo a la mitad): si
+excluir un solo mes puede producir un swing mayor a la mitad del efecto reportado, el efecto no es
+atribuible de forma robusta al ingrediente — es sensible a
 qué mes particular está presente en la muestra. Esto cubre tanto el caso estacional (el delta se
 derrumba al sacar los meses donde el aditivo se usó) como el caso de cohorte-en-lote (el delta se
 derrumba al sacar el mes donde cayó la cosecha en lote ajena).

@@ -54,14 +54,15 @@ function rec(field, value, mes) { var o = { fecha: mes + '-15T00:00:00.000Z' }; 
 })();
 
 // Caso 2: inestable estilo estacional -- el problema (deformaciones altas) ya existia en el
-// baseline ANTES de que el candidato empezara a usarse; sacar esos meses tempranos derrumba el delta.
+// baseline ANTES de que el candidato empezara a usarse (ej. real: "4 bolsas de abril" en
+// MEJ-0003, un solo mes de baseline concentra el problema pre-existente); sacar ese mes
+// temprano cambia el delta drasticamente.
 (function testInestableEstacional() {
     var cand = [], base = [];
-    // meses tempranos: baseline ya tiene el problema, candidato todavia no se usaba
-    ['2026-01','2026-02'].forEach(function(m) {
-        base.push(rec('pctDeformaciones', 90, m), rec('pctDeformaciones', 90, m), rec('pctDeformaciones', 90, m));
-    });
-    // meses tardios: candidato en uso, ambos grupos con deformaciones altas por igual (el problema real es otro)
+    // mes temprano: baseline ya tiene el problema (4 registros, como el caso real), candidato
+    // todavia no se usaba
+    base.push(rec('pctDeformaciones', 90, '2026-01'), rec('pctDeformaciones', 90, '2026-01'), rec('pctDeformaciones', 90, '2026-01'), rec('pctDeformaciones', 90, '2026-01'));
+    // meses tardios: candidato en uso, baseline sin el problema (el problema real ya no esta)
     ['2026-03','2026-04','2026-05'].forEach(function(m) {
         cand.push(rec('pctDeformaciones', 88, m), rec('pctDeformaciones', 90, m), rec('pctDeformaciones', 92, m));
         base.push(rec('pctDeformaciones', 5, m), rec('pctDeformaciones', 5, m), rec('pctDeformaciones', 5, m));
@@ -160,7 +161,7 @@ function _frCalDeltaConLOO(candRecs, baseRecs, field, minN) {
     var deltaLooMin = Math.round(Math.min.apply(null, deltasLOO) * 10) / 10;
     var deltaLooMax = Math.round(Math.max.apply(null, deltasLOO) * 10) / 10;
     var rango = deltaLooMax - deltaLooMin;
-    var establidadTemporal = rango > Math.abs(deltaGlobal) ? 'inestable' : 'estable';
+    var establidadTemporal = rango > 0.5 * Math.abs(deltaGlobal) ? 'inestable' : 'estable';
     return { deltaGlobal: deltaGlobal, establidadTemporal: establidadTemporal, deltaLooMin: deltaLooMin, deltaLooMax: deltaLooMax };
 }
 
@@ -172,7 +173,7 @@ module.exports = { _frCalDeltaConLOO: _frCalDeltaConLOO };
 Run: `node <scratchpad>/test_frcal_loo.js`
 Expected: las 6 líneas `OK: ...` y al final `TODOS LOS CASOS OK`, exit code 0.
 
-Si el Caso 2 o el Caso 3 no da `inestable`, no seguir al Step 5 — ajustar la implementación (probablemente el umbral `rango > Math.abs(deltaGlobal)`) hasta que los 6 casos pasen. Estos 2 casos son los que representan los bugs reales documentados en `MEJ-0003` — si no los detecta, la función no cumple su propósito.
+Si el Caso 2 o el Caso 3 no da `inestable`, no seguir al Step 5 — ajustar el umbral hasta que los 6 casos pasen. Estos 2 casos son los que representan los bugs reales documentados en `MEJ-0003` — si no los detecta, la función no cumple su propósito. (Ya calibrado: `rango > Math.abs(deltaGlobal)` no alcanzaba para el caso estacional real — el umbral correcto, con el que los 6 casos pasan, es `rango > 0.5 * Math.abs(deltaGlobal)`, ya reflejado en el Step 3/5 de abajo.)
 
 - [ ] **Step 5: Pegar la función verificada en `fr_app.js`**
 
@@ -224,7 +225,7 @@ Modify `fr/fr_app.js` — insertar inmediatamente después de `_frCalConfidence`
         var deltaLooMin = Math.round(Math.min.apply(null, deltasLOO) * 10) / 10;
         var deltaLooMax = Math.round(Math.max.apply(null, deltasLOO) * 10) / 10;
         var rango = deltaLooMax - deltaLooMin;
-        var establidadTemporal = rango > Math.abs(deltaGlobal) ? 'inestable' : 'estable';
+        var establidadTemporal = rango > 0.5 * Math.abs(deltaGlobal) ? 'inestable' : 'estable';
         return { deltaGlobal: deltaGlobal, establidadTemporal: establidadTemporal, deltaLooMin: deltaLooMin, deltaLooMax: deltaLooMax };
     }
 ```
