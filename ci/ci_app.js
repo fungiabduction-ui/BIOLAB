@@ -2260,16 +2260,22 @@ function _segSoloUltimoSegmento(label) {
 /**
  * Construye la etiqueta legible de un cultivo CI para los selects de Inoculo trace.
  * Formato default: "Tiamina complex - CI-0003 - PC / APE / 244 · PLACA · 12 disp."
- * Formato con experimento (2026-08-19): el código CI (ruido, no aporta trazabilidad
- * util acá) se reemplaza por "Frasco {label}" — ej. "Frasco A (Control)".
+ * Formato con experimento (2026-08-19, corregido 2026-08-26 — code review): "Frasco {label}"
+ * agrega contexto legible, pero NUNCA puede reemplazar el código CI — experimentoFrascoId
+ * (ej. "A") es un label reusado idéntico en cada experimento nuevo (ver expOnNFrascosChange,
+ * labels=['A','B','C','D'] hardcodeado), no es único entre experimentos distintos de la
+ * misma fórmula+genética. Mostrar solo "Frasco A" hacía indistinguibles dos cultivos reales
+ * en el dropdown de Inóculo trace — riesgo real de que un operador elija el cultivo
+ * equivocado al crear un lote GR, corrompiendo la trazabilidad GE→CI→GR.
  * @param {object} c        - objeto cultivo (con _stockReal ya calculado)
  * @param {Object} formsMap - mapa id→nombre de bl2_forms
  */
 function _segEtiquetaInoculo(c, formsMap) {
   const formulaNombre = (c.medioFormulaId && formsMap && formsMap[c.medioFormulaId]) || '';
+  const codigoCorto    = _segAbreviarCodigoCi(c.codigo || '');
   const origen         = (c.experimentoId && c.experimentoFrascoId)
-    ? `Frasco ${c.experimentoFrascoId}`
-    : _segAbreviarCodigoCi(c.codigo || '');
+    ? `Frasco ${c.experimentoFrascoId} (${codigoCorto})`
+    : codigoCorto;
   const lbl           = (c.geneticaSnapshot && c.geneticaSnapshot.label) || c.geneticaId || '?';
   const geneticaAbrev = _segAbreviarEspecie(lbl);
   const tipo          = c.tipo || '';
