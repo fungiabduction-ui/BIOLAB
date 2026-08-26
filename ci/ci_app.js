@@ -5162,17 +5162,12 @@ function _ciResolverGeneticaSnapshot(geneticaId) {
     const item = list && list.find(g => g.id === geneticaId);
     if (item) return { codigoGE: item.id, label: item.label };
   }
-  // Intento 2: leer biolab.ge.v4 directo y reconstruir cadena
-  try {
-    const raw = JSON.parse(localStorage.getItem('biolab.ge.v4'));
-    if (raw && Array.isArray(raw.nodes) && raw.nodes.length) {
-      const nodes = raw.nodes;
-      const getNode = id => nodes.find(n => n.id === id) || null;
-      const node = getNode(geneticaId);
-      if (!node) return { codigoGE: geneticaId, label: geneticaId };
-      const chain = [];
-      let cur = node;
-      while (cur) { chain.unshift(cur); cur = cur.parentId ? getNode(cur.parentId) : null; }
+  // Intento 2: leer biolab.ge.v4 directo y reconstruir cadena (SSoT del walk
+  // crudo en shared/ge_resolve.js — ver ese archivo para por qué está compartido)
+  if (window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+    const resolved = window.GEResolve.resolverNodoCrudo(geneticaId);
+    if (resolved) {
+      const { node, chain } = resolved;
       const sp = chain.find(x => x.type === 'species');
       const st = chain.find(x => x.type === 'strain');
       const parts = [];
@@ -5187,8 +5182,6 @@ function _ciResolverGeneticaSnapshot(geneticaId) {
         fenotipo: node.type === 'phenotype' ? node.name : '',
       };
     }
-  } catch (e) {
-    console.warn('[CI] No se pudo resolver snapshot genético:', e);
   }
   // Sin GE disponible: snapshot mínimo (no rompe trazabilidad, sigue siendo único)
   return { codigoGE: geneticaId, label: geneticaId };

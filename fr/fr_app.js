@@ -718,18 +718,11 @@
                                 var _hit = _sel.find(function(g){ return g.id === fenId; });
                                 if (_hit) geneticaFull = _hit.label;
                             }
-                            if (!geneticaFull) {
-                                var _raw = localStorage.getItem('biolab.ge.v4');
-                                if (_raw) {
-                                    var _parsed = JSON.parse(_raw);
-                                    var _geNodes = Array.isArray(_parsed.nodes) ? _parsed.nodes : [];
-                                    var _getN = function(id){ return _geNodes.find(function(n){ return n.id===id; })||null; };
-                                    var _fNode = _geNodes.find(function(n){ return n.id===fenId; });
-                                    if (_fNode) {
-                                        var _chain = [], _cur = _fNode;
-                                        while (_cur) { _chain.unshift(_cur); _cur = _cur.parentId ? _getN(_cur.parentId) : null; }
-                                        geneticaFull = _chain.map(function(n){ return n.name; }).join(' / ');
-                                    }
+                            // Fallback: leer biolab.ge.v4 crudo (SSoT del walk en shared/ge_resolve.js)
+                            if (!geneticaFull && window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+                                var _resolved = window.GEResolve.resolverNodoCrudo(fenId);
+                                if (_resolved) {
+                                    geneticaFull = _resolved.chain.map(function(n){ return n.name; }).join(' / ');
                                 }
                             }
                         } catch(e) {}
