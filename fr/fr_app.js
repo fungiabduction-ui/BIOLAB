@@ -3636,11 +3636,16 @@
         // pisarlo, dejando guardado el texto que Escape debia descartar. Enter tiene el
         // mismo riesgo (saveEditObs tambien remueve el input al re-renderizar) -- el flag
         // se marca ANTES de invocar save/cancel para que el blur anidado sea siempre no-op.
+        // (code review 2026-08-26) handled se marcaba true INCONDICIONALMENTE antes de
+        // llamar a saveEditObs -- si el guardado fallaba (ej. texto vacío, ver early-return
+        // de saveEditObs) el input quedaba visible pero el guard trabado en true para
+        // siempre: un blur real posterior (con texto valido esta vez) quedaba silenciado, y
+        // el lápiz tampoco respondía de nuevo (su propio guard ve el input todavía en el DOM).
+        // Fix: handled solo pasa a true si saveEditObs realmente guardó (retorna !== false).
         var handled = false;
         input.onkeydown = function(e) {
             if (e.key === 'Enter') {
-                handled = true;
-                FR.saveEditObs(notaId);
+                handled = FR.saveEditObs(notaId) !== false;
             } else if (e.key === 'Escape') {
                 handled = true;
                 FR.cancelEditObs(notaId, original);
@@ -3650,8 +3655,7 @@
         // pero nunca se implemento -- clickear afuera del input no guardaba nada.
         input.onblur = function() {
             if (handled) return;
-            handled = true;
-            FR.saveEditObs(notaId);
+            handled = FR.saveEditObs(notaId) !== false;
         };
         var btnOk = document.createElement('button');
         btnOk.type = 'button';
@@ -3663,8 +3667,7 @@
         // que el click real del boton corre.
         btnOk.onmousedown = function(e) { e.preventDefault(); };
         btnOk.onclick = function() {
-            handled = true;
-            FR.saveEditObs(notaId);
+            handled = FR.saveEditObs(notaId) !== false;
         };
         txtEl.innerHTML = '';
         wrap.appendChild(input);
@@ -3674,19 +3677,23 @@
         input.select();
     };
 
+    // Devuelve true si guardó, false si no (texto vacío, nota/bolsa no encontrada, input ya
+    // removido) -- los 3 call sites en startEditObs usan el valor de retorno para decidir si
+    // el guard `handled` debe quedar activado (ver comentario ahí, code review 2026-08-26).
     FR.saveEditObs = function(notaId) {
         var input = document.getElementById('fr-log-edit-' + notaId);
-        if (!input) return;
+        if (!input) return false;
         var nuevo = input.value.trim();
-        if (!nuevo) return;
+        if (!nuevo) return false;
         var b = getSelected();
-        if (!b || !Array.isArray(b.observaciones)) return;
+        if (!b || !Array.isArray(b.observaciones)) return false;
         var nota = b.observaciones.find(function(o) { return o.id === notaId; });
-        if (!nota) return;
+        if (!nota) return false;
         nota.texto = nuevo;
         nota.editedAt = new Date().toISOString();
         saveBolsas();
         renderObs(b);
+        return true;
     };
 
     FR.cancelEditObs = function(notaId, original) {
