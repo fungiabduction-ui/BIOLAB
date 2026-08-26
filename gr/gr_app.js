@@ -2456,7 +2456,26 @@ window.grEliminarRegistro = grEliminarRegistro;
     function grGetNombreGeneticaPorId(fenId) {
         if (!fenId) return '?';
         const found = grGetGeSelectable().find(g => g.id === fenId);
-        return found ? found.label : fenId;
+        if (found) return found.label;
+        // Fallback (MEJ-0048): grGetGeSelectable() vía window.ge.getSelectableGenetics()
+        // filtra status==='active' — una genética archivada nunca aparece ahí aunque GE
+        // esté montado. Leer biolab.ge.v4 crudo (sin filtro de status) y reconstruir la
+        // cadena de nombres evita degradar a mostrar el id interno del nodo. Mismo patrón
+        // que _ciResolverGeneticaSnapshot (ci_app.js) y el bloque equivalente de
+        // fr_app.js:711-741 — GR era el único de los 3 sin este segundo intento.
+        try {
+            const raw = localStorage.getItem('biolab.ge.v4');
+            if (!raw) return fenId;
+            const parsed = JSON.parse(raw);
+            const nodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
+            const getNode = id => nodes.find(n => n.id === id) || null;
+            const node = getNode(fenId);
+            if (!node) return fenId;
+            const chain = [];
+            let cur = node;
+            while (cur) { chain.unshift(cur); cur = cur.parentId ? getNode(cur.parentId) : null; }
+            return chain.map(c => c.name).join(' / ');
+        } catch (e) { return fenId; }
     }
     const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
 
