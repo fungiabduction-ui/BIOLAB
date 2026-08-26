@@ -3109,6 +3109,8 @@
                     + '<div class="fr-cal-intel-card-title">GR ' + esc(d.label) + ' <span style="color:#666;">(n=' + d.n + ')</span></div>'
                     + '<div class="fr-cal-intel-row"><span>Score auto medio</span><strong>' + (d.scoreAutoMean != null ? Math.round(d.scoreAutoMean) + '/100' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>% Positivo medio</span><strong>' + (d.pctPositivoMean != null ? fmt(d.pctPositivoMean, 1) + '%' : '—') + '</strong></div>'
+                    + '<div class="fr-cal-intel-row"><span>BE medio</span><strong>' + (d.beMean != null ? fmt(d.beMean, 1) + '%' : '—') + '</strong></div>'
+                    + '<div class="fr-cal-intel-row"><span>Hidratación de grano</span><strong>' + (d.hidratacion != null ? fmt(d.hidratacion, 1) + '%' : '—') + '</strong></div>'
                     + '</div>';
             });
             html += '</div>';
@@ -5134,11 +5136,33 @@
         Object.keys(grGroups).forEach(function(grId) {
             var recs = grGroups[grId].recs;
             if (recs.length < MIN_N) return;
+            // Hidratación de grano (MEJ-0025): mismo cálculo que grCalcularKPIFormulario()
+            // (gr_app.js) sobre datos reales del lote (uf.cantidad_unidades/peso_unidad vs
+            // masa seca de componentes) -- no hace falta ningún campo/UI nuevo, solo
+            // exponerlo cruzado contra el resultado real de FR (BE) en este mismo panel.
+            // Calculado acá en vez de llamar a window.grCalcularKPIFormulario porque GR no
+            // está necesariamente cargado cuando el usuario está en FR (carga de módulos
+            // on-demand) -- mismo patrón que _frCalBolsaAditivos/_frCalBolsaGrComponentes,
+            // que ya leen su_lotes/gr_lotes crudos en vez de depender de funciones de otro
+            // módulo montado.
+            var lote = grLoteCompMap[grId];
+            var hid = null;
+            if (lote) {
+                var _prod = lote.uf || lote.produccion || {};
+                var _masaTotal = (parseFloat(_prod.cantidad_unidades) || 0) * (parseFloat(_prod.peso_unidad) || 0);
+                var _masaSeca = 0;
+                (lote.componentes || []).forEach(function(c) {
+                    if (c.tipo === 'seco') _masaSeca += parseFloat(c.masa) || 0;
+                });
+                hid = _masaSeca > 0 ? ((_masaTotal - _masaSeca) / _masaSeca) * 100 : 0;
+            }
             byGrProtocolo[grId] = {
                 label:           grId,
                 n:               recs.length,
                 scoreAutoMean:   meanField(recs, 'scoreAuto'),
-                pctPositivoMean: mean(recs.map(function(r) { return r.pctDominante + r.pctHegemonico; }))
+                pctPositivoMean: mean(recs.map(function(r) { return r.pctDominante + r.pctHegemonico; })),
+                beMean:          meanField(recs, 'beOleada'),
+                hidratacion:     (hid != null && hid > 0) ? Math.round(hid * 10) / 10 : null
             };
         });
 
