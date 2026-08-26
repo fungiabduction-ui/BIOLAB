@@ -5300,7 +5300,8 @@
             parts.push('⚠ Anomalía: ' + alertResult.anomalias.join(', '));
             if (alertResult.candidatos.length) {
                 var candText = alertResult.candidatos.slice(0, 2).map(function(c) {
-                    return '[' + c.fuente + '] ' + c.label + ' (Δ+' + c.delta + '%)';
+                    var suffix = c.estabilidad === 'inestable' ? ', ⚠inestable en el tiempo' : '';
+                    return '[' + c.fuente + '] ' + c.label + ' (Δ+' + c.delta + '%' + suffix + ')';
                 }).join(', ');
                 parts.push('Candidatos: ' + candText);
             } else {
