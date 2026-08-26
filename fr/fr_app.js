@@ -4968,7 +4968,11 @@
         var deltaLooMin = Math.round(Math.min.apply(null, deltasLOO) * 10) / 10;
         var deltaLooMax = Math.round(Math.max.apply(null, deltasLOO) * 10) / 10;
         var rango = deltaLooMax - deltaLooMin;
-        var establidadTemporal = rango > 0.5 * Math.abs(deltaGlobal) ? 'inestable' : 'estable';
+        // Piso absoluto de 1pp (code review 2026-08-26): sin esto, un deltaGlobal que
+        // redondea a ~0 (sin efecto real) hace que CUALQUIER ruido de muestreo, por chico
+        // que sea, dispare 'inestable' (0.5*0 = 0, cualquier rango>0 ya lo supera) -- justo
+        // cuando no hay efecto que juzgar, no cuando el efecto es genuinamente fragil.
+        var establidadTemporal = rango > Math.max(0.5 * Math.abs(deltaGlobal), 1) ? 'inestable' : 'estable';
         return { deltaGlobal: deltaGlobal, establidadTemporal: establidadTemporal, deltaLooMin: deltaLooMin, deltaLooMax: deltaLooMax };
     }
 
