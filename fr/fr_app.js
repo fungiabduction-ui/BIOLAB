@@ -5001,6 +5001,7 @@
                 var cal = f.calidad;
                 records.push({
                     bolsaId:            b.id,
+                    fecha:              f.fecha || null,
                     suLabel:            suLote ? (suLote.codigo || b.suLoteId || '—') : (b.suLoteId || '—'),
                     grLabel:            grLote ? (grLote.codigo || b.grLoteId || '—') : (b.grLoteId || '—'),
                     flushNum:           flushIdx + 1,
@@ -5078,12 +5079,9 @@
             var bScore = meanField(baseline,  'scoreAuto');
             var gAb    = meanField(grp.recs, 'pctAbortos');
             var bAb    = meanField(baseline,  'pctAbortos');
-            var gBl    = meanField(grp.recs, 'pctBlobs');
-            var bBl    = meanField(baseline,  'pctBlobs');
-            var gMut   = meanField(grp.recs, 'pctMutaciones');
-            var bMut   = meanField(baseline,  'pctMutaciones');
-            var gDef   = meanField(grp.recs, 'pctDeformaciones');
-            var bDef   = meanField(baseline,  'pctDeformaciones');
+            var blLoo  = _frCalDeltaConLOO(grp.recs, baseline, 'pctBlobs', MIN_N);
+            var mutLoo = _frCalDeltaConLOO(grp.recs, baseline, 'pctMutaciones', MIN_N);
+            var defLoo = _frCalDeltaConLOO(grp.recs, baseline, 'pctDeformaciones', MIN_N);
             bySuAditivo[slug] = {
                 label:              grp.label,
                 n:                  grp.recs.length,
@@ -5091,9 +5089,19 @@
                 confidence:         _frCalConfidence(Math.min(grp.recs.length, baseline.length)),
                 deltaScore:         (gScore != null && bScore != null) ? Math.round((gScore - bScore) * 10) / 10 : null,
                 deltaAbortos:       (gAb    != null && bAb    != null) ? Math.round((gAb    - bAb)    * 10) / 10 : null,
-                deltaBlobs:         (gBl    != null && bBl    != null) ? Math.round((gBl    - bBl)    * 10) / 10 : null,
-                deltaMutaciones:    (gMut   != null && bMut   != null) ? Math.round((gMut   - bMut)   * 10) / 10 : null,
-                deltaDeformaciones: (gDef   != null && bDef   != null) ? Math.round((gDef   - bDef)   * 10) / 10 : null
+                deltaBlobs:         blLoo.deltaGlobal,
+                deltaMutaciones:    mutLoo.deltaGlobal,
+                deltaDeformaciones: defLoo.deltaGlobal,
+                estabilidad: {
+                    blobs:         blLoo.establidadTemporal,
+                    mutaciones:    mutLoo.establidadTemporal,
+                    deformaciones: defLoo.establidadTemporal
+                },
+                deltaLoo: {
+                    blobs:         { min: blLoo.deltaLooMin,  max: blLoo.deltaLooMax },
+                    mutaciones:    { min: mutLoo.deltaLooMin, max: mutLoo.deltaLooMax },
+                    deformaciones: { min: defLoo.deltaLooMin, max: defLoo.deltaLooMax }
+                }
             };
         });
 
@@ -5142,21 +5150,28 @@
             if (grp.recs.length < FR_ANOMALY_MIN_N || baseline.length < FR_ANOMALY_MIN_N) return;
             var gScore = meanField(grp.recs, 'scoreAuto');
             var bScore = meanField(baseline,  'scoreAuto');
-            var gMut   = meanField(grp.recs, 'pctMutaciones');
-            var bMut   = meanField(baseline,  'pctMutaciones');
-            var gDef   = meanField(grp.recs, 'pctDeformaciones');
-            var bDef   = meanField(baseline,  'pctDeformaciones');
-            var gBl    = meanField(grp.recs, 'pctBlobs');
-            var bBl    = meanField(baseline,  'pctBlobs');
+            var blLoo  = _frCalDeltaConLOO(grp.recs, baseline, 'pctBlobs', FR_ANOMALY_MIN_N);
+            var mutLoo = _frCalDeltaConLOO(grp.recs, baseline, 'pctMutaciones', FR_ANOMALY_MIN_N);
+            var defLoo = _frCalDeltaConLOO(grp.recs, baseline, 'pctDeformaciones', FR_ANOMALY_MIN_N);
             byGrComponente[cSlug] = {
                 label:              grp.label,
                 n:                  grp.recs.length,
                 nBaseline:          baseline.length,
                 confidence:         _frCalConfidence(Math.min(grp.recs.length, baseline.length)),
                 deltaScore:         (gScore != null && bScore != null) ? Math.round((gScore - bScore) * 10) / 10 : null,
-                deltaMutaciones:    (gMut   != null && bMut   != null) ? Math.round((gMut   - bMut)   * 10) / 10 : null,
-                deltaDeformaciones: (gDef   != null && bDef   != null) ? Math.round((gDef   - bDef)   * 10) / 10 : null,
-                deltaBlobs:         (gBl    != null && bBl    != null) ? Math.round((gBl    - bBl)    * 10) / 10 : null
+                deltaMutaciones:    mutLoo.deltaGlobal,
+                deltaDeformaciones: defLoo.deltaGlobal,
+                deltaBlobs:         blLoo.deltaGlobal,
+                estabilidad: {
+                    blobs:         blLoo.establidadTemporal,
+                    mutaciones:    mutLoo.establidadTemporal,
+                    deformaciones: defLoo.establidadTemporal
+                },
+                deltaLoo: {
+                    blobs:         { min: blLoo.deltaLooMin,  max: blLoo.deltaLooMax },
+                    mutaciones:    { min: mutLoo.deltaLooMin, max: mutLoo.deltaLooMax },
+                    deformaciones: { min: defLoo.deltaLooMin, max: defLoo.deltaLooMax }
+                }
             };
         });
 
