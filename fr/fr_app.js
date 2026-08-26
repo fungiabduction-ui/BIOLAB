@@ -3063,6 +3063,18 @@
             html += '</div>';
         }
 
+        function _frCalEstabilidadRowHTML(estado, loo) {
+            if (!estado) return '';
+            if (estado === 'no-evaluable') {
+                return '<div class="fr-cal-intel-row" style="font-size:0.76rem;color:#888;"><span>Estabilidad temporal</span><span>no evaluable (pocos meses de historia)</span></div>';
+            }
+            if (estado === 'inestable') {
+                var rango = loo ? (' (rango Δ ' + loo.min + ' a ' + loo.max + ')') : '';
+                return '<div class="fr-cal-intel-row" style="font-size:0.76rem;color:#e0a030;"><span>Estabilidad temporal</span><span>⚠ inestable' + rango + '</span></div>';
+            }
+            return '<div class="fr-cal-intel-row" style="font-size:0.76rem;color:#5a5;"><span>Estabilidad temporal</span><span>estable</span></div>';
+        }
+
         var adKeys = Object.keys(intel.bySuAditivo);
         if (adKeys.length) {
             html += '<h4 style="color:var(--text-secondary,#aaa);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;">Aditivos SU — correlaciones</h4>';
@@ -3074,8 +3086,11 @@
                     + '<div class="fr-cal-intel-row"><span>Δ Score auto</span>' + fmtDelta(d.deltaScore, false) + '</div>'
                     + '<div class="fr-cal-intel-row"><span>Δ % Abortos</span>' + fmtDelta(d.deltaAbortos, true) + '</div>'
                     + '<div class="fr-cal-intel-row"><span>Δ % Blobs</span>' + fmtDelta(d.deltaBlobs, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.blobs, d.deltaLoo && d.deltaLoo.blobs)
                     + '<div class="fr-cal-intel-row"><span>Δ % Mutaciones</span>' + fmtDelta(d.deltaMutaciones, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.mutaciones, d.deltaLoo && d.deltaLoo.mutaciones)
                     + '<div class="fr-cal-intel-row"><span>Δ % Deformaciones</span>' + fmtDelta(d.deltaDeformaciones, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.deformaciones, d.deltaLoo && d.deltaLoo.deformaciones)
                     + (d.confidence ? '<div class="fr-cal-intel-row"><span>Confianza</span><strong>' + esc(d.confidence) + '</strong></div>' : '')
                     + '</div>';
             });
@@ -3109,8 +3124,11 @@
                     + '<div class="fr-cal-intel-card-title">' + esc(d.label) + ' <span style="color:#666;">(n=' + d.n + ' / baseline=' + d.nBaseline + ')</span></div>'
                     + '<div class="fr-cal-intel-row"><span>Δ Score auto</span>' + fmtDelta(d.deltaScore, false) + '</div>'
                     + '<div class="fr-cal-intel-row"><span>Δ % Mutaciones</span>' + fmtDelta(d.deltaMutaciones, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.mutaciones, d.deltaLoo && d.deltaLoo.mutaciones)
                     + '<div class="fr-cal-intel-row"><span>Δ % Deformaciones</span>' + fmtDelta(d.deltaDeformaciones, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.deformaciones, d.deltaLoo && d.deltaLoo.deformaciones)
                     + '<div class="fr-cal-intel-row"><span>Δ % Blobs</span>' + fmtDelta(d.deltaBlobs, true) + '</div>'
+                    + _frCalEstabilidadRowHTML(d.estabilidad && d.estabilidad.blobs, d.deltaLoo && d.deltaLoo.blobs)
                     + (d.confidence ? '<div class="fr-cal-intel-row"><span>Confianza</span><strong>' + esc(d.confidence) + '</strong></div>' : '')
                     + '</div>';
             });
