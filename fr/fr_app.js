@@ -3636,16 +3636,22 @@
         // pisarlo, dejando guardado el texto que Escape debia descartar. Enter tiene el
         // mismo riesgo (saveEditObs tambien remueve el input al re-renderizar) -- el flag
         // se marca ANTES de invocar save/cancel para que el blur anidado sea siempre no-op.
-        // (code review 2026-08-26) handled se marcaba true INCONDICIONALMENTE antes de
-        // llamar a saveEditObs -- si el guardado fallaba (ej. texto vacío, ver early-return
-        // de saveEditObs) el input quedaba visible pero el guard trabado en true para
-        // siempre: un blur real posterior (con texto valido esta vez) quedaba silenciado, y
-        // el lápiz tampoco respondía de nuevo (su propio guard ve el input todavía en el DOM).
-        // Fix: handled solo pasa a true si saveEditObs realmente guardó (retorna !== false).
+        // (code review 2026-08-26, segunda vuelta) `handled = FR.saveEditObs(notaId) !== false`
+        // reintroducía la reentrancia que el guard original evitaba: JS evalúa el lado derecho
+        // (corre saveEditObs entero, incluido su renderObs() en el camino exitoso) ANTES de
+        // asignar a `handled` -- mientras esa llamada sigue en el stack, `handled` todavía vale
+        // false, así que el blur anidado que dispara renderObs() (ver comentario de arriba,
+        // "verificado en Chrome real") NO queda protegido por el guard `if (handled) return` y
+        // saveEditObs se llama una segunda vez, reentrante, con doble saveBolsas()/renderObs().
+        // Fix: volver a marcar handled=true ANTES de llamar (protege el camino exitoso, que es
+        // donde ocurre la reentrancia), y recién después bajarlo a false si la llamada devolvió
+        // false explícitamente (preserva el fix anterior: guardado vacío no deja el guard
+        // trabado en true).
         var handled = false;
         input.onkeydown = function(e) {
             if (e.key === 'Enter') {
-                handled = FR.saveEditObs(notaId) !== false;
+                handled = true;
+                if (FR.saveEditObs(notaId) === false) handled = false;
             } else if (e.key === 'Escape') {
                 handled = true;
                 FR.cancelEditObs(notaId, original);
@@ -3655,7 +3661,8 @@
         // pero nunca se implemento -- clickear afuera del input no guardaba nada.
         input.onblur = function() {
             if (handled) return;
-            handled = FR.saveEditObs(notaId) !== false;
+            handled = true;
+            if (FR.saveEditObs(notaId) === false) handled = false;
         };
         var btnOk = document.createElement('button');
         btnOk.type = 'button';
@@ -3667,7 +3674,8 @@
         // que el click real del boton corre.
         btnOk.onmousedown = function(e) { e.preventDefault(); };
         btnOk.onclick = function() {
-            handled = FR.saveEditObs(notaId) !== false;
+            handled = true;
+            if (FR.saveEditObs(notaId) === false) handled = false;
         };
         txtEl.innerHTML = '';
         wrap.appendChild(input);
