@@ -962,7 +962,8 @@ body {
     gap: 4px;
 }
 .fr-log-btn-edit,
-.fr-log-btn-del {
+.fr-log-btn-del,
+.fr-log-btn-save {
     background: transparent;
     border: none;
     color: var(--text-muted);
@@ -973,6 +974,14 @@ body {
 }
 .fr-log-btn-edit:hover,
 .fr-log-btn-del:hover {
+    opacity: 1;
+}
+.fr-log-btn-save {
+    color: var(--fr-ok, #3ecf5e);
+    opacity: 0.85;
+    flex-shrink: 0;
+}
+.fr-log-btn-save:hover {
     opacity: 1;
 }
 .fr-log-row.fr-log-auto {

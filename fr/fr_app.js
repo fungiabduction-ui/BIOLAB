@@ -3580,25 +3580,60 @@
         if (!txtEl) return;
         if (txtEl.querySelector('input')) return; // ya en edicion: evita blanquear el texto en un doble click
         var original = txtEl.textContent;
-        // Construido como elemento real (no innerHTML con texto libre interpolado):
+        // Construido como elementos reales (no innerHTML con texto libre interpolado):
         // `original` puede contener comillas/backslashes de una nota real de lab,
-        // que romperían un atributo onkeydown armado como string. onkeydown/onblur
-        // se asignan acá como funciones JS reales (mismo patron que segEditarNota
-        // en ci/ci_app.js), nunca embebidos en markup.
+        // que romperían un atributo armado como string. onkeydown/onblur/onclick se
+        // asignan acá como funciones JS reales, nunca embebidos en markup.
+        var wrap = document.createElement('span');
+        wrap.style.cssText = 'display:flex;gap:4px;align-items:center;width:100%';
         var input = document.createElement('input');
         input.type = 'text';
         input.id = 'fr-log-edit-' + notaId;
         input.value = original;
-        input.style.cssText = 'width:100%;background:var(--bg-tertiary);border:1px solid var(--primary);color:var(--tx);padding:3px 6px;border-radius:4px;font-size:inherit;box-sizing:border-box';
+        input.style.cssText = 'flex:1;min-width:0;background:var(--bg-tertiary);border:1px solid var(--primary);color:var(--tx);padding:3px 6px;border-radius:4px;font-size:inherit;box-sizing:border-box';
+        // Guard `handled` (MEJ-0049): remover el input del DOM mientras tiene foco
+        // (lo que hace cancelEditObs vía txtEl.textContent=original) dispara 'blur' de
+        // forma SINCRONICA pero ANTES de que la remocion termine -- verificado en Chrome
+        // real: al momento del blur, document.getElementById todavia encuentra el input,
+        // asi que sin este guard el blur llama a saveEditObs con el texto editado y su
+        // propio renderObs() reconstruye el log ANTES de que cancelEditObs termine de
+        // pisarlo, dejando guardado el texto que Escape debia descartar. Enter tiene el
+        // mismo riesgo (saveEditObs tambien remueve el input al re-renderizar) -- el flag
+        // se marca ANTES de invocar save/cancel para que el blur anidado sea siempre no-op.
+        var handled = false;
         input.onkeydown = function(e) {
             if (e.key === 'Enter') {
+                handled = true;
                 FR.saveEditObs(notaId);
             } else if (e.key === 'Escape') {
+                handled = true;
                 FR.cancelEditObs(notaId, original);
             }
         };
+        // onblur real (MEJ-0049): el comentario anterior decia que esto ya existia,
+        // pero nunca se implemento -- clickear afuera del input no guardaba nada.
+        input.onblur = function() {
+            if (handled) return;
+            handled = true;
+            FR.saveEditObs(notaId);
+        };
+        var btnOk = document.createElement('button');
+        btnOk.type = 'button';
+        btnOk.className = 'fr-log-btn-save';
+        btnOk.title = 'Guardar';
+        btnOk.textContent = '✓';
+        // preventDefault en mousedown: evita que el click en ✓ dispare blur del input
+        // ANTES del click (lo duplicaria via los dos handlers) -- mantiene el foco hasta
+        // que el click real del boton corre.
+        btnOk.onmousedown = function(e) { e.preventDefault(); };
+        btnOk.onclick = function() {
+            handled = true;
+            FR.saveEditObs(notaId);
+        };
         txtEl.innerHTML = '';
-        txtEl.appendChild(input);
+        wrap.appendChild(input);
+        wrap.appendChild(btnOk);
+        txtEl.appendChild(wrap);
         input.focus();
         input.select();
     };
