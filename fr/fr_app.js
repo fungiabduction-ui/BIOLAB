@@ -3099,6 +3099,22 @@
             html += '<p style="color:var(--text-muted,#888);font-size:0.82rem;">Se necesitan n ≥ 5 flushes por variable de aditivo para mostrar correlaciones.</p>';
         }
 
+        var doseKeys = Object.keys(intel.doseResponse || {});
+        if (doseKeys.length) {
+            html += '<h4 style="color:var(--text-secondary,#aaa);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;">Dosis-respuesta — Aditivos SU</h4>';
+            doseKeys.forEach(function(idGrp) {
+                var d = intel.doseResponse[idGrp];
+                html += '<div class="fr-cal-intel-card" style="margin-bottom:10px;">'
+                    + '<div class="fr-cal-intel-card-title">' + esc(d.label) + ' <span style="color:#666;">(n=' + d.n + ')</span></div>'
+                    + '<table class="fr-anomaly-table"><thead><tr><th>Dosis (%fibra)</th><th>BE de esa bolsa</th><th>Bolsa</th></tr></thead><tbody>'
+                    + d.points.map(function(p) {
+                        return '<tr><td>' + fmt(p.pct, 1) + '%</td><td>' + fmt(p.beOleada, 1) + '%</td><td>' + esc(p.bolsaId) + '</td></tr>';
+                    }).join('')
+                    + '</tbody></table>'
+                    + '</div>';
+            });
+        }
+
         var grKeys = Object.keys(intel.byGrProtocolo);
         if (grKeys.length) {
             html += '<h4 style="color:var(--text-secondary,#aaa);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;">Lotes GR — correlaciones</h4>';
@@ -4967,6 +4983,12 @@
                     nombre: a.nombre,
                     pct:    pct,
                     bucket: bucket,
+                    // idGrp (MEJ-0006 parte 2, 2026-08-26): mismo criterio que slug de abajo
+                    // pero SIN el sufijo de bucket — agrupa un aditivo por producto real
+                    // real a través de sus 3 buckets, para la vista dosis-respuesta
+                    // (_frCalBuildIntel.doseResponse), que necesita comparar dosis exactas,
+                    // no bucketeadas.
+                    idGrp:  a.id || slugify(a.nombre),
                     // Preferir a.id (catálogo su_biblioteca.materiales, ver prerequisito
                     // MEJ-0006 en SU) como clave de agrupamiento — evita que dos productos
                     // distintos tipeados con el mismo texto se mezclen en la correlación.
@@ -5125,6 +5147,27 @@
             };
         });
 
+        // doseResponse (MEJ-0006 parte 2, 2026-08-26): dosis real (%fibra) vs resultado real
+        // (BE) por aditivo, SIN bucketear y SIN forzar estadística (delta/confidence) con un
+        // n que siempre va a ser chico — se muestra el par dosis→BE crudo, ordenado por dosis,
+        // para que el usuario juzgue la relación a simple vista (mismo criterio que MEJ-0025:
+        // exponer el dato real en vez de inventar una fórmula sobre poca muestra).
+        var doseGroups = {};
+        records.forEach(function(r) {
+            if (r.beOleada == null) return;
+            r.aditivos.forEach(function(a) {
+                if (!doseGroups[a.idGrp]) doseGroups[a.idGrp] = { label: a.nombre, points: [] };
+                doseGroups[a.idGrp].points.push({ pct: Math.round(a.pct * 10) / 10, beOleada: r.beOleada, bolsaId: r.bolsaId });
+            });
+        });
+        var doseResponse = {};
+        Object.keys(doseGroups).forEach(function(idGrp) {
+            var grp = doseGroups[idGrp];
+            if (grp.points.length < 3) return; // insuficiente para mostrar un patrón, ni siquiera crudo
+            grp.points.sort(function(a, b) { return a.pct - b.pct; });
+            doseResponse[idGrp] = { label: grp.label, n: grp.points.length, points: grp.points };
+        });
+
         // byGrProtocolo
         var grGroups = {};
         records.forEach(function(r) {
@@ -5266,6 +5309,7 @@
             bySuAditivo:           bySuAditivo,
             byGrProtocolo:         byGrProtocolo,
             byGrComponente:        byGrComponente,
+            doseResponse:          doseResponse,
             anomalyRanking:        anomalyRanking,
             anomalousBolsas:       anomalousBolsas
         };
