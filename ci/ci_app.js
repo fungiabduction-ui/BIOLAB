@@ -2259,18 +2259,22 @@ function _segSoloUltimoSegmento(label) {
 
 /**
  * Construye la etiqueta legible de un cultivo CI para los selects de Inoculo trace.
- * Formato: "Tiamina complex - CI-0003 - PC / APE / 244 · PLACA · 12 disp."
+ * Formato default: "Tiamina complex - CI-0003 - PC / APE / 244 · PLACA · 12 disp."
+ * Formato con experimento (2026-08-19): el código CI (ruido, no aporta trazabilidad
+ * util acá) se reemplaza por "Frasco {label}" — ej. "Frasco A (Control)".
  * @param {object} c        - objeto cultivo (con _stockReal ya calculado)
  * @param {Object} formsMap - mapa id→nombre de bl2_forms
  */
 function _segEtiquetaInoculo(c, formsMap) {
   const formulaNombre = (c.medioFormulaId && formsMap && formsMap[c.medioFormulaId]) || '';
-  const codigoCorto   = _segAbreviarCodigoCi(c.codigo || '');
+  const origen         = (c.experimentoId && c.experimentoFrascoId)
+    ? `Frasco ${c.experimentoFrascoId}`
+    : _segAbreviarCodigoCi(c.codigo || '');
   const lbl           = (c.geneticaSnapshot && c.geneticaSnapshot.label) || c.geneticaId || '?';
   const geneticaAbrev = _segAbreviarEspecie(lbl);
   const tipo          = c.tipo || '';
   const stock         = c._stockReal != null ? c._stockReal : (c.cantidadDisponible || 0);
-  const prefijo       = formulaNombre ? `${formulaNombre} - ${codigoCorto}` : codigoCorto;
+  const prefijo       = formulaNombre ? `${formulaNombre} - ${origen}` : origen;
   return `${prefijo} - ${geneticaAbrev} · ${tipo} · ${stock} disp.`;
 }
 
@@ -4580,6 +4584,7 @@ function ciInit() {
   // [Fase 1] Inicializar capa de Cultivos CI (idempotente, no rompe datos viejos)
   _ciCultivosInit();
   _ciCultivosAutoArchivar();
+  _ciMigrarExperimentoIdCultivos();
 
   // Render inicial
   ciNewSessionInit();
@@ -4732,6 +4737,35 @@ function _ciCultivosAutoArchivar() {
     _ciCultivosSave(cultivos);
     _ciDispatchCultivosChanged('caducados', null);
   }
+}
+
+// ─── Migración one-shot: backfill experimentoId/experimentoFrascoId en cultivos ya
+// promovidos antes del fix del 2026-08-19. _ciSyncCultivosFromSeg nunca copiaba estos
+// campos al crear un cultivo — el dato real siempre estuvo en la fila bl2_seg de origen
+// (vía seguimientoId), solo nunca se propagaba. No inventa nada: solo backfillea cuando
+// la fila bl2_seg de origen tiene experimentoId real. Flag recién después de persist ok.
+function _ciMigrarExperimentoIdCultivos() {
+  var FLAG = 'biolab_migracion_ci_cultivo_experimento_v1';
+  if (localStorage.getItem(FLAG)) return;
+
+  var cultivos = _ciCultivosLoad();
+  var segByKey = {};
+  gDB(K.seg).forEach(function(s) { if (s) segByKey[s.formula_id + '::' + s.rowId] = s; });
+
+  var changed = false;
+  cultivos.forEach(function(c) {
+    if (!c || c.experimentoId) return; // ya tiene dato real, no pisar
+    var s = segByKey[c.seguimientoId];
+    if (s && s.experimentoId) {
+      c.experimentoId = s.experimentoId;
+      c.experimentoFrascoId = s.experimentoFrascoId || null;
+      changed = true;
+    }
+  });
+
+  if (changed && !_ciCultivosSave(cultivos)) return; // persist falló: no marcar flag, reintentar próxima carga
+
+  localStorage.setItem(FLAG, '1');
 }
 
 // ─── Helper interno (Fase 2) ───
@@ -4967,6 +5001,11 @@ function _ciSyncCultivosFromSeg(frmId) {
         cantidadInicial: sanas,
         medioFormulaId: frmId,
         fechaValidacion: row.inoculoTs ? new Date(row.inoculoTs).toISOString() : new Date().toISOString(),
+        // Trazabilidad experimento → frasco (2026-08-19): el schema ya soportaba estos
+        // campos (_ciCultivoFactory) pero este call site — el único que promueve SEG a
+        // Cultivo — nunca los copiaba desde la fila de origen. Ver CLAUDE.md.
+        experimentoId: row.experimentoId || null,
+        experimentoFrascoId: row.experimentoFrascoId || null,
       }, cultivos);
       cultivos.push(nuevo);
       changed = true;
