@@ -2274,7 +2274,7 @@ function _segEtiquetaInoculo(c, formsMap) {
   const formulaNombre = (c.medioFormulaId && formsMap && formsMap[c.medioFormulaId]) || '';
   const codigoCorto    = _segAbreviarCodigoCi(c.codigo || '');
   const origen         = (c.experimentoId && c.experimentoFrascoId)
-    ? `Frasco ${c.experimentoFrascoId} (${codigoCorto})`
+    ? `Frasco ${c.experimentoFrascoId}` + (codigoCorto ? ` (${codigoCorto})` : '')
     : codigoCorto;
   const lbl           = (c.geneticaSnapshot && c.geneticaSnapshot.label) || c.geneticaId || '?';
   const geneticaAbrev = _segAbreviarEspecie(lbl);
