@@ -2554,8 +2554,25 @@ window.grEliminarRegistro = grEliminarRegistro;
                     label = r.id;
                 }
             } else {
-                label = _grAbreviarEspecie(grGetNombreGeneticaPorId(r.id));
-                if (label === r.id && dgRow && dgRow.genetica) label = _grAbreviarEspecie(dgRow.genetica);
+                // MEJ-0048 (2026-08-26) le agregó a grGetNombreGeneticaPorId un fallback que
+                // resuelve genéticas archivadas leyendo biolab.ge.v4 crudo -- el sentinel viejo
+                // `label === r.id` (que antes detectaba "no resuelto") ya casi nunca dispara,
+                // porque ahora la resolución casi siempre tiene éxito incluso archivada. Eso
+                // rompía la protección real de esta función: una genética renombrada y LUEGO
+                // archivada debía mostrar el nombre histórico guardado en dgRow.genetica (que
+                // se recalcula en cada guardado vía la misma función — no es un snapshot
+                // congelado, pero sí refleja el estado en el último guardado ANTES del rename
+                // más reciente), no el nombre reconstruido en vivo con el árbol actual.
+                // Señal correcta: ¿el id está en el dropdown vivo (grGetGeSelectable, activo)?
+                // Si no, y hay un nombre histórico que no sea el id crudo (protección contra
+                // que ese propio historico haya quedado corrompido a un id por un guardado
+                // previo al fix de MEJ-0048), preferir el histórico sobre el reconstruido.
+                var activeMatch = grGetGeSelectable().find(function(g) { return g.id === r.id; });
+                if (!activeMatch && dgRow && dgRow.genetica && dgRow.genetica !== r.id) {
+                    label = _grAbreviarEspecie(dgRow.genetica);
+                } else {
+                    label = _grAbreviarEspecie(grGetNombreGeneticaPorId(r.id));
+                }
             }
         }
         const opt = document.createElement('option');
