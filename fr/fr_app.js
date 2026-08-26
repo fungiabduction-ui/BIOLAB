@@ -5185,13 +5185,13 @@
                 var d = bySuAditivo[slug];
                 if (d.confidence === 'insuficiente') return;
                 if (d[field] == null || d[field] <= 0) return;
-                candidates.push({ label: d.label, delta: d[field], confidence: d.confidence, fuente: 'SU' });
+                candidates.push({ label: d.label, delta: d[field], confidence: d.confidence, fuente: 'SU', estabilidad: d.estabilidad[dim] });
             });
             Object.keys(byGrComponente).forEach(function(slug) {
                 var d = byGrComponente[slug];
                 if (d.confidence === 'insuficiente') return;
                 if (d[field] == null || d[field] <= 0) return;
-                candidates.push({ label: d.label, delta: d[field], confidence: d.confidence, fuente: 'GR' });
+                candidates.push({ label: d.label, delta: d[field], confidence: d.confidence, fuente: 'GR', estabilidad: d.estabilidad[dim] });
             });
             candidates.sort(function(a, b) { return b.delta - a.delta; });
             anomalyRanking[dim] = candidates.slice(0, 3);
@@ -5271,7 +5271,7 @@
                 var key = c.fuente + '|' + c.label;
                 if (!seen[key]) {
                     seen[key] = true;
-                    candidatos.push({ label: c.label, delta: c.delta, confidence: c.confidence, fuente: c.fuente, dim: dim });
+                    candidatos.push({ label: c.label, delta: c.delta, confidence: c.confidence, fuente: c.fuente, dim: dim, estabilidad: c.estabilidad });
                 }
             });
         });
