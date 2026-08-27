@@ -3195,6 +3195,16 @@
     };
 
     FR.select = function(id) {
+        // Root cause (2026-08-27, reportado por el usuario, reproducido en Chrome real):
+        // #frCalPanel es un nodo estático (fr_index.html) que solo abre/cierra FR.openCalidad/
+        // closeCalidad -- nunca se toca en renderAll()/renderDashboard(). Cambiar de bolsa
+        // seleccionada sin cerrar el panel deja visible la evaluación de la bolsa ANTERIOR,
+        // y como FR.saveCalidad(flushIdx) resuelve la bolsa vía getSelected() (la seleccionada
+        // AHORA, no la que tenía el panel abierto), guardar en ese estado escribe la
+        // evaluación en la bolsa nueva -- confirmado con datos reales, no solo sospecha.
+        // Cerrar el panel solo si la bolsa realmente cambia (no en un re-click de la misma
+        // fila, que no debería tirar una evaluación en curso).
+        if (id !== selectedId) FR.closeCalidad();
         selectedId = id;
         FR.subTab('dash');
         renderAll();
