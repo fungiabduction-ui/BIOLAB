@@ -30,6 +30,7 @@
             <section class="section-card fr-dash-toolbar">
                 <div class="section-content" style="padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                     <button type="button" class="btn btn-secondary" onclick="FR.sync()" title="Importar bolsas nuevas desde SU">🔄 Sync desde SU</button>
+                    <button type="button" class="btn btn-secondary" onclick="FR.abrirModalSyncDeshidratado()" title="Repartir un peso deshidratado total entre varias bolsas secadas juntas">🥵 Sync deshidratado</button>
                     <button type="button" class="btn btn-secondary" onclick="FR.abrirModalHuerfana()" title="Cargar bolsa sin trazabilidad SU→GR">➕ Bolsa huérfana</button>
                     <button type="button" class="btn btn-secondary" onclick="FR.abrirModalExperimento(null)" title="Registrar experimento a pequeña escala">🔬 Nuevo experimento</button>
                     <button type="button" class="btn btn-secondary" onclick="FR.exportarJSON()" title="Exportar todas las bolsas FR a JSON">⬇ Exportar backup de FR (bolsas)</button>
@@ -644,6 +645,50 @@
             <div style="display:flex;gap:10px;margin-top:20px">
                 <button type="button" class="btn btn-fr" onclick="FR.guardarHuerfana()">✅ Guardar bolsa</button>
                 <button type="button" class="btn btn-secondary" onclick="FR.cerrarModalHuerfana()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL: SYNC DESHIDRATADO                     -->
+    <!-- ============================================ -->
+    <div id="frModalSyncDesh" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center">
+        <div style="background:var(--dark-2,#1e1e2e);border-radius:12px;padding:28px 24px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+            <h3 style="margin:0 0 8px;font-size:1.1rem;">🥵 Sync deshidratado</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted,#888);margin:0 0 16px;">Repartí un peso deshidratado total entre las bolsas que secaste juntas en la misma tanda de horno. Solo bolsas activas con al menos una oleada cosechada y sin peso seco cargado.</p>
+
+            <div class="table-wrap" style="max-height:220px;overflow-y:auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:28px"></th>
+                            <th>ID</th>
+                            <th>Húmedo</th>
+                            <th>Fecha oleada</th>
+                        </tr>
+                    </thead>
+                    <tbody id="frSyncDeshPickerBody"></tbody>
+                </table>
+            </div>
+
+            <div class="form-row" style="margin-top:14px">
+                <div class="form-group">
+                    <label for="frSyncDeshTotal">Peso deshidratado total (g) *</label>
+                    <input type="number" id="frSyncDeshTotal" class="fr-dash-input" step="0.1" min="0" oninput="FR._syncDeshOnChange()">
+                </div>
+                <div class="form-group">
+                    <label for="frSyncDeshFin">Fin de deshidratación</label>
+                    <input type="datetime-local" id="frSyncDeshFin" class="fr-dash-input">
+                </div>
+            </div>
+
+            <p id="frSyncDeshMsg" style="color:#FF6B6B;font-size:0.82rem;min-height:1.2em;margin:8px 0 0"></p>
+
+            <div id="frSyncDeshPreview" style="margin-top:10px"></div>
+
+            <div style="display:flex;gap:10px;margin-top:20px">
+                <button type="button" id="frSyncDeshBtnConfirm" class="btn btn-fr" disabled onclick="FR.aplicarSyncDeshidratado()">✅ Confirmar reparto</button>
+                <button type="button" class="btn btn-secondary" onclick="FR.cerrarModalSyncDeshidratado()">Cancelar</button>
             </div>
         </div>
     </div>

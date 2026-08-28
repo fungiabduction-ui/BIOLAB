@@ -384,6 +384,22 @@
         return out;
     }
 
+    // Bolsas ACTIVAS (no archivadas — decision del usuario en brainstorming del
+    // 2026-08-28) con un flush pendiente de secar, ordenadas por fecha de esa oleada
+    // (mas viejas primero, para que no se sigan perdiendo de vista).
+    function _frBolsasPendientesSecar() {
+        var out = [];
+        bolsas.forEach(function(b) {
+            if (esArchivada(b)) return;
+            var idx = _frIdxFlushPendienteSecar(b);
+            if (idx === -1) return;
+            var f = b.flushes[idx];
+            out.push({ b: b, idx: idx, pesoHumedo: f.pesoHumedo, fecha: f.fecha || b.fechaInicio || '' });
+        });
+        out.sort(function(a, c) { return (a.fecha || '').localeCompare(c.fecha || ''); });
+        return out;
+    }
+
     function tiempoTrabajoTotal(b) {
         if (!b || !b.fechaInicio) return null;
         var last = null;
@@ -3509,6 +3525,147 @@
     // y dias despues completa fin de deshidratacion + peso seco.
     // Cada cambio se persiste al instante.
     // ------------------------------------------------------
+    FR.abrirModalSyncDeshidratado = function() {
+        var pend = _frBolsasPendientesSecar();
+        var body = document.getElementById('frSyncDeshPickerBody');
+        if (!body) return;
+        if (pend.length === 0) {
+            body.innerHTML = '<tr><td colspan="4" class="fr-empty">No hay bolsas activas con húmedo cargado y seco pendiente.</td></tr>';
+        } else {
+            body.innerHTML = pend.map(function(p) {
+                return '<tr>'
+                    + '<td style="text-align:center"><input type="checkbox" class="fr-syncdesh-cb" data-fr-uuid="' + esc(p.b._frUuid) + '" onchange="FR._syncDeshOnChange()"></td>'
+                    + '<td><strong>' + esc(p.b.id) + '</strong></td>'
+                    + '<td class="fr-num">' + fmt(p.pesoHumedo, 1) + ' g</td>'
+                    + '<td class="fr-num-days">' + esc(fmtFecha(p.fecha)) + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+        setInput('frSyncDeshTotal', '');
+        var finEl = document.getElementById('frSyncDeshFin');
+        if (finEl) finEl.value = ahoraISOLocal();
+        var msgEl = document.getElementById('frSyncDeshMsg');
+        if (msgEl) msgEl.textContent = '';
+        var prevEl = document.getElementById('frSyncDeshPreview');
+        if (prevEl) prevEl.innerHTML = '';
+        var btn = document.getElementById('frSyncDeshBtnConfirm');
+        if (btn) btn.disabled = true;
+        var modal = document.getElementById('frModalSyncDesh');
+        if (modal) modal.style.display = 'flex';
+    };
+
+    FR.cerrarModalSyncDeshidratado = function() {
+        var modal = document.getElementById('frModalSyncDesh');
+        if (modal) modal.style.display = 'none';
+    };
+
+    FR._syncDeshOnChange = function() {
+        var previewEl = document.getElementById('frSyncDeshPreview');
+        var msgEl = document.getElementById('frSyncDeshMsg');
+        var btnConfirm = document.getElementById('frSyncDeshBtnConfirm');
+        if (!previewEl || !msgEl || !btnConfirm) return;
+
+        var cbs = document.querySelectorAll('.fr-syncdesh-cb:checked');
+        var totalInput = num(document.getElementById('frSyncDeshTotal').value);
+
+        var items = [];
+        cbs.forEach(function(cb) {
+            var b = bolsas.find(function(x) { return x._frUuid === cb.dataset.frUuid; });
+            var idx = b ? _frIdxFlushPendienteSecar(b) : -1;
+            if (b && idx !== -1) items.push({ id: b.id, uuid: b._frUuid, pesoHumedo: b.flushes[idx].pesoHumedo });
+        });
+
+        var totalHumedo = items.reduce(function(s, it) { return s + it.pesoHumedo; }, 0);
+        var err = '';
+        if (items.length < 2) err = 'Marcá al menos 2 bolsas.';
+        else if (!(totalInput > 0)) err = 'Cargá el peso deshidratado total.';
+        else if (totalInput >= totalHumedo) err = 'El total deshidratado (' + fmt(totalInput, 1) + 'g) no puede ser mayor o igual al húmedo combinado (' + fmt(totalHumedo, 1) + 'g).';
+
+        if (err) {
+            previewEl.innerHTML = '';
+            msgEl.textContent = err;
+            btnConfirm.disabled = true;
+            return;
+        }
+        msgEl.textContent = '';
+
+        var reparto = _frSyncDeshReparto(items, totalInput);
+        var repartoMap = {};
+        reparto.forEach(function(r) { repartoMap[r.id] = r.pesoSeco; });
+
+        var filas = items.map(function(it) {
+            var seco = repartoMap[it.id];
+            var b = bolsas.find(function(x) { return x._frUuid === it.uuid; });
+            var be = beOleada(it.pesoHumedo, b.pesoSustratoSeco);
+            return '<tr><td>' + esc(it.id) + '</td><td class="fr-num">' + fmt(it.pesoHumedo, 1) + ' g</td>'
+                + '<td class="fr-num">' + fmt(seco, 1) + ' g</td><td class="fr-num-pct">' + fmt(be, 1) + '%</td></tr>';
+        }).join('');
+        var sumaSeco = reparto.reduce(function(s, r) { return s + r.pesoSeco; }, 0);
+
+        previewEl.innerHTML = '<table class="data-table"><thead><tr><th>ID</th><th>Húmedo</th><th>Seco propuesto</th><th>BE</th></tr></thead><tbody>'
+            + filas + '</tbody></table>'
+            + '<p class="fr-dash-subtle">Total repartido: ' + fmt(sumaSeco, 1) + ' g</p>';
+
+        btnConfirm.disabled = false;
+    };
+
+    FR.aplicarSyncDeshidratado = function() {
+        var cbs = document.querySelectorAll('.fr-syncdesh-cb:checked');
+        var totalInput = num(document.getElementById('frSyncDeshTotal').value);
+        var finVal = document.getElementById('frSyncDeshFin').value || ahoraISOLocal();
+
+        var items = [];
+        cbs.forEach(function(cb) {
+            var b = bolsas.find(function(x) { return x._frUuid === cb.dataset.frUuid; });
+            var idx = b ? _frIdxFlushPendienteSecar(b) : -1;
+            if (b && idx !== -1) items.push({ id: b.id, uuid: b._frUuid, pesoHumedo: b.flushes[idx].pesoHumedo });
+        });
+        // Guard defensivo: el boton ya esta disabled si esto no se cumple
+        // (ver FR._syncDeshOnChange), pero no confiar solo en el estado del DOM.
+        var totalHumedo = items.reduce(function(s, it) { return s + it.pesoHumedo; }, 0);
+        if (items.length < 2 || !(totalInput > 0) || totalInput >= totalHumedo) return;
+
+        var reparto = _frSyncDeshReparto(items, totalInput);
+        var repartoMap = {};
+        reparto.forEach(function(r) { repartoMap[r.id] = r.pesoSeco; });
+
+        // Re-verificar en el momento de confirmar (no solo al abrir el modal): si otra
+        // via cargo el seco de alguna de estas bolsas mientras el modal seguia abierto,
+        // esa bolsa se saltea en vez de sobreescribir un dato ya cargado.
+        var aplicadas = [];
+        var salteadas = [];
+        items.forEach(function(it) {
+            var b = bolsas.find(function(x) { return x._frUuid === it.uuid; });
+            var idxActual = b ? _frIdxFlushPendienteSecar(b) : -1;
+            if (!b || idxActual === -1) { salteadas.push(it.id); return; }
+            aplicadas.push({ b: b, idx: idxActual, id: it.id });
+        });
+        if (aplicadas.length < 2) {
+            _frToast('⚠ Alguna bolsa cambió de estado mientras el modal estaba abierto — cerrá y volvé a abrir.', 'warn');
+            return;
+        }
+
+        var idsAplicadas = aplicadas.map(function(a) { return a.id; });
+        aplicadas.forEach(function(item) {
+            var b = item.b, f = b.flushes[item.idx];
+            f.pesoSeco = repartoMap[item.id];
+            f.finDeshidratacion = finVal;
+            recomputeFlushes(b);
+            var prevEstado = b.estado;
+            b.estado = computeEstado(b);
+            addObsTo(b, 'F' + f.n + ' - Peso seco registrado: ' + fmt(f.pesoSeco, 1) + ' g - BE ' + fmt(f.beOleada, 1) + '%', 'auto', 'green');
+            addObsTo(b, 'F' + f.n + ' - Fin de deshidratacion: ' + fmtFechaHora(f.finDeshidratacion), 'auto', 'none');
+            addObsTo(b, 'Peso seco repartido vía Sync deshidratado: ' + fmt(totalInput, 1) + 'g totales entre ' + aplicadas.length + ' bolsas (' + idsAplicadas.join(', ') + ')', 'auto', 'none');
+            if (b.estado !== prevEstado) addObsTo(b, 'Estado: ' + prevEstado + ' -> ' + b.estado, 'auto', 'none');
+        });
+
+        saveBolsas();
+        FR.cerrarModalSyncDeshidratado();
+        renderAll();
+        _frToast('✅ Reparto aplicado a ' + aplicadas.length + ' bolsa(s): ' + idsAplicadas.join(', ') + '.'
+            + (salteadas.length ? ' Salteadas (ya no calificaban): ' + salteadas.join(', ') + '.' : ''), 'ok');
+    };
+
     FR.editFlush = function(idx) {
         var b = getSelected();
         if (!b || !Array.isArray(b.flushes) || !b.flushes[idx]) return;
