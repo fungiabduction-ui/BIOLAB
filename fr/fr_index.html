@@ -665,11 +665,16 @@
                             <th>ID</th>
                             <th>Húmedo</th>
                             <th>Fecha oleada</th>
+                            <th style="width:32px"></th>
                         </tr>
                     </thead>
                     <tbody id="frSyncDeshPickerBody"></tbody>
                 </table>
             </div>
+
+            <p id="frSyncDeshIgnoradasToggle" style="display:none;cursor:pointer;font-size:0.78rem;color:var(--text-muted,#888);margin:6px 0 0"
+               onclick="FR._syncDeshToggleIgnoradas()"></p>
+            <div id="frSyncDeshIgnoradasList" style="font-size:0.8rem;margin-top:4px"></div>
 
             <div class="form-row" style="margin-top:14px">
                 <div class="form-group">

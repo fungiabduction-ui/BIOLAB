@@ -386,13 +386,21 @@
 
     // Bolsas ACTIVAS (no archivadas — decision del usuario en brainstorming del
     // 2026-08-28) con un flush pendiente de secar, ordenadas por fecha de esa oleada
-    // (mas viejas primero, para que no se sigan perdiendo de vista).
-    function _frBolsasPendientesSecar() {
+    // (mas viejas primero, para que no se sigan perdiendo de vista). `soloIgnoradas`
+    // invierte el filtro de `b._frSyncDeshIgnorado` -- flag persistente, no borra el
+    // flush pendiente ni afecta el chip "PENDIENTE" de Cosecha/Archivo (eso es un asunto
+    // distinto: "no me interesa repartirle secado en batch" no es lo mismo que "ya no
+    // hace falta cargarle el seco"), solo saca la bolsa de este picker. Reversible via
+    // FR._syncDeshRestaurar. Pedido del usuario 2026-08-28 (bolsas viejas/sin
+    // trazabilidad completa que no quiere ver cada vez que abre este modal).
+    function _frBolsasPendientesSecar(soloIgnoradas) {
         var out = [];
         bolsas.forEach(function(b) {
             if (esArchivada(b)) return;
             var idx = _frIdxFlushPendienteSecar(b);
             if (idx === -1) return;
+            var ignorada = b._frSyncDeshIgnorado === true;
+            if (soloIgnoradas ? !ignorada : ignorada) return;
             var f = b.flushes[idx];
             out.push({ b: b, idx: idx, pesoHumedo: f.pesoHumedo, fecha: f.fecha || b.fechaInicio || '' });
         });
@@ -3525,12 +3533,17 @@
     // y dias despues completa fin de deshidratacion + peso seco.
     // Cada cambio se persiste al instante.
     // ------------------------------------------------------
-    FR.abrirModalSyncDeshidratado = function() {
-        var pend = _frBolsasPendientesSecar();
+    var _frSyncDeshMostrarIgnoradas = false;
+
+    // Redibuja el picker (activas + toggle de ignoradas) sin tocar total/fin/preview --
+    // se llama al abrir el modal Y despues de ignorar/restaurar una bolsa, para que la
+    // lista quede consistente sin cerrar el modal.
+    function _frSyncDeshRenderPicker() {
         var body = document.getElementById('frSyncDeshPickerBody');
         if (!body) return;
+        var pend = _frBolsasPendientesSecar(false);
         if (pend.length === 0) {
-            body.innerHTML = '<tr><td colspan="4" class="fr-empty">No hay bolsas activas con húmedo cargado y seco pendiente.</td></tr>';
+            body.innerHTML = '<tr><td colspan="5" class="fr-empty">No hay bolsas activas con húmedo cargado y seco pendiente.</td></tr>';
         } else {
             body.innerHTML = pend.map(function(p) {
                 return '<tr>'
@@ -3538,9 +3551,57 @@
                     + '<td><strong>' + esc(p.b.id) + '</strong></td>'
                     + '<td class="fr-num">' + fmt(p.pesoHumedo, 1) + ' g</td>'
                     + '<td class="fr-num-days">' + esc(fmtFecha(p.fecha)) + '</td>'
+                    + '<td style="text-align:center"><button type="button" class="fr-btn-eliminar-canc" title="Ignorar esta bolsa — no vuelve a aparecer acá hasta que la restaures" onclick="FR._syncDeshIgnorar(\'' + esc(p.b._frUuid) + '\')">🚫</button></td>'
                     + '</tr>';
             }).join('');
         }
+
+        var ignoradas = _frBolsasPendientesSecar(true);
+        var toggleEl = document.getElementById('frSyncDeshIgnoradasToggle');
+        var listEl = document.getElementById('frSyncDeshIgnoradasList');
+        if (toggleEl) {
+            if (ignoradas.length === 0) {
+                toggleEl.style.display = 'none';
+                if (listEl) listEl.innerHTML = '';
+            } else {
+                toggleEl.style.display = '';
+                toggleEl.textContent = (_frSyncDeshMostrarIgnoradas ? '▾ ' : '▸ ') + 'Bolsas ignoradas (' + ignoradas.length + ')';
+                if (listEl) {
+                    listEl.innerHTML = !_frSyncDeshMostrarIgnoradas ? '' : ignoradas.map(function(p) {
+                        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">'
+                            + '<span>' + esc(p.b.id) + ' — ' + fmt(p.pesoHumedo, 1) + ' g (' + esc(fmtFecha(p.fecha)) + ')</span>'
+                            + '<button type="button" class="btn btn-secondary" style="padding:2px 8px;font-size:0.75rem" onclick="FR._syncDeshRestaurar(\'' + esc(p.b._frUuid) + '\')">↩ Restaurar</button>'
+                            + '</div>';
+                    }).join('');
+                }
+            }
+        }
+        FR._syncDeshOnChange();
+    }
+
+    FR._syncDeshToggleIgnoradas = function() {
+        _frSyncDeshMostrarIgnoradas = !_frSyncDeshMostrarIgnoradas;
+        _frSyncDeshRenderPicker();
+    };
+
+    FR._syncDeshIgnorar = function(frUuid) {
+        var b = bolsas.find(function(x) { return x._frUuid === frUuid; });
+        if (!b) return;
+        b._frSyncDeshIgnorado = true;
+        saveBolsas();
+        _frSyncDeshRenderPicker();
+    };
+
+    FR._syncDeshRestaurar = function(frUuid) {
+        var b = bolsas.find(function(x) { return x._frUuid === frUuid; });
+        if (!b) return;
+        delete b._frSyncDeshIgnorado;
+        saveBolsas();
+        _frSyncDeshRenderPicker();
+    };
+
+    FR.abrirModalSyncDeshidratado = function() {
+        _frSyncDeshMostrarIgnoradas = false;
         setInput('frSyncDeshTotal', '');
         var finEl = document.getElementById('frSyncDeshFin');
         if (finEl) finEl.value = ahoraISOLocal();
@@ -3550,6 +3611,7 @@
         if (prevEl) prevEl.innerHTML = '';
         var btn = document.getElementById('frSyncDeshBtnConfirm');
         if (btn) btn.disabled = true;
+        _frSyncDeshRenderPicker();
         var modal = document.getElementById('frModalSyncDesh');
         if (modal) modal.style.display = 'flex';
     };
@@ -3595,14 +3657,13 @@
 
         var filas = items.map(function(it) {
             var seco = repartoMap[it.id];
-            var b = bolsas.find(function(x) { return x._frUuid === it.uuid; });
-            var be = beOleada(it.pesoHumedo, b.pesoSustratoSeco);
+            var pctDeshid = it.pesoHumedo > 0 ? (seco / it.pesoHumedo) * 100 : 0;
             return '<tr><td>' + esc(it.id) + '</td><td class="fr-num">' + fmt(it.pesoHumedo, 1) + ' g</td>'
-                + '<td class="fr-num">' + fmt(seco, 1) + ' g</td><td class="fr-num-pct">' + fmt(be, 1) + '%</td></tr>';
+                + '<td class="fr-num">' + fmt(seco, 1) + ' g</td><td class="fr-num-pct">' + fmt(pctDeshid, 1) + '%</td></tr>';
         }).join('');
         var sumaSeco = reparto.reduce(function(s, r) { return s + r.pesoSeco; }, 0);
 
-        previewEl.innerHTML = '<table class="data-table"><thead><tr><th>ID</th><th>Húmedo</th><th>Seco propuesto</th><th>BE</th></tr></thead><tbody>'
+        previewEl.innerHTML = '<table class="data-table"><thead><tr><th>ID</th><th>Húmedo</th><th>Rend. Seco</th><th>% Deshid.</th></tr></thead><tbody>'
             + filas + '</tbody></table>'
             + '<p class="fr-dash-subtle">Total repartido: ' + fmt(sumaSeco, 1) + ' g</p>';
 

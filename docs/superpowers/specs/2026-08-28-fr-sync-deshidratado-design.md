@@ -152,3 +152,24 @@ Casos a cubrir en el plan de implementación:
   mientras el modal estaba abierto) se saltea sin romper el resto del lote.
 - `computeEstado`/notas automáticas coinciden bit a bit con lo que produciría `editFlush` para el
   mismo input, corrido bolsa por bolsa.
+
+## Iteración post-lanzamiento (2026-08-28, feedback en vivo del usuario)
+
+Con el modal ya en uso real (`FR1707b`+`FR2207`, 109g), dos ajustes chicos:
+
+**Preview — nombres de columna consistentes con la tabla de Cosecha.** La preview mostraba
+`Seco propuesto`/`BE` — se renombra a `Rend. Seco`/`% Deshid.` (mismos nombres/orden que las
+columnas de resultado en Cosecha/Archivo, ver `filaTabla`). `BE` no aportaba nada para juzgar si
+el reparto tiene sentido; `% Deshid.` (seco/húmedo de la fila propuesta) sí — deja ver de un
+vistazo si el % de cada bolsa es razonable, mismo criterio que usé a mano para justificar el
+reparto proporcional más arriba en este documento.
+
+**Ignorar bolsas del picker.** El picker mostraba bolsas viejas/sin trazabilidad completa que el
+usuario no quiere repartir nunca (ej. de abril/junio, antes de que el lab tuviera el flujo actual).
+Nuevo campo persistente `b._frSyncDeshIgnorado` (boolean) en `fr_bolsas` — un botón `🚫` por fila
+del picker lo marca y la saca de la lista al instante; un toggle "Bolsas ignoradas (N)" al pie
+del picker permite verlas y `↩ Restaurar` cualquiera (reversible, no se pierde nada). Alcance
+deliberadamente acotado: **solo afecta este picker.** No toca `_frIdxFlushPendienteSecar` ni el
+chip "PENDIENTE" de Cosecha/Archivo — "no quiero repartirle el secado en batch" es una decisión
+distinta de "todavía no cargué el peso seco de esta bolsa", y la segunda sigue siendo visible en
+la tabla principal aunque la bolsa esté ignorada acá.
