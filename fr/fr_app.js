@@ -3614,12 +3614,31 @@
         var totalInput = num(document.getElementById('frSyncDeshTotal').value);
         var finVal = document.getElementById('frSyncDeshFin').value || ahoraISOLocal();
 
+        // Un unico paso de validacion (no dos pasadas separadas): la version anterior
+        // filtraba bolsas no calificantes al construir `items` y RECIEN DESPUES corria
+        // una "re-verificacion" sobre ese mismo `items` ya filtrado -- estructuralmente
+        // no podia detectar nada, porque lo que buscaba ya habia sido excluido en silencio
+        // un paso antes (bug real, code review holistico final, MEJ-0052). Ahora se
+        // detecta y se reporta CUALQUIER bolsa tildada que ya no califique (no existe,
+        // ya no esta pendiente de secar, o fue archivada) en el mismo paso que arma la
+        // lista real a repartir.
         var items = [];
+        var noCalifican = [];
         cbs.forEach(function(cb) {
             var b = bolsas.find(function(x) { return x._frUuid === cb.dataset.frUuid; });
             var idx = b ? _frIdxFlushPendienteSecar(b) : -1;
-            if (b && idx !== -1) items.push({ id: b.id, uuid: b._frUuid, pesoHumedo: b.flushes[idx].pesoHumedo });
+            if (b && idx !== -1 && !esArchivada(b)) {
+                items.push({ id: b.id, uuid: b._frUuid, pesoHumedo: b.flushes[idx].pesoHumedo });
+            } else {
+                noCalifican.push(b ? b.id : cb.dataset.frUuid);
+            }
         });
+
+        if (noCalifican.length > 0) {
+            _frToast('⚠ ' + noCalifican.join(', ') + ' ya no califican (secadas, archivadas o eliminadas desde que abriste el modal) — el reparto ya no es válido. Cerrá y volvé a abrir para reintentar.', 'warn');
+            return;
+        }
+
         // Guard defensivo: el boton ya esta disabled si esto no se cumple
         // (ver FR._syncDeshOnChange), pero no confiar solo en el estado del DOM.
         var totalHumedo = items.reduce(function(s, it) { return s + it.pesoHumedo; }, 0);
@@ -3629,47 +3648,25 @@
         var repartoMap = {};
         reparto.forEach(function(r) { repartoMap[r.id] = r.pesoSeco; });
 
-        // Re-verificar en el momento de confirmar (no solo al abrir el modal): si otra
-        // via cargo el seco de alguna de estas bolsas mientras el modal seguia abierto,
-        // esa bolsa se saltea en vez de sobreescribir un dato ya cargado.
-        var aplicadas = [];
-        var salteadas = [];
+        var idsAplicadas = items.map(function(it) { return it.id; });
         items.forEach(function(it) {
             var b = bolsas.find(function(x) { return x._frUuid === it.uuid; });
-            var idxActual = b ? _frIdxFlushPendienteSecar(b) : -1;
-            if (!b || idxActual === -1 || esArchivada(b)) { salteadas.push(it.id); return; }
-            aplicadas.push({ b: b, idx: idxActual, id: it.id });
-        });
-        // Todo-o-nada: si CUALQUIER bolsa dejo de calificar (secada/archivada por otra
-        // pestaña mientras el modal seguia abierto), se aborta el batch completo en vez
-        // de aplicar el reparto original sobre un subconjunto -- aplicar sobre menos
-        // bolsas de las que originalmente sumaban el total dejaria sum(pesoSeco escrito)
-        // por debajo de lo que el usuario realmente peso, sin ninguna senal de que el
-        // numero ya no cierra (code review, MEJ-0052 parte 3).
-        if (salteadas.length > 0) {
-            _frToast('⚠ ' + salteadas.join(', ') + ' cambiaron de estado mientras el modal estaba abierto — el reparto ya no es válido. Cerrá y volvé a abrir para reintentar.', 'warn');
-            return;
-        }
-
-        var idsAplicadas = aplicadas.map(function(a) { return a.id; });
-        aplicadas.forEach(function(item) {
-            var b = item.b, f = b.flushes[item.idx];
-            f.pesoSeco = repartoMap[item.id];
+            var f = b.flushes[_frIdxFlushPendienteSecar(b)];
+            f.pesoSeco = repartoMap[it.id];
             f.finDeshidratacion = finVal;
             recomputeFlushes(b);
             var prevEstado = b.estado;
             b.estado = computeEstado(b);
             addObsTo(b, 'F' + f.n + ' - Peso seco registrado: ' + fmt(f.pesoSeco, 1) + ' g - BE ' + fmt(f.beOleada, 1) + '%', 'auto', 'green');
             addObsTo(b, 'F' + f.n + ' - Fin de deshidratacion: ' + fmtFechaHora(f.finDeshidratacion), 'auto', 'none');
-            addObsTo(b, 'Peso seco repartido vía Sync deshidratado: ' + fmt(totalInput, 1) + 'g totales entre ' + aplicadas.length + ' bolsas (' + idsAplicadas.join(', ') + ')', 'auto', 'none');
+            addObsTo(b, 'Peso seco repartido vía Sync deshidratado: ' + fmt(totalInput, 1) + 'g totales entre ' + items.length + ' bolsas (' + idsAplicadas.join(', ') + ')', 'auto', 'none');
             if (b.estado !== prevEstado) addObsTo(b, 'Estado: ' + prevEstado + ' -> ' + b.estado, 'auto', 'none');
         });
 
         saveBolsas();
         FR.cerrarModalSyncDeshidratado();
         renderAll();
-        _frToast('✅ Reparto aplicado a ' + aplicadas.length + ' bolsa(s): ' + idsAplicadas.join(', ') + '.'
-            + (salteadas.length ? ' Salteadas (ya no calificaban): ' + salteadas.join(', ') + '.' : ''), 'ok');
+        _frToast('✅ Reparto aplicado a ' + items.length + ' bolsa(s): ' + idsAplicadas.join(', ') + '.', 'ok');
     };
 
     FR.editFlush = function(idx) {
