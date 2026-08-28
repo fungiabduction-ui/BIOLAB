@@ -3637,11 +3637,17 @@
         items.forEach(function(it) {
             var b = bolsas.find(function(x) { return x._frUuid === it.uuid; });
             var idxActual = b ? _frIdxFlushPendienteSecar(b) : -1;
-            if (!b || idxActual === -1) { salteadas.push(it.id); return; }
+            if (!b || idxActual === -1 || esArchivada(b)) { salteadas.push(it.id); return; }
             aplicadas.push({ b: b, idx: idxActual, id: it.id });
         });
-        if (aplicadas.length < 2) {
-            _frToast('⚠ Alguna bolsa cambió de estado mientras el modal estaba abierto — cerrá y volvé a abrir.', 'warn');
+        // Todo-o-nada: si CUALQUIER bolsa dejo de calificar (secada/archivada por otra
+        // pestaña mientras el modal seguia abierto), se aborta el batch completo en vez
+        // de aplicar el reparto original sobre un subconjunto -- aplicar sobre menos
+        // bolsas de las que originalmente sumaban el total dejaria sum(pesoSeco escrito)
+        // por debajo de lo que el usuario realmente peso, sin ninguna senal de que el
+        // numero ya no cierra (code review, MEJ-0052 parte 3).
+        if (salteadas.length > 0) {
+            _frToast('⚠ ' + salteadas.join(', ') + ' cambiaron de estado mientras el modal estaba abierto — el reparto ya no es válido. Cerrá y volvé a abrir para reintentar.', 'warn');
             return;
         }
 
