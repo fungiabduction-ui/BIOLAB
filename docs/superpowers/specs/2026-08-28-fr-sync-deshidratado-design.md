@@ -95,12 +95,23 @@ mide en la práctica.
 
 ## Escritura
 
+**Todo-o-nada, no skip-and-continue (revisado en code review final, ver Task 4 en el plan de
+implementación).** El diseño original de esta sección proponía saltear la bolsa individual que
+dejó de calificar y aplicar el reparto sobre el resto — se descartó: hacerlo así habría requerido
+recalcular `_frSyncDeshReparto` sobre un subconjunto (el reparto original ya no suma el total que
+el usuario realmente pesó), o aceptar una suma silenciosamente desalineada. La versión final aborta
+el batch COMPLETO si cualquier bolsa tildada dejó de calificar — más simple, y el usuario vuelve a
+abrir el modal para reintentar con el estado real actual.
+
 Por cada bolsa tildada, en memoria (sin persistir todavía):
-1. Re-verificar `f.pesoSeco == null` en el momento de confirmar (no solo al abrir el modal) — por
-   si algo cambió mientras el modal estaba abierto (ventana angosta, pero gratis de chequear y
-   consistente con el estilo defensivo ya presente en otras partes de FR/CI).  Si ya no es `null`,
-   esa bolsa se saltea (no se sobreescribe un dato cargado mientras tanto) y se avisa al final
-   cuáles se saltearon.
+1. Re-verificar, en el momento de confirmar (no solo al abrir el modal), que la bolsa siga
+   existiendo, siga teniendo un flush pendiente de secar, y no haya sido archivada mientras el modal
+   estaba abierto — las 3 condiciones se chequean en un único paso al construir la lista de items
+   (no en dos pasadas separadas: una implementación intermedia tenía una "re-verificación" que
+   filtraba sobre una lista ya pre-filtrada, por lo que nunca podía detectar nada — bug real
+   encontrado en el review holístico final). Si CUALQUIERA de las bolsas tildadas ya no califica,
+   se aborta el batch entero (no se escribe nada) y se avisa cuáles fueron las que ya no
+   calificaban.
 2. `f.pesoSeco = redondeado_i`; `f.finDeshidratacion = frSyncDeshFin` (mismo valor para todas —
    compartieron la misma tanda de horno).
 3. `recomputeFlushes(b)` — **la misma función que ya usa `FR.editFlush`**, sin reimplementar el

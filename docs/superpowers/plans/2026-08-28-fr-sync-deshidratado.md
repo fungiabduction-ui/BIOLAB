@@ -162,6 +162,8 @@ git commit -m "feat(fr): chip PENDIENTE en Cosecha/Archivo para flushes con hume
 
 ---
 
+> **Nota post-implementación (superada por code review, ver commits `bc81fa4`/`cebd0a9`):** el código de este Task 2 quedó desactualizado — el resto de redondeo se asigna al item de MAYOR `pesoHumedo`, no al último del array (`bc81fa4`, corrige `pesoSeco` negativo posible en tandas de 4+ bolsas). La verdad actual es `fr/fr_app.js` — no copiar el código de acá.
+
 ### Task 2: `_frSyncDeshReparto` — función pura de reparto, TDD en aislamiento
 
 **Files:**
@@ -304,6 +306,8 @@ git commit -m "feat(fr): agrega _frSyncDeshReparto, calculo puro de reparto prop
 ```
 
 ---
+
+> **Nota post-implementación (superada por code review, ver commits `cebd0a9` y el fix del review holístico final):** el `FR.aplicarSyncDeshidratado` de este Task 3 quedó desactualizado en dos rondas — primero se agregó el chequeo de `esArchivada`, después se colapsó a un único paso de validación (la "re-verificación" de dos pasadas de acá nunca podía detectar nada, porque la primera pasada ya excluía todo lo que la segunda buscaba). La verdad actual es `fr/fr_app.js` — no copiar el código de acá.
 
 ### Task 3: UI completa — botón, modal, picker, preview en vivo, confirmar
 
