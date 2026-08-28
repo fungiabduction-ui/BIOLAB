@@ -349,6 +349,28 @@
         }
         return -1;
     }
+
+    // Reparto proporcional al peso humedo entre N bolsas secadas juntas en la misma
+    // tanda de horno. El ULTIMO item de `items` absorbe el resto de redondeo para que
+    // la suma de pesoSeco calce exacto con `total` (nunca queda offset por decimas).
+    // Ver docs/superpowers/specs/2026-08-28-fr-sync-deshidratado-design.md.
+    function _frSyncDeshReparto(items, total) {
+        var totalHumedo = items.reduce(function(s, it) { return s + it.pesoHumedo; }, 0);
+        if (totalHumedo <= 0) return items.map(function(it) { return { id: it.id, pesoSeco: 0 }; });
+
+        var out = items.map(function(it) {
+            var crudo = total * (it.pesoHumedo / totalHumedo);
+            return { id: it.id, pesoSeco: Math.round(crudo * 10) / 10 };
+        });
+
+        var sumaRedondeada = out.reduce(function(s, o) { return s + o.pesoSeco; }, 0);
+        var diff = Math.round((total - sumaRedondeada) * 100) / 100;
+        var ultimo = out[out.length - 1];
+        ultimo.pesoSeco = Math.round((ultimo.pesoSeco + diff) * 10) / 10;
+
+        return out;
+    }
+
     function tiempoTrabajoTotal(b) {
         if (!b || !b.fechaInicio) return null;
         var last = null;
