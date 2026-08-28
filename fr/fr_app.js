@@ -338,6 +338,17 @@
         if (!f || !f.fecha || !f.finDeshidratacion) return null;
         return horasEntre(f.fecha, f.finDeshidratacion);
     }
+    // Indice del ultimo flush con humedo cargado y seco todavia sin completar (o -1
+    // si no hay ninguno). Usado tanto por el chip "PENDIENTE" de la tabla de Cosecha/Archivo
+    // como por el picker de "Sync deshidratado" (ver docs/superpowers/specs/2026-08-28-fr-sync-deshidratado-design.md).
+    function _frIdxFlushPendienteSecar(b) {
+        if (!b || !Array.isArray(b.flushes)) return -1;
+        for (var i = b.flushes.length - 1; i >= 0; i--) {
+            var f = b.flushes[i];
+            if (f && f.pesoHumedo != null && f.pesoSeco == null) return i;
+        }
+        return -1;
+    }
     function tiempoTrabajoTotal(b) {
         if (!b || !b.fechaInicio) return null;
         var last = null;
@@ -1199,8 +1210,10 @@
         // comparable contra 3 flushes de 80% cada uno, promediar scoreAuto seria enganoso.
         var rendSeco    = biomasaSecaTotal(b.flushes);
         var pctDeshid   = (rend > 0 && rendSeco > 0) ? (rendSeco / rend) * 100 : null;
-        var rendSecoTxt = rendSeco > 0 ? fmt(rendSeco, 1) + ' g' : '-';
-        var pctDeshidTxt = pctDeshid != null ? fmt(pctDeshid, 1) + '%' : '-';
+        var _pendChip   = '<span class="fr-chip fr-chip-pendiente">PENDIENTE</span>';
+        var _esPend     = _frIdxFlushPendienteSecar(b) !== -1;
+        var rendSecoTxt = rendSeco > 0 ? fmt(rendSeco, 1) + ' g' : (_esPend ? _pendChip : '-');
+        var pctDeshidTxt = pctDeshid != null ? fmt(pctDeshid, 1) + '%' : (_esPend ? _pendChip : '-');
         var fEntrada   = fmtFecha(b.fechaInicio || b.fechaEntradaFR || _parseFechaFromId(b.id));
         var fUltCos    = '—';
         var fArchFecha = '—';
