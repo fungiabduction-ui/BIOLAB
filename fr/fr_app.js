@@ -369,7 +369,10 @@
         // picker (Task 3), el ultimo del array puede ser una bolsa chica agregada tarde
         // a la tanda -- asignarle el resto ahi podia dar pesoSeco negativo en tandas de
         // 4+ bolsas (confirmado por code review, MEJ-0052 parte 2). Math.max(0, ...)
-        // queda como backstop defensivo, no deberia dispararse nunca con este cambio.
+        // queda como backstop defensivo -- no deberia dispararse a los ratios seco:humedo
+        // reales de este dominio (8-20%), aunque matematicamente no es imposible con un
+        // total extremo (ej. <0.3% del humedo total). Si dispara, prioriza no-negativo
+        // sobre sum(reparto)===total exacto en ese caso extremo.
         var sumaRedondeada = out.reduce(function(s, o) { return s + o.pesoSeco; }, 0);
         var diff = Math.round((total - sumaRedondeada) * 100) / 100;
         var idxMayor = 0;

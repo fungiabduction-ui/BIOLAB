@@ -80,9 +80,13 @@ totalHumedo = suma(seleccion[i].pesoHumedo)
 para cada bolsa i (en el mismo orden que se muestran):
     crudo_i = total * (pesoHumedo_i / totalHumedo)
     redondeado_i = round(crudo_i, 1 decimal)
-// Ajuste de redondeo: la ULTIMA fila de la lista absorbe la diferencia,
-// para que sum(redondeado) === total exacto (no que quede off por decimas).
-redondeado_ultima += (total - sum(redondeado))
+// Ajuste de redondeo: la bolsa de MAYOR pesoHumedo (no la ultima fila por orden de
+// llegada) absorbe la diferencia, para que sum(redondeado) === total exacto. Cambiado
+// en code review (Task 2, commit bc81fa4): con orden por fecha, la "ultima fila" puede
+// ser una bolsa chica agregada tarde a la tanda -- asignarle el resto ahi podia dar
+// pesoSeco negativo en tandas de 4+ bolsas. Un Math.max(0, ...) queda como backstop
+// defensivo (no debería dispararse a los ratios seco:humedo reales de este dominio).
+redondeado_mayor += (total - sum(redondeado))
 ```
 
 Precedente de precisión: los `pesoSeco` ya cargados a mano en el dataset real usan 1 decimal
