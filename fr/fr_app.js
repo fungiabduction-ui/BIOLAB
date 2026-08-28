@@ -351,7 +351,7 @@
     }
 
     // Reparto proporcional al peso humedo entre N bolsas secadas juntas en la misma
-    // tanda de horno. El ULTIMO item de `items` absorbe el resto de redondeo para que
+    // tanda de horno. El item de MAYOR pesoHumedo absorbe el resto de redondeo para que
     // la suma de pesoSeco calce exacto con `total` (nunca queda offset por decimas).
     // Ver docs/superpowers/specs/2026-08-28-fr-sync-deshidratado-design.md.
     function _frSyncDeshReparto(items, total) {
@@ -363,10 +363,20 @@
             return { id: it.id, pesoSeco: Math.round(crudo * 10) / 10 };
         });
 
+        // El resto de redondeo se le asigna al item de MAYOR pesoHumedo (no al ultimo
+        // del array por orden de llegada) -- ese item tiene el margen mas grande para
+        // absorber el ajuste sin quedar en negativo. Con el orden por fecha que usa el
+        // picker (Task 3), el ultimo del array puede ser una bolsa chica agregada tarde
+        // a la tanda -- asignarle el resto ahi podia dar pesoSeco negativo en tandas de
+        // 4+ bolsas (confirmado por code review, MEJ-0052 parte 2). Math.max(0, ...)
+        // queda como backstop defensivo, no deberia dispararse nunca con este cambio.
         var sumaRedondeada = out.reduce(function(s, o) { return s + o.pesoSeco; }, 0);
         var diff = Math.round((total - sumaRedondeada) * 100) / 100;
-        var ultimo = out[out.length - 1];
-        ultimo.pesoSeco = Math.round((ultimo.pesoSeco + diff) * 10) / 10;
+        var idxMayor = 0;
+        for (var i = 1; i < items.length; i++) {
+            if (items[i].pesoHumedo > items[idxMayor].pesoHumedo) idxMayor = i;
+        }
+        out[idxMayor].pesoSeco = Math.max(0, Math.round((out[idxMayor].pesoSeco + diff) * 10) / 10);
 
         return out;
     }
