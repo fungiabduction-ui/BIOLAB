@@ -1207,6 +1207,47 @@ function _abbrevGen(s) {
     return s ? s.replace(/Psilocybe cubensis/gi, 'PC') : s;
 }
 
+// Chip de genética acortado al último eslabón, coloreado con el color del nodo GE.
+// No modifica storage — 100% capa de render. Ver docs/superpowers/specs/
+// 2026-08-31-fr-su-genetica-chip-acortado-design.md.
+function _suHexToRgba(hex, alpha) {
+    if (typeof hex !== 'string') return null;
+    var m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+function _suResolveGeColor(fenId) {
+    if (!fenId) return null;
+    try {
+        if (window.ge && typeof window.ge.getNode === 'function') {
+            var n = window.ge.getNode(fenId);
+            if (n && n.color) return n.color;
+        }
+    } catch (e) {}
+    try {
+        if (window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+            var r = window.GEResolve.resolverNodoCrudo(fenId);
+            if (r && r.node && r.node.color) return r.node.color;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function _suGenChipHtml(fullChainStr, fenId) {
+    if (!fullChainStr) return '—';
+    var parts = String(fullChainStr).split('/').map(function(s) { return s.trim(); }).filter(Boolean);
+    var label = parts.length > 0 ? parts[parts.length - 1] : fullChainStr;
+    var hex = _suResolveGeColor(fenId);
+    var bg = hex ? _suHexToRgba(hex, 0.13) : null;
+    var border = hex ? _suHexToRgba(hex, 0.40) : null;
+    var cls = 'su-kchip' + (bg ? '' : ' su-kchip-dim');
+    var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + suDbEscapeHtml(hex) + '"' : '';
+    return '<span class="' + cls + '"' + style + ' title="' + suDbEscapeHtml(fullChainStr) + '">' + suDbEscapeHtml(label) + '</span>';
+}
+
 function suFmt(n, dec) {
     if (n == null || isNaN(n)) return '—';
     var d = (dec == null) ? 1 : dec;
@@ -1335,17 +1376,17 @@ function renderizarRegistroLotes() {
                 var _us = parseInt(s.grUsados) || 0;
                 us += _us;
                 var _grL = grMap[s.grLoteId || ''];
-                var _pf = 0, _gen = '';
+                var _pf = 0, _gen = '', _fenId = null;
                 if (_grL) {
                     _pf = parseFloat(_grL.uf && _grL.uf.peso_unidad) || parseFloat(_grL.fr && _grL.fr.pesoFrasco) || 0;
                     if (Array.isArray(_grL.dg)) {
                         for (var k = 0; k < _grL.dg.length; k++) {
-                            if (_grL.dg[k].tanda === s.grTandaId) { _gen = _grL.dg[k].genetica || ''; break; }
+                            if (_grL.dg[k].tanda === s.grTandaId) { _gen = _grL.dg[k].genetica || ''; _fenId = _grL.dg[k].fen_id || null; break; }
                         }
                     }
                 }
                 pesoGranoSub += _us * _pf;
-                grTxtParts.push(s.grTandaId + (_gen ? ' — ' + _abbrevGen(_gen) : ''));
+                grTxtParts.push(s.grTandaId + (_gen ? ' — ' + _suGenChipHtml(_gen, _fenId) : ''));
             });
             if (normSrcs.length === 0) us = parseInt(r.grUsados) || 0;
             var grTxt = grTxtParts.length > 0 ? grTxtParts.join(' + ') : '';

@@ -2089,6 +2089,9 @@ body {
     white-space: nowrap;
     padding-right: 8px;
 }
+.su-sub-gen .su-kchip {
+    font-style: normal;
+}
 .su-sub-col {
     text-align: center;
     font-weight: 600;
