@@ -1289,6 +1289,7 @@ function renderizarRegistroLotes() {
             <span>BOLSAS</span>
             <span>FRASCOS</span>
             <span>SU HIDRA&shy;TADO</span>
+            <span>BOLSA INOC.</span>
             <span>GRANO</span>
             <span>RATIO</span>
         </div>`;
@@ -1432,6 +1433,12 @@ function renderizarRegistroLotes() {
                                 : (granoTeoBolsa > 0 ? granoTeoBolsa : 0);
             var granoTxt      = granoVal > 0 ? '🌾 ' + granoVal.toFixed(0) + ' g' : '—';
 
+            // Bolsa ya inoculada (sustrato + grano combinado, pesada tal cual) -- solo dato
+            // crudo tipeado por el operador, sin fallback teorico (no hay "peso de bolsa
+            // inoculada teorico" que calcular, a diferencia de Sustrato/Grano).
+            var pesoBolsaInocSub = parseFloat(r.pesoBolsaInoculada) || 0;
+            var bolsaInocTxt     = pesoBolsaInocSub > 0 ? '🔺 ' + pesoBolsaInocSub.toFixed(0) + ' g' : '—';
+
             // Sustrato seco por tanda (lote fibra proporcional a bolsas de esta tanda)
             var sustTandaVal  = bo > 0 && _sustSecoPerBolsa > 0 ? _sustSecoPerBolsa : 0;
             var sustTxt       = sustTandaVal > 0 ? sustTandaVal.toFixed(0) + ' g' : '—';
@@ -1453,6 +1460,7 @@ function renderizarRegistroLotes() {
                     <span class="su-sub-col">${bo}</span>
                     <span class="su-sub-col">${us}</span>
                     <span class="su-sub-col${hidBolsaReal ? ' su-sub-real' : ''}">${hidBolsaTxt}${hidBolsaReal ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
+                    <span class="su-sub-col">${bolsaInocTxt}</span>
                     <span class="su-sub-col${granoRealFlag ? ' su-sub-real' : ''}">${granoTxt}${granoRealFlag ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
                     <span class="su-sub-col">${ratioTxt}</span>
                 </div>${beRowHtml}`;
@@ -2701,7 +2709,7 @@ window.suDbAddRow = function() {
         +       '<input type="number" class="db-peso-real" value="0" min="0" step="1" placeholder="—" onchange="suDbOnChangeSustratoReal(this)">'
         +     '</div>'
         +     '<div class="db-peso-col db-peso-col--inoc" title="Peso real de la bolsa ya inoculada (sustrato + grano). Calcula el Grano automáticamente restando el peso real de Sustrato.">'
-        +       '<span class="db-cell-label">⚖️ Bolsa inoc.</span>'
+        +       '<span class="db-cell-label">🔺 Bolsa inoc.</span>'
         +       '<input type="number" class="db-peso-bolsa-inoculada" value="0" min="0" step="0.1" placeholder="—" onchange="suDbOnChangeBolsaInoculada(this)">'
         +       '<span class="db-peso-bolsa-inoculada-msg"></span>'
         +     '</div>'

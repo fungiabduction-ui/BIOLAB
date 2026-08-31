@@ -2009,7 +2009,7 @@ body {
 /* Header de columnas de sub-filas — barra contrastante */
 .su-sub-header {
     display: grid;
-    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 65px;
+    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 78px 65px;
     gap: 0;
     padding: 6px 14px;
     margin-bottom: 4px;
@@ -2030,7 +2030,7 @@ body {
 /* Sub-filas: grid alineado con header */
 .su-card-sub {
     display: grid;
-    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 65px;
+    grid-template-columns: 105px 68px 1fr 65px 82px 52px 58px 96px 78px 78px 65px;
     align-items: center;
     gap: 0;
     padding: 6px 14px;
