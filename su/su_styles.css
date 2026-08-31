@@ -1559,6 +1559,28 @@ body {
     line-height: 1.15;
 }
 
+/* Anti-autofill (2026-08-31): Chrome puede pintar el fondo de un input en blanco
+   via un box-shadow interno cuando su heuristico "reconoce" el campo -- confirmado
+   en produccion, un input puede quedar marcado aunque sus hermanos, con CSS
+   identico, no lo esten (es por-campo, no por-fila). background/color no alcanzan
+   para pisarlo; el unico contra-truco confiable es un box-shadow inset propio mas
+   grande que el de Chrome. Se blindan los 3 pesos de esta fila, no solo el
+   reportado, porque el mismo riesgo aplica a los tres por igual. */
+.db-peso-col--sust input:-webkit-autofill,
+.db-peso-col--sust input:-webkit-autofill:hover,
+.db-peso-col--sust input:-webkit-autofill:focus,
+.db-peso-col--gran input:-webkit-autofill,
+.db-peso-col--gran input:-webkit-autofill:hover,
+.db-peso-col--gran input:-webkit-autofill:focus,
+.db-peso-col--inoc input:-webkit-autofill,
+.db-peso-col--inoc input:-webkit-autofill:hover,
+.db-peso-col--inoc input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-light, #ddd);
+    -webkit-box-shadow: 0 0 0 1000px var(--dark, #1D1D1D) inset;
+    box-shadow: 0 0 0 1000px var(--dark, #1D1D1D) inset;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
 /* Mantener compatibilidad con selectores de clase directa */
 .db-row .db-peso-real        { /* heredado de .db-peso-col--sust input */ }
 .db-row .db-peso-grano-real  { /* heredado de .db-peso-col--gran input */ }
