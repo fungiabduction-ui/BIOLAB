@@ -1202,11 +1202,6 @@ function suCalcularMetricasLote(lote) {
 // Exponer por si otro módulo quiere consumirlo
 window.suCalcularMetricasLote = suCalcularMetricasLote;
 
-// Abreviaciones de especie para display — no modifica storage
-function _abbrevGen(s) {
-    return s ? s.replace(/Psilocybe cubensis/gi, 'PC') : s;
-}
-
 // Chip de genética acortado al último eslabón, coloreado con el color del nodo GE.
 // No modifica storage — 100% capa de render. Ver docs/superpowers/specs/
 // 2026-08-31-fr-su-genetica-chip-acortado-design.md.
