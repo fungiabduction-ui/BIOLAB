@@ -2924,6 +2924,77 @@
         return _abbrevGen(b.geneticaFull || [b.genetica, b.fenotipo].filter(Boolean).join(' / ') || '—');
     }
 
+    // Chip de genética acortado al último eslabón, coloreado con el color del nodo GE.
+    // Solo para RENDER (ver _geChipFromBolsa más abajo) — _geTxtFromBolsa arriba sigue
+    // devolviendo texto plano porque también la usan _frBuscar y _sortValue (búsqueda y
+    // orden por columna), que necesitan comparar contra el nombre real, no contra HTML.
+    // No modifica storage — 100% capa de render. Ver docs/superpowers/specs/
+    // 2026-08-31-fr-su-genetica-chip-acortado-design.md.
+    function _hexToRgba(hex, alpha) {
+        if (typeof hex !== 'string') return null;
+        var m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+        if (!m) return null;
+        var n = parseInt(m[1], 16);
+        var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+
+    function _resolveGeColor(fenId) {
+        if (!fenId) return null;
+        try {
+            if (window.ge && typeof window.ge.getNode === 'function') {
+                var n = window.ge.getNode(fenId);
+                if (n && n.color) return n.color;
+            }
+        } catch (e) {}
+        try {
+            if (window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+                var r = window.GEResolve.resolverNodoCrudo(fenId);
+                if (r && r.node && r.node.color) return r.node.color;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function _genChipHtml(fullChainStr, fenId) {
+        if (!fullChainStr) return '—';
+        var parts = String(fullChainStr).split('/').map(function(s) { return s.trim(); }).filter(Boolean);
+        var label = parts.length > 0 ? parts[parts.length - 1] : fullChainStr;
+        var hex = _resolveGeColor(fenId);
+        var bg = hex ? _hexToRgba(hex, 0.15) : null;
+        var border = hex ? _hexToRgba(hex, 0.40) : null;
+        var cls = 'fr-chip' + (bg ? '' : ' fr-chip-neutral');
+        var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + esc(hex) + '"' : '';
+        return '<span class="' + cls + '"' + style + ' title="' + esc(fullChainStr) + '">' + esc(label) + '</span>';
+    }
+
+    // grSources[] no guarda fenId por fuente (solo geneticaFull/inoculoSource/inoculoCiId,
+    // ver fr_app.js:631-634) — se resuelve en vivo contra gr_lotes, lectura ya permitida para
+    // FR (ver cabecera del módulo). Funciona igual para bolsas nuevas y ya selladas.
+    function _fenIdForGrSource(s) {
+        if (!s || !s.grLoteId || !s.grTandaId) return null;
+        try {
+            var grMap = getGRLotesMap();
+            var l = grMap[s.grLoteId];
+            if (!l || !Array.isArray(l.dg)) return null;
+            var t = l.dg.filter(function(row) { return row.tanda === s.grTandaId; })[0];
+            return (t && t.fen_id) || null;
+        } catch (e) { return null; }
+    }
+
+    // Mismo shape que _geTxtFromBolsa (arriba) pero devuelve chips en vez de texto plano.
+    // Usar SOLO para render (filaTabla/filaPendiente/_ovFilas, Task 3) — nunca para
+    // búsqueda/orden, para eso sigue existiendo _geTxtFromBolsa sin tocar.
+    function _geChipFromBolsa(b) {
+        if (Array.isArray(b.grSources) && b.grSources.length > 1) {
+            var chips = b.grSources
+                .map(function(s) { return _genChipHtml(s.geneticaFull || '', _fenIdForGrSource(s)); })
+                .filter(function(h) { return h && h !== '—'; });
+            if (chips.length > 1) return chips.join(' + ');
+        }
+        return _genChipHtml(b.geneticaFull || [b.genetica, b.fenotipo].filter(Boolean).join(' / ') || '', b.fenId);
+    }
+
     function filaPendiente(b) {
         var ge    = _geTxtFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
