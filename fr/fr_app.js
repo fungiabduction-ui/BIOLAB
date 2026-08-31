@@ -338,6 +338,16 @@
         if (!f || !f.fecha || !f.finDeshidratacion) return null;
         return horasEntre(f.fecha, f.finDeshidratacion);
     }
+    // Formato "24 hs (1 dias)" / "36 hs (1.5 dias)" para la columna de tiempo de
+    // deshidratacion de la tabla de oleadas. Redondea horas a entero para el display
+    // (el dato crudo en f.tiempoDeshidratacion sigue con toda su precision, esto es
+    // solo presentacion). dias = horas/24 con 1 decimal, sin ".0" de mas si es entero.
+    function fmtTiempoDeshid(horas) {
+        if (horas == null) return '—';
+        var h = Math.round(horas);
+        var dias = Math.round((horas / 24) * 10) / 10;
+        return h + ' hs (' + dias + ' dias)';
+    }
     // Indice del ultimo flush con humedo cargado y seco todavia sin completar (o -1
     // si no hay ninguno). Usado tanto por el chip "PENDIENTE" de la tabla de Cosecha/Archivo
     // como por el picker de "Sync deshidratado" (ver docs/superpowers/specs/2026-08-28-fr-sync-deshidratado-design.md).
@@ -2042,7 +2052,7 @@
         var fbody = document.getElementById('frFlushBody');
         if (fbody) {
             if (!b.flushes || b.flushes.length === 0) {
-                fbody.innerHTML = '<tr><td colspan="11" class="fr-empty">Sin oleadas aun.</td></tr>';
+                fbody.innerHTML = '<tr><td colspan="12" class="fr-empty">Sin oleadas aun.</td></tr>';
             } else {
                 fbody.innerHTML = b.flushes.map(function(f, idx) {
                     var pctBio = pctBiomasaFlush(f);
@@ -2066,6 +2076,7 @@
                         + '<td><input type="number" step="0.1" class="fr-dash-input fr-flush-inline" id="frFlushH_' + idx + '" value="' + esc(hV) + '" placeholder="g" onchange="FR.editFlush(' + idx + ')"></td>'
                         + '<td><input type="datetime-local" class="fr-dash-input fr-flush-inline" id="frFlushFin_' + idx + '" value="' + esc(finV) + '" onchange="FR.editFlush(' + idx + ')"></td>'
                         + '<td><input type="number" step="0.1" class="fr-dash-input fr-flush-inline" id="frFlushS_' + idx + '" value="' + esc(sV) + '" placeholder="g" onchange="FR.editFlush(' + idx + ')"></td>'
+                        + '<td id="frFlushTiempo_' + idx + '">' + fmtTiempoDeshid(tiempoDeshidFlush(f)) + '</td>'
                         + '<td id="frFlushPct_' + idx + '">' + pctBioTxt + '</td>'
                         + '<td id="frFlushBEo_' + idx + '">' + fmt(f.beOleada, 1) + '%</td>'
                         + '<td id="frFlushBEa_' + idx + '">' + fmt(f.beAcumulado, 1) + '%</td>'
@@ -3358,6 +3369,7 @@
                         + '<td><input type="number" step="0.1" class="fr-dash-input fr-flush-inline" id="frFlushH_' + fidx + '" value="' + esc(f.pesoHumedo != null ? f.pesoHumedo : '') + '" placeholder="g" onchange="FR.editFlush(' + fidx + ')"></td>'
                         + '<td><input type="datetime-local" class="fr-dash-input fr-flush-inline" id="frFlushFin_' + fidx + '" value="' + esc(f.finDeshidratacion || '') + '" onchange="FR.editFlush(' + fidx + ')"></td>'
                         + '<td><input type="number" step="0.1" class="fr-dash-input fr-flush-inline" id="frFlushS_' + fidx + '" value="' + esc(f.pesoSeco != null ? f.pesoSeco : '') + '" placeholder="g" onchange="FR.editFlush(' + fidx + ')"></td>'
+                        + '<td id="frFlushTiempo_' + fidx + '">' + fmtTiempoDeshid(tiempoDeshidFlush(f)) + '</td>'
                         + '<td id="frFlushPct_' + fidx + '">' + pctBioTxt + '</td>'
                         + '<td id="frFlushBEo_' + fidx + '">' + fmt(f.beOleada, 1) + '%</td>'
                         + '<td id="frFlushBEa_' + fidx + '">' + fmt(f.beAcumulado, 1) + '%</td>'
@@ -3772,7 +3784,9 @@
         var pctEl = document.getElementById('frFlushPct_' + idx);
         var beOEl = document.getElementById('frFlushBEo_' + idx);
         var beAEl = document.getElementById('frFlushBEa_' + idx);
+        var tiempoEl = document.getElementById('frFlushTiempo_' + idx);
         if (pctEl) pctEl.textContent = pct != null ? fmt(pct, 1) + '%' : '—';
+        if (tiempoEl) tiempoEl.textContent = fmtTiempoDeshid(tiempoDeshidFlush(f));
         if (beOEl) beOEl.textContent = fmt(f.beOleada, 1) + '%';
         // Recompute & update all beAcumulado cells (they cascade)
         var acc = 0, totH = 0, totS = 0;
