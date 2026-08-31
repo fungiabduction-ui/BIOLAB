@@ -2698,7 +2698,7 @@ window.suDbAddRow = function() {
         +   '<div class="db-row-pesos-body">'
         +     '<div class="db-peso-col db-peso-col--sust" title="Peso real del sustrato por bolsa. 0 = peso teórico del lote">'
         +       '<span class="db-cell-label">🧱 Sustrato</span>'
-        +       '<input type="number" class="db-peso-real" value="0" min="0" step="1" placeholder="—">'
+        +       '<input type="number" class="db-peso-real" value="0" min="0" step="1" placeholder="—" onchange="suDbOnChangeSustratoReal(this)">'
         +     '</div>'
         +     '<div class="db-peso-col db-peso-col--inoc" title="Peso real de la bolsa ya inoculada (sustrato + grano). Calcula el Grano automáticamente restando el peso real de Sustrato.">'
         +       '<span class="db-cell-label">⚖️ Bolsa inoc.</span>'
@@ -3319,6 +3319,26 @@ window.suDbOnChangeBolsaInoculada = function(inputEl) {
         _suDbLogGranoAuto(tanda,
             tanda + ': Grano calculado automático: ' + granoTxt
             + 'g (bolsa inoculada ' + pesoBolsaInoculada.toFixed(1) + 'g − sustrato real ' + pesoReal.toFixed(1) + 'g)');
+    }
+};
+
+// Si la fila esta en estado bloqueado (el aviso de "Carga Sustrato primero" visible), reintenta
+// el calculo de Grano automaticamente al corregir Sustrato -- en ese estado, por construccion,
+// Grano nunca llego a calcularse todavia (suDbOnChangeBolsaInoculada siempre retorna antes de
+// tocarlo cuando bloquea), asi que reintentar no puede pisar un valor que el operador haya
+// editado a mano. Si la fila NO esta bloqueada (nunca se intento, o ya calculo bien antes), no
+// hace nada -- mismo invariante de siempre: editar Sustrato solo, fuera de este caso puntual de
+// recuperacion, nunca recalcula Grano por si solo. Existe porque los navegadores reales NO
+// disparan 'change' en "Bolsa inoculada" si el operador retipea el mismo numero que ya tenia
+// cargado -- confirmado en Chrome real durante code review -- asi que sin esto, corregir
+// Sustrato despues de quedar bloqueado no tenia ningun camino de recuperacion real.
+window.suDbOnChangeSustratoReal = function(inputEl) {
+    var row = inputEl.closest('.db-row');
+    if (!row) return;
+    var msgEl = row.querySelector('.db-peso-bolsa-inoculada-msg');
+    var biInp = row.querySelector('.db-peso-bolsa-inoculada');
+    if (biInp && msgEl && msgEl.style.display === 'block') {
+        window.suDbOnChangeBolsaInoculada(biInp);
     }
 };
 
