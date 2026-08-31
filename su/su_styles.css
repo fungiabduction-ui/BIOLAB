@@ -1526,6 +1526,39 @@ body {
     background: rgba(255,192,0,0.05);
 }
 
+/* Input bolsa inoculada — acento verde */
+.db-peso-col--inoc input {
+    width: 58px;
+    padding: 4px 5px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 5px;
+    border: 1px solid rgba(112,173,71,0.25);
+    background: var(--dark, #1D1D1D);
+    color: var(--text-light, #ddd);
+    text-align: center;
+    transition: border-color 150ms, color 150ms, box-shadow 150ms;
+}
+.db-peso-col--inoc input:focus {
+    outline: none;
+    border-color: #70AD47;
+    box-shadow: 0 0 0 2px rgba(112,173,71,0.14);
+}
+.db-peso-col--inoc input:not([value="0"]):not([value=""]) {
+    border-color: #70AD47;
+    color: #a8d18d;
+    background: rgba(112,173,71,0.06);
+}
+.db-peso-bolsa-inoculada-msg {
+    display: none;
+    font-size: 0.68rem;
+    color: #FF9F45;
+    text-align: center;
+    margin-top: 2px;
+    max-width: 90px;
+    line-height: 1.15;
+}
+
 /* Mantener compatibilidad con selectores de clase directa */
 .db-row .db-peso-real        { /* heredado de .db-peso-col--sust input */ }
 .db-row .db-peso-grano-real  { /* heredado de .db-peso-col--gran input */ }
