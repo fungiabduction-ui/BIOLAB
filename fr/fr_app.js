@@ -1261,7 +1261,7 @@
         var dias = b.cicloCerrado && b.fechaCierreCiclo
             ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
             : diasEntre(b.fechaInicio, hoyISO());
-        var ge = _geTxtFromBolsa(b);
+        var ge = _geChipFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
         var grTxt = _grTxtFromBolsa(b);
         var be = beAcumulado(b.flushes);
@@ -1319,7 +1319,7 @@
             + '</td>'
             + '<td class="fr-num-days" ' + cl + ' title="Fecha de armado de la bolsa">' + esc(fEntrada) + '</td>'
             + '<td ' + cl + '><strong>' + esc(b.id) + '</strong>' + huerfanaBadge + '</td>'
-            + '<td ' + cl + '>' + esc(ge) + '</td>'
+            + '<td ' + cl + '>' + ge + '</td>'
             + '<td ' + cl + '><span class="fr-traza">' + esc(suTxt) + '</span></td>'
             + '<td ' + cl + '><span class="fr-traza">' + esc(grTxt) + '</span></td>'
             + '<td class="fr-num-days" ' + cl + '>' + (dias != null ? dias + 'd' : '-') + '</td>'
@@ -2718,10 +2718,9 @@
             var be   = beAcumulado(b.flushes);
             var rend = rendimientoFresco(b.flushes);
             var fN   = (b.flushes || []).length;
-            var ge   = _abbrevGen(
-                b.geneticaFull ||
-                [b.genetica, b.fenotipo].filter(Boolean).join(' / ') ||
-                '—'
+            var ge   = _genChipHtml(
+                b.geneticaFull || [b.genetica, b.fenotipo].filter(Boolean).join(' / ') || '',
+                b.fenId
             );
             // Pendientes no son seleccionables aún (sin ID definitivo)
             var clickAttr = esPendiente(b)
@@ -2732,7 +2731,7 @@
                 : '';
             return '<tr class="fr-row" style="' + cursor + '"' + clickAttr + '>'
                 + '<td><strong>' + esc(b.id || '—') + '</strong>' + huerfana + '</td>'
-                + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(ge) + '">' + esc(ge) + '</td>'
+                + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ge + '</td>'
                 + '<td><span class="fr-chip ' + chipClass + '">' + esc(label) + '</span></td>'
                 + '<td class="fr-num-days">' + (dias != null ? dias + 'd' : '—') + '</td>'
                 + '<td class="fr-num">' + (fN > 0 ? fN : '—') + '</td>'
@@ -2996,7 +2995,7 @@
     }
 
     function filaPendiente(b) {
-        var ge    = _geTxtFromBolsa(b);
+        var ge    = _geChipFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
         var grTxt = _grTxtFromBolsa(b);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
@@ -3008,7 +3007,7 @@
         var fechaVal = _frFechaArmadoDrafts.hasOwnProperty(b._frUuid) ? _frFechaArmadoDrafts[b._frUuid] : hoyISO();
         return '<tr class="fr-row fr-row-pendiente">'
             + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
-            + '<td>' + esc(ge) + '</td>'
+            + '<td>' + ge + '</td>'
             + '<td><span class="fr-traza">' + esc(suTxt) + '</span></td>'
             + '<td><span class="fr-traza">' + esc(grTxt) + '</span></td>'
             + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + esc(fechaVal) + '" oninput="FR._draftFechaArmado(\'' + uuid + '\', this.value)" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
