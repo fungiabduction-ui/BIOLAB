@@ -51,10 +51,17 @@ inputs de esta fila usa `oninput` hoy — no se rompe esa convención):
    contra un promedio del lote podría no corresponder a la bolsa puntual que se pesó.
 2. Si `pesoReal > 0` → `grano = pesoBolsaInoculada − pesoReal`. Se escribe directo en el `.value`
    del input `.db-peso-grano-real` de la misma fila (confirmación visual inmediata, sin UI extra).
-3. **El único disparador es el propio input "Bolsa inoculada".** Si después el operador edita
-   Sustrato, Grano NO se recalcula solo — evita pisar en silencio un valor de Grano que el
-   operador ya haya tocado a mano. Para que el cálculo refleje un Sustrato nuevo, hay que volver a
-   tocar "Bolsa inoculada" (aunque sea al mismo valor, dispara el `onchange` de nuevo).
+3. **Revisado en code review (2026-08-29) — el disparador normal es "Bolsa inoculada"; hay un
+   caso especial de recuperación en Sustrato.** Si el operador edita Sustrato después de un
+   cálculo YA exitoso (mensaje de aviso oculto), Grano NO se recalcula solo — evita pisar en
+   silencio un valor de Grano que el operador ya haya tocado a mano. Pero si la fila está en
+   estado BLOQUEADO (mensaje de aviso visible — Sustrato seguía en 0 cuando se tipeó "Bolsa
+   inoculada"), corregir Sustrato SÍ reintenta el cálculo automáticamente
+   (`suDbOnChangeSustratoReal`, agregado en `su_app.js`). Se agregó porque la redacción original de
+   este punto ("volver a tocar Bolsa inoculada, aunque sea al mismo valor, dispara el onchange de
+   nuevo") resultó ser **falsa en navegadores reales** — confirmado en Chrome real durante code
+   review: un input no dispara `change` si se retipea el mismo valor que ya tenía, así que sin este
+   camino de recuperación el operador quedaba bloqueado sin ninguna forma real de destrabar la fila.
 4. **Grano sigue siendo editable a mano en todo momento** (decisión explícita del usuario) — si el
    operador lo edita directamente después de un cálculo automático, ese valor manual queda tal
    cual, sin ningún guard que lo revierta.
@@ -77,60 +84,27 @@ Nuevo campo `pesoBolsaInoculada` por fila, mismo nivel que `pesoReal`/`pesoGrano
 **No se toca `suCalcularMetricasLote()` ni ningún otro consumidor de `pesoGranoReal`** — el nuevo
 campo es puramente una entrada de conveniencia que escribe en el campo que ya existía.
 
-## Auto-log en `dbSeguimiento`
+## Auto-log en `dbSeguimiento` — implementado y luego eliminado (2026-08-31)
 
-Hoy ninguno de los 3 pesos de esta fila genera nota automática — pero SÍ existe un patrón ya
-establecido para otros eventos de esta misma fila (`suDbOnChangeBolsas` → nota de inoculación;
-consumo de frascos GR → `suDbRegistrarSeguimiento`, `su_app.js:3195-3214`).
-
-**Decisión revisada en brainstorming (rechazado el patrón de "nota de corrección" separada que usa
-`frascos-gr`):** una sola nota por tanda que siempre refleja el valor vigente, nunca un historial
-de correcciones. Nueva función `_suDbLogGranoAuto(tanda, texto)`:
-
-```javascript
-function _suDbLogGranoAuto(tanda, texto) {
-    var nota = null;
-    for (var i = 0; i < SU.dbSeguimientoNotas.length; i++) {
-        var n = SU.dbSeguimientoNotas[i];
-        if (n.auto === true && n.tipo === 'peso-grano-auto' && n.tanda === tanda) { nota = n; break; }
-    }
-    if (nota) {
-        nota.texto = texto;
-        nota.editedAt = new Date().toISOString();
-    } else {
-        SU.dbSeguimientoNotas.push({
-            id: _suNotaId(), ts: new Date().toISOString(), tsLegacy: null, tsInferred: false,
-            tipo: 'peso-grano-auto', texto: texto, estado: 'green', auto: true, editedAt: null,
-            imagenes: [], tanda: tanda
-        });
-    }
-    window.suDbRenderSeguimientoNotas();
-}
-```
-
-- Busca por `tipo === 'peso-grano-auto' && tanda === <esta tanda>` en `SU.dbSeguimientoNotas`
-  (array ya persistido) — no depende de estado en el DOM (`dataset`), por eso sigue encontrando la
-  nota correcta después de cerrar y reabrir el lote, sin necesitar un campo de persistencia nuevo
-  en la fila `db`.
-- Campo `tanda` agregado directo al objeto de la nota — mismo precedente que ya usan CI
-  (`tandaId`), GR (`frascos`/`dias`), FR (`dias`): cada módulo agrega sus propios campos extra
-  sobre el shape unificado de notas (`id`/`ts`/`texto`/`estado`/`auto`/`tipo`/`editedAt`/`imagenes`)
-  sin romper nada compartido.
-- `editedAt` ya es un campo real del shape, ya renderizado hoy (`su_app.js:3337`, marca "✦" al
-  lado del texto) — reusar el mecanismo existente en vez de inventar uno nuevo.
-- Sin distinción de color "corrección" (🟡) vs "primera vez" (🟢) — siempre `estado:'green'`, ya
-  no aplica esa distinción porque no hay una segunda entrada que diferenciar.
-- Texto de la nota: `tanda + ': Grano calculado automático: ' + grano.toFixed(1) + 'g (bolsa inoculada ' + pesoBolsaInoculada + 'g − sustrato real ' + pesoReal + 'g)'`.
-- Se llama desde `suDbOnChangeBolsaInoculada` únicamente en el caso 2 del cálculo (Sustrato > 0,
-  cálculo exitoso) — el caso bloqueado (Sustrato en 0) no genera nota, solo el aviso visual.
+Se implementó una función `_suDbLogGranoAuto(tanda, texto)` (busca-y-actualiza por `tipo+tanda`,
+nunca duplica) y se la conectó desde `suDbOnChangeBolsaInoculada`. El review holístico final
+encontró que la búsqueda por nombre de tanda podía cruzar notas entre 2 filas si llegaban a
+compartir el mismo nombre. Al plantear esa disyuntiva (documentar la limitación vs. blindar con un
+id estable por fila), el usuario cortó por lo sano: **la nota automática no aporta nada — los
+valores explícitos (Sustrato/Bolsa inoculada/Grano) ya están en sus propios campos, y agregar una
+nota que los repite en texto libre es complejidad sin beneficio real.** Se eliminó la función
+entera y su único call site. `suDbOnChangeBolsaInoculada` ya no lee `.db-tanda` para nada (esa
+lectura también se eliminó, quedaba sin uso).
 
 ## Fuera de alcance
 
-- No se toca `db-peso-real`/`db-peso-grano-real` como inputs en sí — siguen sin `onchange`/`oninput`
-  propio salvo el nuevo comportamiento de que Grano recibe un `.value` seteado programáticamente
-  desde el handler nuevo.
-- No hay recálculo retroactivo si se edita Sustrato después del cálculo (ver punto 3 de
-  "Cálculo" arriba) — decisión explícita, no un olvido.
-- No se agrega indicador visual de "este Grano vino de un cálculo automático vs. tipeado a mano"
-  más allá de la nota en `dbSeguimiento` — el usuario no lo pidió, y agregarlo sería una superficie
-  de UI nueva no solicitada.
+- No se toca `db-peso-grano-real` como input en sí más allá de que recibe un `.value` (y el
+  atributo `value`, ver "Cálculo" arriba) seteado programáticamente desde el handler nuevo.
+- `db-peso-real` SÍ terminó necesitando su propio `onchange` (`suDbOnChangeSustratoReal`) — no
+  estaba en el alcance original, se agregó durante code review para resolver la recuperación desde
+  el estado bloqueado (ver "Cálculo", punto 3 revisado).
+- No hay recálculo retroactivo AUTOMÁTICO E INCONDICIONAL si se edita Sustrato después de un
+  cálculo ya exitoso (ver punto 3 de "Cálculo" arriba) — decisión explícita, no un olvido. Sí
+  reintenta específicamente cuando la fila está en el estado bloqueado (`suDbOnChangeSustratoReal`).
+- Ninguna nota automática ni indicador visual de "este Grano vino de un cálculo automático vs.
+  tipeado a mano" — eliminado explícitamente por pedido del usuario (ver sección de arriba).

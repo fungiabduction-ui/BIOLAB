@@ -3218,40 +3218,6 @@ function suDbRegistrarSeguimiento(tipo, mensaje, emoji) {
     window.suDbRenderSeguimientoNotas();
 }
 
-// Registra (o actualiza in-place) la nota automatica de grano calculado por resta -- a
-// diferencia de suDbRegistrarSeguimiento (que siempre agrega una entrada nueva, usado por
-// inoculacion/frascos-gr), esta busca la nota existente de esta tanda por tipo+tanda y
-// sobreescribe su texto + editedAt en vez de duplicar. Decision del usuario en brainstorming
-// (2026-08-28): una sola nota vigente por tanda, no un historial de "correcciones". Buscar por
-// tanda en vez de por un id guardado en el DOM porque asi sigue encontrando la nota correcta
-// despues de cerrar y reabrir el lote, sin necesitar un campo de persistencia nuevo en la fila.
-function _suDbLogGranoAuto(tanda, texto) {
-    var nota = null;
-    for (var i = 0; i < SU.dbSeguimientoNotas.length; i++) {
-        var n = SU.dbSeguimientoNotas[i];
-        if (n.auto === true && n.tipo === 'peso-grano-auto' && n.tanda === tanda) { nota = n; break; }
-    }
-    if (nota) {
-        nota.texto = texto;
-        nota.editedAt = new Date().toISOString();
-    } else {
-        SU.dbSeguimientoNotas.push({
-            id: _suNotaId(),
-            ts: new Date().toISOString(),
-            tsLegacy: null,
-            tsInferred: false,
-            tipo: 'peso-grano-auto',
-            texto: texto,
-            estado: 'green',
-            auto: true,
-            editedAt: null,
-            imagenes: [],
-            tanda: tanda
-        });
-    }
-    window.suDbRenderSeguimientoNotas();
-}
-
 // ---------- HANDLERS INLINE ----------
 window.suDbOnChangeBolsas = function(inputEl) {
     var row = inputEl.closest('.db-row');
@@ -3293,7 +3259,6 @@ window.suDbOnChangeBolsas = function(inputEl) {
 window.suDbOnChangeBolsaInoculada = function(inputEl) {
     var row = inputEl.closest('.db-row');
     if (!row) return;
-    var tanda = (row.querySelector('.db-tanda') || {}).value || '';
     var msgEl = row.querySelector('.db-peso-bolsa-inoculada-msg');
     var prInp = row.querySelector('.db-peso-real');
     var pgInp = row.querySelector('.db-peso-grano-real');
@@ -3313,12 +3278,6 @@ window.suDbOnChangeBolsaInoculada = function(inputEl) {
     if (pgInp) {
         pgInp.value = granoTxt;
         pgInp.setAttribute('value', granoTxt);
-    }
-
-    if (tanda) {
-        _suDbLogGranoAuto(tanda,
-            tanda + ': Grano calculado automático: ' + granoTxt
-            + 'g (bolsa inoculada ' + pesoBolsaInoculada.toFixed(1) + 'g − sustrato real ' + pesoReal.toFixed(1) + 'g)');
     }
 };
 
