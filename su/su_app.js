@@ -1433,11 +1433,17 @@ function renderizarRegistroLotes() {
                                 : (granoTeoBolsa > 0 ? granoTeoBolsa : 0);
             var granoTxt      = granoVal > 0 ? '🌾 ' + granoVal.toFixed(0) + ' g' : '—';
 
-            // Bolsa ya inoculada (sustrato + grano combinado, pesada tal cual) -- solo dato
-            // crudo tipeado por el operador, sin fallback teorico (no hay "peso de bolsa
-            // inoculada teorico" que calcular, a diferencia de Sustrato/Grano).
+            // Bolsa ya inoculada: real (pesada tal cual) > suma Sustrato+Grano (hidBolsaVal/
+            // granoVal ya resueltos arriba, cada uno real-o-teorico por su cuenta) -- a
+            // diferencia de Sustrato/Grano no hay un "teorico" propio que calcular para este
+            // campo, pero SI hay una suma derivable de los otros dos siempre que al menos uno
+            // de ellos tenga un valor > 0. Solo muestra "—" cuando ninguno de los 3 esta
+            // disponible. Pedido del usuario 2026-08-31 (nunca dejar en blanco pudiendo calcular).
             var pesoBolsaInocSub = parseFloat(r.pesoBolsaInoculada) || 0;
-            var bolsaInocTxt     = pesoBolsaInocSub > 0 ? '🔺 ' + pesoBolsaInocSub.toFixed(0) + ' g' : '—';
+            var bolsaInocReal    = pesoBolsaInocSub > 0;
+            var bolsaInocSumaVal = hidBolsaVal + granoVal;
+            var bolsaInocVal     = bolsaInocReal ? pesoBolsaInocSub : bolsaInocSumaVal;
+            var bolsaInocTxt     = bolsaInocVal > 0 ? '🔺 ' + bolsaInocVal.toFixed(0) + ' g' : '—';
 
             // Sustrato seco por tanda (lote fibra proporcional a bolsas de esta tanda)
             var sustTandaVal  = bo > 0 && _sustSecoPerBolsa > 0 ? _sustSecoPerBolsa : 0;
@@ -1460,7 +1466,7 @@ function renderizarRegistroLotes() {
                     <span class="su-sub-col">${bo}</span>
                     <span class="su-sub-col">${us}</span>
                     <span class="su-sub-col${hidBolsaReal ? ' su-sub-real' : ''}">${hidBolsaTxt}${hidBolsaReal ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
-                    <span class="su-sub-col">${bolsaInocTxt}</span>
+                    <span class="su-sub-col${bolsaInocReal ? ' su-sub-real' : ''}">${bolsaInocTxt}${bolsaInocReal ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
                     <span class="su-sub-col${granoRealFlag ? ' su-sub-real' : ''}">${granoTxt}${granoRealFlag ? '<sup class="su-sub-edit">✎</sup>' : ''}</span>
                     <span class="su-sub-col">${ratioTxt}</span>
                 </div>${beRowHtml}`;
