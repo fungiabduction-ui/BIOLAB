@@ -2702,7 +2702,7 @@ window.suDbAddRow = function() {
         +     '</div>'
         +     '<div class="db-peso-col db-peso-col--inoc" title="Peso real de la bolsa ya inoculada (sustrato + grano). Calcula el Grano automáticamente restando el peso real de Sustrato.">'
         +       '<span class="db-cell-label">⚖️ Bolsa inoc.</span>'
-        +       '<input type="number" class="db-peso-bolsa-inoculada" value="0" min="0" step="0.1" placeholder="—">'
+        +       '<input type="number" class="db-peso-bolsa-inoculada" value="0" min="0" step="0.1" placeholder="—" onchange="suDbOnChangeBolsaInoculada(this)">'
         +       '<span class="db-peso-bolsa-inoculada-msg"></span>'
         +     '</div>'
         +     '<div class="db-peso-col db-peso-col--gran" title="Peso real del grano por bolsa. 0 = calcular automáticamente desde GR">'
@@ -3276,6 +3276,50 @@ window.suDbOnChangeBolsas = function(inputEl) {
     }
     window.suDbActualizarResumen();
     if (typeof window.suRecomputeGrUsadosPush === 'function') window.suRecomputeGrUsadosPush();
+};
+
+// Calcula Grano = Bolsa inoculada - Sustrato real y lo escribe en .db-peso-grano-real de la
+// misma fila. Unico disparador: el propio input "Bolsa inoculada" (ver spec, 2026-08-28) --
+// editar Sustrato despues NO recalcula solo, para no pisar en silencio un Grano ya editado a
+// mano por el operador. Bloquea con aviso si Sustrato sigue en 0/teorico -- restar contra el
+// promedio del lote podria no corresponder a la bolsa puntual que se peso.
+//
+// setAttribute('value', ...) ademas de .value: el CSS de esta fila (.db-peso-col--gran
+// input:not([value="0"]):not([value=""])) matchea el ATRIBUTO value, no la propiedad -- sin
+// esto el input de Grano quedaria sin el acento visual "lleno" pese a tener un numero real
+// adentro (hallazgo de code review de la Task 1: los 3 pesos de esta fila comparten este gap,
+// pero aca es donde SI importa arreglarlo, porque este handler es el unico camino nuevo de
+// este plan que escribe en Grano programaticamente).
+window.suDbOnChangeBolsaInoculada = function(inputEl) {
+    var row = inputEl.closest('.db-row');
+    if (!row) return;
+    var tanda = (row.querySelector('.db-tanda') || {}).value || '';
+    var msgEl = row.querySelector('.db-peso-bolsa-inoculada-msg');
+    var prInp = row.querySelector('.db-peso-real');
+    var pgInp = row.querySelector('.db-peso-grano-real');
+
+    var pesoBolsaInoculada = parseFloat(inputEl.value) || 0;
+    if (msgEl) { msgEl.style.display = 'none'; msgEl.textContent = ''; }
+    if (pesoBolsaInoculada <= 0) return;
+
+    var pesoReal = parseFloat(prInp && prInp.value) || 0;
+    if (pesoReal <= 0) {
+        if (msgEl) { msgEl.textContent = 'Cargá el peso real de Sustrato primero.'; msgEl.style.display = 'block'; }
+        return;
+    }
+
+    var grano = pesoBolsaInoculada - pesoReal;
+    var granoTxt = grano.toFixed(1);
+    if (pgInp) {
+        pgInp.value = granoTxt;
+        pgInp.setAttribute('value', granoTxt);
+    }
+
+    if (tanda) {
+        _suDbLogGranoAuto(tanda,
+            tanda + ': Grano calculado automático: ' + granoTxt
+            + 'g (bolsa inoculada ' + pesoBolsaInoculada.toFixed(1) + 'g − sustrato real ' + pesoReal.toFixed(1) + 'g)');
+    }
 };
 
 // ---------- CÁLCULO DE RESUMEN + VALIDACIÓN ----------
