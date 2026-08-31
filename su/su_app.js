@@ -3449,6 +3449,12 @@ window.suDbCollect = function() {
         var _pgRaw = parseFloat((row.querySelector('.db-peso-grano-real') || {}).value) || 0;
         var pesoGranoReal = _pgRaw > 0 ? _pgRaw : null;
 
+        // Peso real de la bolsa ya inoculada (g). Solo alimenta el calculo de pesoGranoReal via
+        // suDbOnChangeBolsaInoculada -- suCalcularMetricasLote y todo lo demas rio abajo sigue
+        // leyendo unicamente pesoGranoReal, sin cambios.
+        var _piRaw = parseFloat((row.querySelector('.db-peso-bolsa-inoculada') || {}).value) || 0;
+        var pesoBolsaInoculada = _piRaw > 0 ? _piRaw : null;
+
         // Leer fuentes desde el sub-panel de sources
         var allSources = suDbGetSourcesFromRow(row);
         var rawSources = allSources.filter(function(s) { return s.grLoteId && s.grTandaId; });
@@ -3476,6 +3482,7 @@ window.suDbCollect = function() {
             bolsas:    bolsas,
             pesoReal:      pesoReal,      // null → teórico sustrato; >0 → override manual (g/bolsa)
             pesoGranoReal: pesoGranoReal, // null → calcular desde GR; >0 → override manual (g/bolsa)
+            pesoBolsaInoculada: pesoBolsaInoculada, // null o >0; solo insumo del calculo, nada rio abajo lo lee
             grSources: grSources,
             // Campos legacy (primera fuente): no eliminar — necesarios para compatibilidad histórica
             grano:     first.grTandaId || null,
@@ -3512,6 +3519,8 @@ window.suDbLoadFromLote = function(lote) {
             if (prInp) prInp.value = (parseFloat(d.pesoReal) > 0) ? parseFloat(d.pesoReal) : 0;
             var pgInp = mainRow.querySelector('.db-peso-grano-real');
             if (pgInp) pgInp.value = (parseFloat(d.pesoGranoReal) > 0) ? parseFloat(d.pesoGranoReal) : 0;
+            var piInp = mainRow.querySelector('.db-peso-bolsa-inoculada');
+            if (piInp) piInp.value = (parseFloat(d.pesoBolsaInoculada) > 0) ? parseFloat(d.pesoBolsaInoculada) : 0;
 
             // Normalizar fuentes: soporta grSources[] (nuevo) y campos flat (histórico)
             var sources = suDbNormSources(d, grLoteDefault);
