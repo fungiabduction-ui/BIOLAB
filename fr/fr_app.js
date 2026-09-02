@@ -1293,11 +1293,11 @@
             var maxFlushFecha = (b.flushes || []).reduce(function(m, f) { return (f.fecha || '') > m ? (f.fecha || '') : m; }, '');
             if (maxFlushFecha) fUltCos = fmtFecha(maxFlushFecha);
         }
-        var archStr = b.fechaCierreCiclo || b.fechaCancelacion;
+        var archStr = b.fechaCierreCiclo || b.fechaCancelacion || b.fechaNoFructifico;
         if (archStr) fArchFecha = fmtFecha(archStr);
         // Mapping de estados internos → etiquetas de display en chip.
         // Estado interno 'ciclo cerrado' → label visible 'FIN DEL CICLO'.
-        var _ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO' };
+        var _ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO', 'no fructifico': 'NO FRUCTIFICÓ' };
         var estadoLabel = _ESTADO_LABELS[estado] || estado;
 
         var chipClass = 'fr-chip-neutral';
@@ -1308,6 +1308,7 @@
         else if (estado === 'contaminada') chipClass = 'fr-chip-bad';
         else if (estado === 'cancelada') chipClass = 'fr-chip-cancelada';
         else if (estado === 'ciclo cerrado') chipClass = 'fr-chip-fin-ciclo';
+        else if (estado === 'no fructifico') chipClass = 'fr-chip-no-fructifico';
 
         var selectedAttr = (selectedId === b.id) ? ' fr-row-selected' : '';
 
@@ -1955,7 +1956,7 @@
                 +   ' style="display:none" onclick="FR.cancelarRenombreId()" title="Cancelar">&#10007;</button>';
         }
         var estado = computeEstado(b);
-        var _DASH_ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO' };
+        var _DASH_ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO', 'no fructifico': 'NO FRUCTIFICÓ' };
         var stEl = document.getElementById('frDashState');
         if (stEl) {
             stEl.textContent = _DASH_ESTADO_LABELS[estado] || estado;
@@ -1965,6 +1966,7 @@
                  estado === 'pinning'      ? 'fr-chip-warn' :
                  estado === 'cosechado'    ? 'fr-chip-ok' :
                  estado === 'ciclo cerrado'? 'fr-chip-fin-ciclo' :
+                 estado === 'no fructifico'? 'fr-chip-no-fructifico' :
                  estado === 'contaminada'  ? 'fr-chip-bad' :
                  'fr-chip-neutral');
         }
@@ -2697,7 +2699,7 @@
     // contenedor #frDashEmpty cuando no hay bolsa seleccionada.
     // No crea nueva pestaña ni modifica la estructura de navegación.
     // ======================================================
-    var _OV_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO' };
+    var _OV_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO', 'no fructifico': 'NO FRUCTIFICÓ' };
 
     function _ovChipClass(estado) {
         if (estado === 'colonizando')   return 'fr-chip-warn';
@@ -2707,6 +2709,7 @@
         if (estado === 'contaminada')   return 'fr-chip-bad';
         if (estado === 'cancelada')     return 'fr-chip-cancelada';
         if (estado === 'ciclo cerrado') return 'fr-chip-fin-ciclo';
+        if (estado === 'no fructifico') return 'fr-chip-no-fructifico';
         if (estado === 'pendiente')     return 'fr-chip-pendiente';
         return 'fr-chip-neutral';
     }
@@ -3492,7 +3495,7 @@
         set('frDaysCosecha', b.fechaCosecha      ? ('dia ' + (diasEntre(b.fechaInicio, b.fechaCosecha) || 0))      : 'pendiente');
 
         // Actualizar chip de estado por si cambió
-        var _UF_ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO' };
+        var _UF_ESTADO_LABELS = { 'ciclo cerrado': 'FIN DEL CICLO', 'no fructifico': 'NO FRUCTIFICÓ' };
         var stEl = document.getElementById('frDashState');
         if (stEl) {
             stEl.textContent = _UF_ESTADO_LABELS[b.estado] || b.estado;
@@ -3502,6 +3505,7 @@
                  b.estado === 'pinning'       ? 'fr-chip-warn' :
                  b.estado === 'cosechado'     ? 'fr-chip-ok' :
                  b.estado === 'ciclo cerrado' ? 'fr-chip-fin-ciclo' :
+                 b.estado === 'no fructifico' ? 'fr-chip-no-fructifico' :
                  b.estado === 'contaminada'   ? 'fr-chip-bad' :
                  'fr-chip-neutral');
         }
