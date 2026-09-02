@@ -1270,6 +1270,86 @@ function suFormatFecha(iso) {
     } catch (e) { return String(iso); }
 }
 window.suFormatFecha = suFormatFecha;
+
+// Traduce el estado archivado real de una bolsa FR (solo lectura, nunca escribe)
+// a texto + color para mostrar en la card de Registro de SU.
+function _suFRArchivoInfo(frB) {
+    if (frB.contaminada === true) {
+        return { label: 'Contaminada' + (frB.fechaContaminacion ? ' (' + suFormatFecha(frB.fechaContaminacion) + ')' : ''), dotClass: 'su-be-dot--bad' };
+    }
+    if (frB.noFructifico === true) {
+        return { label: 'No fructificó' + (frB.fechaNoFructifico ? ' (' + suFormatFecha(frB.fechaNoFructifico) + ')' : ''), dotClass: 'su-be-dot--warn' };
+    }
+    if (frB.cicloCerrado === true) {
+        return { label: 'Fin del ciclo' + (frB.fechaCierreCiclo ? ' (' + suFormatFecha(frB.fechaCierreCiclo) + ')' : ''), dotClass: 'su-be-dot--good' };
+    }
+    if (frB.cancelada === true) {
+        return { label: 'Cancelada', dotClass: 'su-be-dot--dim' };
+    }
+    return { label: 'Archivada', dotClass: 'su-be-dot--dim' };
+}
+
+// Fecha local (no UTC) — mismo criterio que hoyISO() de FR, para que
+// fechaNoFructifico/noFructificoRevisadoEn no corran de día según timezone.
+function _suHoyISOLocal() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Escritura directa a fr_bolsas sin depender de que el módulo FR esté montado —
+// mismo patrón que _suPropagarRenameFR: leer, mutar por _frUuid, guardar,
+// notificar con el mismo evento que FR ya escucha para sus propios cambios.
+function _suEscribirBolsaFR(frUuid, mutator) {
+    try {
+        var raw = localStorage.getItem('fr_bolsas');
+        if (!raw) return false;
+        var bolsas = JSON.parse(raw);
+        if (!Array.isArray(bolsas)) return false;
+        var b = bolsas.find(function(x) { return x._frUuid === frUuid; });
+        if (!b) return false;
+        mutator(b);
+        localStorage.setItem('fr_bolsas', JSON.stringify(bolsas));
+        try { window.dispatchEvent(new Event('su-lote-guardado')); } catch (e) {}
+        return true;
+    } catch (e) {
+        if (window.BioLog) window.BioLog.logError('SU', '_suEscribirBolsaFR', e, { frUuid: frUuid });
+        alert('⚠ No se pudo actualizar la bolsa en FR (¿localStorage lleno?). Revisá manualmente en el módulo FR.');
+        return false;
+    }
+}
+
+function suMarcarBolsaNoFructifico(frUuid, frId) {
+    if (!frUuid) return;
+    if (!confirm('Marcar la bolsa ' + (frId || '') + ' como NO FRUCTIFICÓ?\n\nSe archivará en FR. Es reversible desde FR → Archivo.')) return;
+    var ok = _suEscribirBolsaFR(frUuid, function(b) {
+        b.noFructifico = true;
+        b.fechaNoFructifico = _suHoyISOLocal();
+        b.noFructificoRevisadoEn = null;
+        if (!Array.isArray(b.observaciones)) b.observaciones = [];
+        b.observaciones.push({
+            id: 'nt_fr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+            ts: new Date().toISOString(), tsLegacy: null, tsInferred: false,
+            texto: 'Bolsa marcada como NO FRUCTIFICÓ desde SU. Archivada.',
+            estado: 'yellow', auto: false, tipo: null, editedAt: null, imagenes: []
+        });
+    });
+    if (ok) renderizarRegistroLotes();
+}
+
+function suRevisarBolsaSigueEnSeguimiento(frUuid) {
+    if (!frUuid) return;
+    var ok = _suEscribirBolsaFR(frUuid, function(b) {
+        b.noFructificoRevisadoEn = _suHoyISOLocal();
+        if (!Array.isArray(b.observaciones)) b.observaciones = [];
+        b.observaciones.push({
+            id: 'nt_fr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+            ts: new Date().toISOString(), tsLegacy: null, tsInferred: false,
+            texto: 'Revisado desde SU: no está abandonada, sigue en seguimiento.',
+            estado: 'none', auto: false, tipo: null, editedAt: null, imagenes: []
+        });
+    });
+    if (ok) renderizarRegistroLotes();
+}
 // Letra alfabética: 0→a, 1→b, ... 25→z, 26→aa, ...
 
 function renderizarRegistroLotes() {
@@ -1421,13 +1501,30 @@ function renderizarRegistroLotes() {
                     <span class="su-be-label">BE ${beStats.beTotal.toFixed(0)}% total (${oleadasTxt})</span>
                 </div>`;
                     }
+                } else if (frB.contaminada === true || frB.cicloCerrado === true || frB.noFructifico === true || frB.cancelada === true) {
+                    // FIX: la bolsa ya se resolvió en FR — mostrar su estado real en vez del
+                    // aviso de "¿no fructificó?", que antes quedaba huérfano para siempre sin
+                    // importar qué pasara con la bolsa en FR (bug reportado por el usuario:
+                    // marcó una bolsa contaminada en FR y SU seguía preguntando indefinidamente).
+                    var arcInfo = _suFRArchivoInfo(frB);
+                    beRowHtml = `
+                <div class="su-be-row">
+                    <span class="su-be-dot ${arcInfo.dotClass}"></span>
+                    <span class="su-be-label">🍄 ${arcInfo.label}</span>
+                </div>`;
                 } else if (frB.fechaInicio) {
                     var diasSinFR = (Date.now() - new Date(frB.fechaInicio).getTime()) / 86400000;
-                    if (diasSinFR >= 60) {
+                    var snoozed = frB.noFructificoRevisadoEn &&
+                        (Date.now() - new Date(frB.noFructificoRevisadoEn).getTime()) < 7 * 86400000;
+                    if (diasSinFR >= 60 && !snoozed) {
                         beRowHtml = `
                 <div class="su-be-row su-be-danger">
                     <span class="su-be-danger-dots"><span></span><span></span><span></span></span>
-                    <span class="su-be-label">Sin registro FR desde hace ${Math.floor(diasSinFR)} días — ¿bolsa abandonada?</span>
+                    <span class="su-be-label">Sin registro FR desde hace ${Math.floor(diasSinFR)} días — ¿no fructificó?</span>
+                    <span class="su-be-nf-actions">
+                        <button type="button" class="su-be-btn-si" onclick="event.stopPropagation();suMarcarBolsaNoFructifico('${frB._frUuid||''}','${frB.id||''}')">Sí, no fructificó</button>
+                        <button type="button" class="su-be-btn-no" onclick="event.stopPropagation();suRevisarBolsaSigueEnSeguimiento('${frB._frUuid||''}')">No, sigue en seguimiento</button>
+                    </span>
                 </div>`;
                     }
                 }
@@ -3887,6 +3984,8 @@ Object.assign(window, {
     // Utilidades expuestas
     suGenerarId,
     suNavToFR,
+    suMarcarBolsaNoFructifico,
+    suRevisarBolsaSigueEnSeguimiento,
     // suNavToFR ya expuesto arriba en el bloque
 });
 
