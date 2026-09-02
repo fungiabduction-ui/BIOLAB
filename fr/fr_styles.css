@@ -1190,6 +1190,16 @@ p.fr-hint {
     letter-spacing: 0.4px;
 }
 
+/* No fructificó — bolsa con 0 cosechas que nunca prendió. Violeta: no es un
+   error (rojo) ni un cierre deliberado de una bolsa que sí produjo (rojo
+   oscuro de fin-ciclo) ni ambar (choca con fr-chip-pendiente) — es
+   "no pasó nada". */
+.fr-chip-no-fructifico {
+    background: rgba(130, 90, 190, 0.20);
+    color: #B79CFF;
+    border-color: rgba(150, 110, 210, 0.5);
+}
+
 .fr-btn-eliminar-canc {
     margin-left: 6px;
     padding: 1px 6px;
