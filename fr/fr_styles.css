@@ -852,6 +852,35 @@ body {
     opacity: 0.6;
 }
 
+/* No fructificó — acción reversible, mismo tratamiento visual que Cerrar ciclo
+   pero con el violeta del chip para que se identifique de un vistazo. */
+.fr-btn-no-fructifico {
+    background: transparent;
+    color: #B79CFF;
+    border: 1px solid rgba(183,156,255,0.45);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease, box-shadow .14s ease, transform .08s ease;
+}
+.fr-btn-no-fructifico:hover {
+    background: rgba(183,156,255,0.10);
+    border-color: #B79CFF;
+    box-shadow: 0 0 0 2px rgba(183,156,255,0.18);
+}
+.fr-btn-no-fructifico:active { transform: translateY(1px); }
+.fr-btn-no-fructifico:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
 .fr-contam-info {
     font-size: 0.82rem;
     color: var(--text-muted);
@@ -867,6 +896,11 @@ body {
     font-weight: 600;
     font-style: normal;
     text-shadow: 0 0 4px var(--fr-accent-glow);
+}
+.fr-contam-info.is-no-fructifico {
+    color: #B79CFF;
+    font-weight: 600;
+    font-style: normal;
 }
 
 /* Hint de edición en vivo (reemplaza al botón Editar) */
