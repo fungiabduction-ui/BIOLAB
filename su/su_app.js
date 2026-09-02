@@ -1306,7 +1306,10 @@ function _suEscribirBolsaFR(frUuid, mutator) {
         var bolsas = JSON.parse(raw);
         if (!Array.isArray(bolsas)) return false;
         var b = bolsas.find(function(x) { return x._frUuid === frUuid; });
-        if (!b) return false;
+        if (!b) {
+            alert('⚠ No se encontró la bolsa en FR (puede haber cambiado desde que se cargó esta pantalla). Recargá SU e intentá de nuevo.');
+            return false;
+        }
         mutator(b);
         localStorage.setItem('fr_bolsas', JSON.stringify(bolsas));
         try { window.dispatchEvent(new Event('su-lote-guardado')); } catch (e) {}
@@ -1325,6 +1328,7 @@ function suMarcarBolsaNoFructifico(frUuid, frId) {
         b.noFructifico = true;
         b.fechaNoFructifico = _suHoyISOLocal();
         b.noFructificoRevisadoEn = null;
+        b.estado = 'no fructifico';
         if (!Array.isArray(b.observaciones)) b.observaciones = [];
         b.observaciones.push({
             id: 'nt_fr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
@@ -1501,7 +1505,7 @@ function renderizarRegistroLotes() {
                     <span class="su-be-label">BE ${beStats.beTotal.toFixed(0)}% total (${oleadasTxt})</span>
                 </div>`;
                     }
-                } else if (frB.contaminada === true || frB.cicloCerrado === true || frB.noFructifico === true || frB.cancelada === true) {
+                } else if (!frB.pendienteConfirmacion && (frB.contaminada === true || frB.cicloCerrado === true || frB.noFructifico === true || frB.cancelada === true)) {
                     // FIX: la bolsa ya se resolvió en FR — mostrar su estado real en vez del
                     // aviso de "¿no fructificó?", que antes quedaba huérfano para siempre sin
                     // importar qué pasara con la bolsa en FR (bug reportado por el usuario:
@@ -1512,7 +1516,7 @@ function renderizarRegistroLotes() {
                     <span class="su-be-dot ${arcInfo.dotClass}"></span>
                     <span class="su-be-label">🍄 ${arcInfo.label}</span>
                 </div>`;
-                } else if (frB.fechaInicio) {
+                } else if (!frB.pendienteConfirmacion && frB.fechaInicio) {
                     var diasSinFR = (Date.now() - new Date(frB.fechaInicio).getTime()) / 86400000;
                     var snoozed = frB.noFructificoRevisadoEn &&
                         (Date.now() - new Date(frB.noFructificoRevisadoEn).getTime()) < 7 * 86400000;
