@@ -278,6 +278,9 @@
         // cicloCerrado se evalúa ANTES de flushes: una bolsa cerrada con flushes
         // debe mostrar 'ciclo cerrado', no 'cosechado'.
         if (b.cicloCerrado === true) return 'ciclo cerrado';
+        // noFructifico: estado terminal propio para bolsas con 0 cosechas — distinto de
+        // cicloCerrado (que sella el ÚLTIMO flush de una bolsa que sí produjo).
+        if (b.noFructifico === true) return 'no fructifico';
         if (Array.isArray(b.flushes) && b.flushes.length > 0) return 'cosechado';
         if (b.fechaCosecha) return 'cosechado';
         if (b.fechaPines) return 'pinning';
@@ -296,7 +299,7 @@
         if (!b) return false;
         // pendientes NO van al archivo — tienen su propia sección
         if (esPendiente(b)) return false;
-        return b.cancelada === true || b.contaminada === true || b.cicloCerrado === true;
+        return b.cancelada === true || b.contaminada === true || b.cicloCerrado === true || b.noFructifico === true;
     }
     function esCosecha(b) {
         if (!b) return false;
@@ -2166,6 +2169,7 @@
         if (b.cancelada)             return 'cancelada';
         if (b.contaminada)           return 'contaminada';
         if (b.cicloCerrado)          return 'ciclo cerrado';
+        if (b.noFructifico)          return 'no fructifico';
         if (Array.isArray(b.flushes) && b.flushes.length > 0) return 'cosechado';
         if (b.fechaCosecha)          return 'cosechado';
         if (b.fechaPines)            return 'pinning';
@@ -2177,7 +2181,7 @@
             'cosechado':    'ok',  'colonizado':  'col',
             'pinning':      'pin', 'colonizando': 'act',
             'contaminada':  'err', 'cancelada':   'err',
-            'ciclo cerrado':'arc', 'pendiente':   'pend'
+            'ciclo cerrado':'arc', 'no fructifico':'arc', 'pendiente':   'pend'
         };
         return 'frt-badge-' + (map[estado] || 'act');
     }
