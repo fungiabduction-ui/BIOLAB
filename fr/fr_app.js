@@ -3589,6 +3589,51 @@
         renderAll();
     };
 
+    // ------------------------------------------------------
+    // Marcar bolsa como NO FRUCTIFICÓ (reversible).
+    // Estado terminal propio, distinto de cicloCerrado: cicloCerrado sella el
+    // ÚLTIMO FLUSH de una bolsa que sí produjo — esto es para bolsas con CERO
+    // cosechas que nunca prendieron. Guard: solo aplica con 0 flushes y
+    // ningún otro estado terminal activo.
+    // ------------------------------------------------------
+    FR.marcarNoFructifico = function() {
+        var b = getSelected();
+        if (!b) { alert('Selecciona una bolsa primero.'); return; }
+        if (b.noFructifico === true) {
+            if (!confirm('La bolsa ' + b.id + ' está marcada como NO FRUCTIFICÓ.\n\n¿Querés reabrirla?')) return;
+            b.noFructifico = false;
+            b.fechaNoFructifico = null;
+            addObsTo(b, 'Reabierta desde Archivo (estaba marcada como no fructificó).', 'manual', 'yellow');
+            b.estado = computeEstado(b);
+            saveBolsas();
+            renderAll();
+            return;
+        }
+        if (b.contaminada === true) {
+            alert('La bolsa ' + b.id + ' está marcada como CONTAMINADA. No aplica "no fructificó".');
+            return;
+        }
+        if (b.cicloCerrado === true) {
+            alert('La bolsa ' + b.id + ' ya tiene el ciclo cerrado (tuvo cosecha). No aplica "no fructificó".');
+            return;
+        }
+        if (Array.isArray(b.flushes) && b.flushes.length > 0) {
+            alert('La bolsa ' + b.id + ' ya tiene cosechas registradas. Usá "Cerrar ciclo" en vez de esto.');
+            return;
+        }
+        if (!confirm('Marcar la bolsa ' + b.id + ' como NO FRUCTIFICÓ?\n\nLa bolsa se archivará. Es reversible desde Archivo.')) return;
+        var prevEstado = computeEstado(b);
+        b.noFructifico = true;
+        b.fechaNoFructifico = hoyISO();
+        addObsTo(b, 'Bolsa marcada como NO FRUCTIFICÓ desde FR. Archivada.', 'manual', 'yellow');
+        b.estado = computeEstado(b);
+        if (b.estado !== prevEstado) {
+            addObsTo(b, 'Estado: ' + prevEstado + ' -> ' + b.estado, 'auto', 'none');
+        }
+        saveBolsas();
+        renderAll();
+    };
+
     FR.recomputeFlushesLive = function() {
         var b = getSelected();
         if (!b || !Array.isArray(b.flushes)) return;
