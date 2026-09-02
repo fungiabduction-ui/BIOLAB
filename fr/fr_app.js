@@ -2103,10 +2103,12 @@
                 : '';
         }
 
-        // Estado de los botones de acción terminal (Contaminación + Cerrar ciclo)
+        // Estado de los botones de acción terminal (Contaminación + Cerrar ciclo + No fructificó)
         var btnContam = document.getElementById('frBtnContam');
         var btnCerrar = document.getElementById('frBtnCerrar');
+        var btnNoFruct = document.getElementById('frBtnNoFructifico');
         var infoContam = document.getElementById('frContamInfo');
+        var tieneFlushes = Array.isArray(b.flushes) && b.flushes.length > 0;
 
         if (b.contaminada === true) {
             if (btnContam) {
@@ -2117,9 +2119,14 @@
                 btnCerrar.disabled = true;
                 btnCerrar.textContent = '\u23F9 Cerrar ciclo';
             }
+            if (btnNoFruct) {
+                btnNoFruct.disabled = true;
+                btnNoFruct.textContent = '\uD83D\uDD73 No fructific\u00f3';
+            }
             if (infoContam) {
                 infoContam.classList.add('is-contam');
                 infoContam.classList.remove('is-cerrado');
+                infoContam.classList.remove('is-no-fructifico');
                 var fc = b.fechaContaminacion ? fmtFecha(b.fechaContaminacion) : '';
                 infoContam.textContent = 'Bolsa contaminada' + (fc ? ' el ' + fc : '') + ' \u00b7 Archivada';
             }
@@ -2132,11 +2139,36 @@
                 btnCerrar.disabled = false;
                 btnCerrar.textContent = '\u21A9 Reabrir ciclo';
             }
+            if (btnNoFruct) {
+                btnNoFruct.disabled = true;
+                btnNoFruct.textContent = '\uD83D\uDD73 No fructific\u00f3';
+            }
             if (infoContam) {
                 infoContam.classList.remove('is-contam');
                 infoContam.classList.add('is-cerrado');
+                infoContam.classList.remove('is-no-fructifico');
                 var fcc = b.fechaCierreCiclo ? fmtFecha(b.fechaCierreCiclo) : '';
                 infoContam.textContent = 'Ciclo cerrado' + (fcc ? ' el ' + fcc : '') + ' \u00b7 Archivada';
+            }
+        } else if (b.noFructifico === true) {
+            if (btnContam) {
+                btnContam.disabled = true;
+                btnContam.textContent = '\uD83D\uDD34 Contaminaci\u00f3n';
+            }
+            if (btnCerrar) {
+                btnCerrar.disabled = true;
+                btnCerrar.textContent = '\u23F9 Cerrar ciclo';
+            }
+            if (btnNoFruct) {
+                btnNoFruct.disabled = false;
+                btnNoFruct.textContent = '\u21A9 Reabrir (no fructific\u00f3)';
+            }
+            if (infoContam) {
+                infoContam.classList.remove('is-contam');
+                infoContam.classList.remove('is-cerrado');
+                infoContam.classList.add('is-no-fructifico');
+                var fnf = b.fechaNoFructifico ? fmtFecha(b.fechaNoFructifico) : '';
+                infoContam.textContent = 'No fructific\u00f3' + (fnf ? ' el ' + fnf : '') + ' \u00b7 Archivada';
             }
         } else {
             if (btnContam) {
@@ -2144,12 +2176,17 @@
                 btnContam.textContent = '\uD83D\uDD34 Contaminaci\u00f3n';
             }
             if (btnCerrar) {
-                btnCerrar.disabled = false;
+                btnCerrar.disabled = !tieneFlushes;
                 btnCerrar.textContent = '\u23F9 Cerrar ciclo';
+            }
+            if (btnNoFruct) {
+                btnNoFruct.disabled = tieneFlushes;
+                btnNoFruct.textContent = '\uD83D\uDD73 No fructific\u00f3';
             }
             if (infoContam) {
                 infoContam.classList.remove('is-contam');
                 infoContam.classList.remove('is-cerrado');
+                infoContam.classList.remove('is-no-fructifico');
                 infoContam.textContent = '';
             }
         }
