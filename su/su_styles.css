@@ -2138,6 +2138,7 @@ body {
 .su-be-dot--good { background: #70AD47; box-shadow: 0 0 6px #70AD47; }
 .su-be-dot--warn { background: #FFC000; box-shadow: 0 0 6px #FFC000; }
 .su-be-dot--bad  { background: #FF6B6B; box-shadow: 0 0 6px #FF6B6B; }
+.su-be-dot--dim  { background: #888; box-shadow: none; animation: none; }
 .su-be-label {
     color: var(--text-muted, #999);
     font-weight: 600;
@@ -2164,6 +2165,33 @@ body {
     0%, 100% { opacity: 1;   transform: scale(1);    }
     50%       { opacity: 0.25; transform: scale(0.8); }
 }
+
+.su-be-nf-actions {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 8px;
+}
+.su-be-btn-si,
+.su-be-btn-no {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.su-be-btn-si {
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.5);
+    color: #FF6B6B;
+}
+.su-be-btn-si:hover { background: rgba(255, 107, 107, 0.28); }
+.su-be-btn-no {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-muted, #999);
+}
+.su-be-btn-no:hover { background: rgba(255,255,255,0.09); }
 
 /* Chips de registro */
 .su-kchip {
