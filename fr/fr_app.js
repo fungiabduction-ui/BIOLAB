@@ -1245,7 +1245,7 @@
             return _aggSUCache[suLoteId];
         }
         var contam = deLote.filter(function(x) { return x.contaminada === true; }).length;
-        var colon = deLote.filter(function(x) { return !!x.fechaColonizacion && x.contaminada !== true; }).length;
+        var colon = deLote.filter(function(x) { return !!x.fechaColonizacion && x.contaminada !== true && x.noFructifico !== true; }).length;
         var diasArr = deLote
             .filter(function(x) { return !!x.fechaColonizacion && !!x.fechaInicio; })
             .map(function(x) { return diasEntre(x.fechaInicio, x.fechaColonizacion); })
@@ -4400,7 +4400,7 @@
         var sel = document.getElementById('frExBase');
         if (!sel) return;
         var archivadas = bolsas.filter(function(b) {
-            return b.cancelada === true || b.contaminada === true || b.cicloCerrado === true;
+            return b.cancelada === true || b.contaminada === true || b.cicloCerrado === true || b.noFructifico === true;
         }).sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
         var opts = '<option value="">— Sin base (desde insumos directos) —</option>';
         archivadas.forEach(function(b) {
