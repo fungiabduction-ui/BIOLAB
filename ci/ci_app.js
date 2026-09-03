@@ -799,118 +799,22 @@ function ciRenderFormulasList() {
   if (!forms.length) {
     el.innerHTML = '<div class="empty">Sin fórmulas registradas. Creá una arriba con "+ Nueva Fórmula CI".</div>';
     _actualizarToggleArchivadas(forms);
+    _ciActualizarContadorBusqueda('ci-formulas-search-count', '', 0, 0);
     return;
   }
 
-  // Filtrar según toggle
-  const visibles = _ciMostrarArchivadas ? forms : forms.filter(f => !f.archivada);
+  const query = (document.getElementById('ci-formulas-search') || {}).value || '';
+  const { html, total, archivedShown } = _ciBuildFormulaTilesHtml(
+    forms, segs, ings, query, _ciMostrarArchivadas, /* showUsarComoBase */ true
+  );
 
-  // Ordenar por fecha desc
-  const sorted = [...visibles].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  _ciActualizarContadorBusqueda('ci-formulas-search-count', query.trim(), total, archivedShown);
 
-  // Renderizar como tile grid — click abre en Dashboard detalle
-  el.innerHTML = '<div class="ci-dash-grid">' + sorted.map(f => {
-    const ingsSorted = [...f.ingredientes].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    const { c, n, masa } = calcCN(ingsSorted, ings);
-    const cn = n > 0 ? (c / n).toFixed(1) : '—';
-
-    const segsF  = segs.filter(s => s.formula_id === f.id);
-    const totalP = segsF.reduce((s, r) => s + (r.placas || 0), 0);
-    const totalC = segsF.reduce((s, r) => s + (r.contaminados || 0), 0);
-    const sanas  = totalP - totalC;
-    const ratio  = totalP > 0 ? Math.round(sanas / totalP * 100) : null;
-    const ratioCol = ratio === null ? 'var(--tx3)'
-      : ratio >= 80 ? 'var(--ac)' : ratio >= 50 ? 'var(--wn)' : 'var(--er)';
-
-    // Chips de genéticas usadas — vistazo rápido sin entrar a la fórmula (2026-08-04,
-    // pedido tras el incidente R244/244 en CI-0012: un error de carga de genética
-    // debería poder detectarse desde afuera, no solo abriendo cada fórmula).
-    const geneticasUnicas = [...new Set(segsF.map(s => s.genetica).filter(Boolean))];
-    const geneticasChipsHtml = geneticasUnicas.length ? `
-        <div class="ci-dash-gen-chips">
-          ${geneticasUnicas.map(gid => {
-            const snap = _ciResolverGeneticaSnapshot(gid);
-            const full  = snap ? _segAbreviarEspecie(snap.label) : gid;
-            const corto = snap ? _segSoloUltimoSegmento(snap.label) : gid;
-            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(full)}">🧬 ${esc(corto)}</span>`;
-          }).join('')}
-        </div>` : '';
-
-    const tileIdDate = (() => {
-      const seg = segsF.filter(s => s.colonizacion)
-        .sort((a, b) => new Date(b.colonizacion) - new Date(a.colonizacion))[0];
-      if (!seg) return ciFormatDate(f.fecha).split(' ')[0];
-      const colDate = _segParseDate(seg.colonizacion);
-      if (!colDate || isNaN(colDate)) return ciFormatDate(f.fecha).split(' ')[0];
-      const colonFmt = ciFormatDate(colDate.toISOString()).split(' ')[0];
-      if (seg.inoculoFecha || seg.inoculoTs) {
-        const inoDate = seg.inoculoFecha ? _segParseDate(seg.inoculoFecha) : new Date(seg.inoculoTs);
-        const dias    = Math.round((colDate - inoDate) / 86400000);
-        if (isFinite(dias) && dias >= 0) {
-          return `${ciFormatDate(inoDate.toISOString()).split(' ')[0]} - ${colonFmt} - D ${dias}`;
-        }
-      }
-      return `Col: ${colonFmt}`;
-    })();
-
-    const diasBadge = _ciDashDiasDesdeInoculacion(segsF);
-
-    const expCount = expByFormula(f.id).length;
-    const notas    = (SEG.seguimientoNotas[f.id] || []);
-    const lastNota = notas.length ? notas[notas.length - 1] : null;
-    const estadoColor = { green: 'var(--ac)', yellow: 'var(--wn)', red: 'var(--er)', none: 'var(--tx3)' };
-    const notaCol  = lastNota ? (estadoColor[lastNota.estado] || 'var(--tx3)') : 'var(--tx3)';
-
-    const ratioBar = ratio !== null ? `
-      <div style="margin:6px 0 4px;height:3px;border-radius:2px;background:var(--bg-tertiary);overflow:hidden">
-        <div style="height:100%;width:${ratio}%;background:${ratioCol};border-radius:2px;transition:width .4s"></div>
-      </div>` : '';
-
-    return `
-      <div class="ci-dash-tile${f.archivada ? ' ci-tile-archivada' : ''}" onclick="ciDashOpenFormula('${f.id}')">
-        <div class="ci-dash-tile-top">
-          <span class="ci-dash-tile-name">${esc(f.nombre)}</span>
-          <span class="ci-dash-tile-ver">${esc(f.version || 'v1')}</span>
-          ${f.archivada ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:#FFC000;letter-spacing:1px">ARCH</span>' : ''}
-        </div>
-        <div class="ci-dash-tile-id">${f.id} · ${tileIdDate}</div>
-        ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
-        ${geneticasChipsHtml}
-        <div class="ci-dash-metrics">
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>
-            <div class="ci-dash-mlbl">C/N</div>
-          </div>
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac3)">${masa.toFixed(0)}g</div>
-            <div class="ci-dash-mlbl">Masa</div>
-          </div>
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac2)">${f.ingredientes.length}</div>
-            <div class="ci-dash-mlbl">Ings</div>
-          </div>
-          ${totalP ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:${ratioCol}">${sanas}/${totalP}</div>
-            <div class="ci-dash-mlbl">🧫 ${ratio}%</div>
-          </div>` : ''}
-          ${expCount ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac4)">${expCount}</div>
-            <div class="ci-dash-mlbl">🔬 Exp</div>
-          </div>` : ''}
-          ${notas.length ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:${notaCol}">${notas.length}</div>
-            <div class="ci-dash-mlbl">📝 Notas</div>
-          </div>` : ''}
-        </div>
-        ${ratioBar}
-        ${lastNota ? `<div class="ci-dash-last-nota" style="border-left-color:${notaCol}">
-          ${esc(lastNota.texto.slice(0, 72))}${lastNota.texto.length > 72 ? '…' : ''}
-        </div>` : ''}
-        <button type="button" onclick="event.stopPropagation();ciCargarComoBase('${f.id}')"
-          style="margin-top:8px;width:100%;padding:4px;font-size:11px;background:none;border:1px solid rgba(0,204,51,.25);color:var(--ac);border-radius:3px;cursor:pointer;letter-spacing:.3px"
-          title="Cargar como base para nueva fórmula">📋 Usar como base</button>
-      </div>`;
-  }).join('') + '</div>';
+  el.innerHTML = total
+    ? '<div class="ci-dash-grid">' + html + '</div>'
+    : (query.trim()
+        ? `<div class="empty">Sin fórmulas que coincidan con "${esc(query.trim())}".</div>`
+        : `<div class="empty">Todas las fórmulas están archivadas. Activá "Ver archivadas" para verlas.</div>`);
 
   _actualizarToggleArchivadas(forms);
 }
@@ -934,6 +838,9 @@ function _actualizarToggleArchivadas(forms) {
   }
   btn.textContent = _ciMostrarArchivadas ? '📦 Ocultar archivadas' : '📦 Ver archivadas';
   btn.classList.toggle('activo', _ciMostrarArchivadas);
+  const searchActive = !!((document.getElementById('ci-formulas-search') || {}).value || '').trim();
+  btn.style.opacity = searchActive ? '0.5' : '';
+  btn.title = searchActive ? 'Anulado mientras hay una búsqueda activa — la búsqueda ya incluye archivadas' : '';
 }
 
 function buildFrmBodyHTML(f) {
