@@ -62,15 +62,18 @@
   <!-- ── Vista grid (default) ── -->
   <div id="ci-dash-grid-wrap">
     <div class="card">
-      <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <span style="color:#00CC33">📊 Dashboard CI — Fórmulas activas</span>
         <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="ci-dash-search" placeholder="🔍 Buscar cepa, ingrediente, nombre o ID…" oninput="ciRenderDashboard()"
+                 style="padding:6px 10px;border-radius:6px;background:var(--bg-tertiary);color:var(--tx);border:1px solid var(--border);font-size:12px;width:240px">
           <button class="btn btn-s" style="height:24px;font-size:11px;padding:0 10px;border-color:var(--er);color:var(--er)" onclick="exportData()" title="Backup solo de datos de CI (fórmulas, cultivos, seguimiento) — no es un backup de todo el sistema, ver CFG para eso">💾 Backup de CI</button>
         </div>
       </div>
-      <p style="color:var(--tx3);font-size:13px;margin:4px 0 16px">
+      <p style="color:var(--tx3);font-size:13px;margin:4px 0 4px">
         Vista rápida. Hacé click en una fórmula para abrirla en detalle.
       </p>
+      <div id="ci-dash-search-count" style="display:none;color:var(--tx3);font-size:11px;font-family:'JetBrains Mono',monospace;margin-bottom:8px"></div>
       <div id="ci-dashboard-grid" class="ci-dash-grid"></div>
     </div>
   </div>
@@ -203,18 +206,21 @@
 
   <!-- ── Resumen de Fórmulas CI (tiles) ── -->
   <div class="card">
-    <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <span style="color:#00CC33">📋 Fórmulas CI</span>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="ci-formulas-search" placeholder="🔍 Buscar cepa, ingrediente, nombre o ID…" oninput="ciRenderFormulasList()"
+               style="padding:6px 10px;border-radius:6px;background:var(--bg-tertiary);color:var(--tx);border:1px solid var(--border);font-size:12px;width:240px">
         <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="ciExportExcel()">📥 Copiar para Excel</button>
         <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="exportData()">⬇ Backup de CI (JSON)</button>
         <button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('ci-import-file').click()">⬆ Importar backup de CI</button>
         <input type="file" id="ci-import-file" accept=".json" style="display:none" onchange="importData(event)">
       </div>
     </div>
-    <p style="color:var(--tx3);font-size:12px;margin:2px 0 14px">
+    <p style="color:var(--tx3);font-size:12px;margin:2px 0 4px">
       Hacé click en el tile para ver detalle en Dashboard · <span style="color:var(--ac)">📋 Usar como base</span> la carga como plantilla en el formulario.
     </p>
+    <div id="ci-formulas-search-count" style="display:none;color:var(--tx3);font-size:11px;font-family:'JetBrains Mono',monospace;margin-bottom:10px"></div>
     <div id="ci-formulas-list-wrap" style="position:relative">
       <div id="ci-formulas-list"></div>
     </div>
