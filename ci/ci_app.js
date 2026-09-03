@@ -6432,6 +6432,7 @@ Object.assign(window, {
 
   // Dashboard / Formulación
   ciRenderDashboard,
+  ciRenderFormulasList,
   ciDashOpenFormula,
   ciCargarComoBase,
   ciDashRenderDetalle,
