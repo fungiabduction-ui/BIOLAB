@@ -5753,6 +5753,28 @@ function expSave(arr)        { sDB(K.exp, arr); }
 function expNxtId()          { return nxtId('EXP', expLoad()); }
 function expByFormula(frmId) { return expLoad().filter(x => x.formulaId === frmId); }
 
+// Chips de frascos de experimento para la card de Dashboard/Formulación — reemplaza al viejo
+// pill "🔬 N Exp" (solo conteo) por el label real de cada frasco (ej. "A' Ca restaurado").
+// _ciExpFrascoChipsFromList es la parte pura (testeada en aislamiento); _ciExpFrascoChipsHtml
+// es el wrapper que lee bl2_experimentos vía expByFormula (ya existente, sin cambios).
+function _ciExpFrascoChipsFromList(frascos) {
+  if (!Array.isArray(frascos) || !frascos.length) return '';
+  const MAX = 6;
+  const visibles = frascos.slice(0, MAX);
+  const resto = frascos.length - visibles.length;
+  const chips = visibles.map(fr =>
+    `<span class="ci-chip ci-chip-exp" title="${esc(fr.label || '')}">🔬 ${esc(fr.label || '?')}</span>`
+  ).join('');
+  const overflow = resto > 0 ? `<span class="ci-chip ci-chip-neutral">+${resto} más</span>` : '';
+  return chips + overflow;
+}
+
+function _ciExpFrascoChipsHtml(frmId) {
+  const frascos = expByFormula(frmId).flatMap(e => e.frascos || []);
+  const inner = _ciExpFrascoChipsFromList(frascos);
+  return inner ? `<div class="ci-dash-gen-chips">${inner}</div>` : '';
+}
+
 // ── Hoist del modal a body (idéntico al patrón _ciHoistModal) ──
 function _expHoistModal() {
   // Limpiar cualquier copia que quedó dentro del módulo (fuera de body)
