@@ -290,7 +290,7 @@
     /**
      * Clasificación de bolsa para tabs:
      *   esPendiente(b)   → armado no confirmado aún (sin ID definitivo)
-     *   esArchivada(b)   → contaminada, ciclo cerrado, o cancelada
+     *   esArchivada(b)   → contaminada, ciclo cerrado, no fructificó, o cancelada
      *   esCosecha(b)     → tiene >=1 flush y NO está archivada ni pendiente
      *   esEnCultivo(b)   → no archivada, no pendiente, sin flushes
      * Las cuatro son mutuamente excluyentes y cubren el universo de bolsas.
@@ -1261,8 +1261,8 @@
 
     function filaTabla(b, tabNombre) {
         var cl = 'onclick="FR.select(\'' + esc(b.id) + '\')"';
-        var dias = b.cicloCerrado && b.fechaCierreCiclo
-            ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
+        var dias = b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
+            : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico)
             : diasEntre(b.fechaInicio, hoyISO());
         var ge = _geChipFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
@@ -1422,7 +1422,7 @@
         if (key === 'ge')      return _geTxtFromBolsa(b).toLowerCase();
         if (key === 'su')      return (b.suLoteId || '').toLowerCase();
         if (key === 'gr')      return _grTxtFromBolsa(b).toLowerCase();
-        if (key === 'dias')    return (b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo) : diasEntre(b.fechaInicio, hoyISO())) || 0;
+        if (key === 'dias')    return (b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo) : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico) : diasEntre(b.fechaInicio, hoyISO())) || 0;
         if (key === 'estado')  return computeEstado(b);
         if (key === 'fn')      return (b.flushes || []).length;
         if (key === 'rend')    return rendimientoFresco(b.flushes);
@@ -1986,7 +1986,9 @@
         setInput('frFechaCosecha', b.fechaCosecha || '');
 
         var hoy = hoyISO();
-        var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo : hoy;
+        var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo
+            : b.noFructifico && b.fechaNoFructifico ? b.fechaNoFructifico
+            : hoy;
         var d0 = diasEntre(b.fechaInicio, fechaRef);
         set('frDayNow', d0 != null ? d0 : 0);
         set('frDaysInicio', b.fechaInicio ? (d0 > 0 ? ('hace ' + d0 + ' d') : 'hoy') : '—');
@@ -2756,8 +2758,8 @@
             var estado    = computeEstado(b);
             var label     = _OV_LABELS[estado] || estado;
             var chipClass = _ovChipClass(estado);
-            var dias      = b.cicloCerrado && b.fechaCierreCiclo
-                ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
+            var dias      = b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
+                : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico)
                 : diasEntre(b.fechaInicio, hoyISO());
             var be   = beAcumulado(b.flushes);
             var rend = rendimientoFresco(b.flushes);
@@ -3523,7 +3525,9 @@
         // Refresco selectivo (no re-render completo del dashboard para no
         // perder foco si el usuario sigue tabulando).
         var hoy = hoyISO();
-        var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo : hoy;
+        var fechaRef = b.cicloCerrado && b.fechaCierreCiclo ? b.fechaCierreCiclo
+            : b.noFructifico && b.fechaNoFructifico ? b.fechaNoFructifico
+            : hoy;
         var _diasDesdeInicio = diasEntre(b.fechaInicio, fechaRef);
         set('frDayNow', _diasDesdeInicio || 0);
         set('frDaysInicio', b.fechaInicio ? (_diasDesdeInicio > 0 ? ('hace ' + _diasDesdeInicio + ' d') : 'hoy') : '—');
