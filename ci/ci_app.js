@@ -5550,115 +5550,22 @@ function ciRenderDashboard() {
   const forms   = gDB(K.forms);
   const allIngs = gDB(K.ings);
   const segs    = gDB(K.seg);
+  const query   = (document.getElementById('ci-dash-search') || {}).value || '';
 
-  const visibles = forms.filter(f => !f.archivada)
-    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const { html, total, archivedShown } = _ciBuildFormulaTilesHtml(
+    forms, segs, allIngs, query, /* showArchived */ false, /* showUsarComoBase */ false
+  );
 
-  if (!visibles.length) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Sin fórmulas. Creá una en la pestaña Formulación.</div>';
+  _ciActualizarContadorBusqueda('ci-dash-search-count', query.trim(), total, archivedShown);
+
+  if (!total) {
+    grid.innerHTML = query.trim()
+      ? `<div class="empty" style="grid-column:1/-1">Sin fórmulas que coincidan con "${esc(query.trim())}".</div>`
+      : '<div class="empty" style="grid-column:1/-1">Sin fórmulas. Creá una en la pestaña Formulación.</div>';
     return;
   }
 
-  grid.innerHTML = visibles.map(f => {
-    const ingsSorted = [...f.ingredientes].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    const { c, n, masa } = calcCN(ingsSorted, allIngs);
-    const cn = n > 0 ? (c / n).toFixed(1) : '—';
-
-    const segsF   = segs.filter(s => s.formula_id === f.id);
-    const totalP  = segsF.reduce((s, r) => s + (r.placas || 0), 0);
-    const totalC  = segsF.reduce((s, r) => s + (r.contaminados || 0), 0);
-    const sanas   = totalP - totalC;
-    const ratio   = totalP > 0 ? Math.round(sanas / totalP * 100) : null;
-    const ratioCol = ratio === null ? 'var(--tx3)'
-      : ratio >= 80 ? 'var(--ac)' : ratio >= 50 ? 'var(--wn)' : 'var(--er)';
-
-    const tileIdDate2 = (() => {
-      const seg = segsF.filter(s => s.colonizacion)
-        .sort((a, b) => new Date(b.colonizacion) - new Date(a.colonizacion))[0];
-      if (!seg) return ciFormatDate(f.fecha).split(' ')[0];
-      const colDate = _segParseDate(seg.colonizacion);
-      if (!colDate || isNaN(colDate)) return ciFormatDate(f.fecha).split(' ')[0];
-      const colonFmt = ciFormatDate(colDate.toISOString()).split(' ')[0];
-      if (seg.inoculoFecha || seg.inoculoTs) {
-        const inoDate = seg.inoculoFecha ? _segParseDate(seg.inoculoFecha) : new Date(seg.inoculoTs);
-        const dias    = Math.round((colDate - inoDate) / 86400000);
-        if (isFinite(dias) && dias >= 0) {
-          return `${ciFormatDate(inoDate.toISOString()).split(' ')[0]} - ${colonFmt} - D ${dias}`;
-        }
-      }
-      return `Col: ${colonFmt}`;
-    })();
-
-    const diasBadge = _ciDashDiasDesdeInoculacion(segsF);
-
-    const expCount = expByFormula(f.id).length;
-    const notas = (SEG.seguimientoNotas[f.id] || []);
-    const lastNota = notas.length ? notas[notas.length - 1] : null;
-    const estadoColor = { green: 'var(--ac)', yellow: 'var(--wn)', red: 'var(--er)', none: 'var(--tx3)' };
-    const notaCol = lastNota ? (estadoColor[lastNota.estado] || 'var(--tx3)') : 'var(--tx3)';
-
-    const ratioBar = ratio !== null ? `
-      <div style="margin:6px 0 4px;height:3px;border-radius:2px;background:var(--bg-tertiary);overflow:hidden">
-        <div style="height:100%;width:${ratio}%;background:${ratioCol};border-radius:2px;transition:width .4s"></div>
-      </div>` : '';
-
-    // Chips de genéticas usadas — vistazo rápido sin entrar a la fórmula (2026-08-04,
-    // pedido tras el incidente R244/244 en CI-0012). Este es el grid real que ve el
-    // usuario por defecto (#ci-dashboard-grid) — ciRenderFormulasList() construye un
-    // tile casi idéntico pero para #ci-formulas-list, un contenedor secundario; el
-    // mismo bloque se duplicó ahí también para no dejar uno de los dos desactualizado.
-    const geneticasUnicas2 = [...new Set(segsF.map(s => s.genetica).filter(Boolean))];
-    const geneticasChipsHtml2 = geneticasUnicas2.length ? `
-        <div class="ci-dash-gen-chips">
-          ${geneticasUnicas2.map(gid => {
-            const snap = _ciResolverGeneticaSnapshot(gid);
-            const full  = snap ? _segAbreviarEspecie(snap.label) : gid;
-            const corto = snap ? _segSoloUltimoSegmento(snap.label) : gid;
-            return `<span class="seg-tc-tag seg-tc-tag-gen" title="${esc(full)}">🧬 ${esc(corto)}</span>`;
-          }).join('')}
-        </div>` : '';
-
-    return `
-      <div class="ci-dash-tile" onclick="ciDashOpenFormula('${f.id}')">
-        <div class="ci-dash-tile-top">
-          <span class="ci-dash-tile-name">${esc(f.nombre)}</span>
-          <span class="ci-dash-tile-ver">${esc(f.version || 'v1')}</span>
-        </div>
-        <div class="ci-dash-tile-id">${f.id} · ${tileIdDate2}</div>
-        ${diasBadge ? `<div class="ci-dash-dias-badge">🕐 ${diasBadge}</div>` : ''}
-        ${geneticasChipsHtml2}
-        <div class="ci-dash-metrics">
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--wn)">${cn}</div>
-            <div class="ci-dash-mlbl">C/N</div>
-          </div>
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac3)">${masa.toFixed(0)}g</div>
-            <div class="ci-dash-mlbl">Masa</div>
-          </div>
-          <div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac2)">${f.ingredientes.length}</div>
-            <div class="ci-dash-mlbl">Ings</div>
-          </div>
-          ${totalP ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:${ratioCol}">${sanas}/${totalP}</div>
-            <div class="ci-dash-mlbl">🧫 ${ratio}%</div>
-          </div>` : ''}
-          ${expCount ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:var(--ac4)">${expCount}</div>
-            <div class="ci-dash-mlbl">🔬 Exp</div>
-          </div>` : ''}
-          ${notas.length ? `<div class="ci-dash-metric">
-            <div class="ci-dash-mval" style="color:${notaCol}">${notas.length}</div>
-            <div class="ci-dash-mlbl">📝 Notas</div>
-          </div>` : ''}
-        </div>
-        ${ratioBar}
-        ${lastNota ? `<div class="ci-dash-last-nota" style="border-left-color:${notaCol}">
-          ${esc(lastNota.texto.slice(0, 72))}${lastNota.texto.length > 72 ? '…' : ''}
-        </div>` : ''}
-      </div>`;
-  }).join('');
+  grid.innerHTML = html;
 }
 
 // Abre la vista detalle de una fórmula dentro del Dashboard
