@@ -916,6 +916,7 @@
         if (b.cancelada)             return 'cancelada';
         if (b.contaminada)           return 'contaminada';
         if (b.cicloCerrado)          return 'ciclo cerrado';
+        if (b.noFructifico)          return 'no fructifico';
         if (Array.isArray(b.flushes) && b.flushes.length > 0) return 'cosechado';
         if (b.fechaCosecha)          return 'cosechado';
         if (b.fechaPines)            return 'pinning';
@@ -931,6 +932,7 @@
             'contaminada':  'err',
             'cancelada':    'err',
             'ciclo cerrado':'arc',
+            'no fructifico':'arc',
             'pendiente':    'pend'
         };
         return 'frt-badge-' + (map[estado] || 'act');
@@ -1138,7 +1140,7 @@
         }
 
         var statusOptions = ['colonizando','colonizado','pinning','cosechado',
-                             'contaminada','cancelada','ciclo cerrado','pendiente'];
+                             'contaminada','cancelada','ciclo cerrado','no fructifico','pendiente'];
 
         el.innerHTML = '<div class="frt-layout">'
 
