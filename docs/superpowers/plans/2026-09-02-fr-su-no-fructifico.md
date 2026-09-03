@@ -23,7 +23,7 @@ Spec de referencia: `docs/superpowers/specs/2026-09-02-fr-su-no-fructifico-desig
 
 ---
 
-## Task 1: FR — clasificación de estado (`computeEstado`, `esArchivada`, identidad)
+## Task 1: FR — clasificación de estado (`computeEstado`, `esArchivada`, identidad) ✅ DONE (cd3a440)
 
 **Files:**
 - Modify: `fr/fr_app.js:272-312` (computeEstado, esArchivada)
@@ -113,7 +113,7 @@ EOF
 
 ---
 
-## Task 2: FR — chips visuales en los 4 sitios de render + fecha de archivo
+## Task 2: FR — chips visuales en los 4 sitios de render + fecha de archivo ✅ DONE (3ef252c)
 
 **Files:**
 - Modify: `fr/fr_app.js:1293` (fecha de archivo en la fila)
@@ -230,7 +230,7 @@ EOF
 
 ---
 
-## Task 3: FR — CSS del chip nuevo
+## Task 3: FR — CSS del chip nuevo ✅ DONE (b419b2a)
 
 **Files:**
 - Modify: `fr/fr_styles.css:1176-1191`
@@ -260,7 +260,7 @@ git commit -m "feat(fr): CSS del chip NO FRUCTIFICO (violeta, distinto de bad/fi
 
 ---
 
-## Task 4: FR — fix de agregados por SU + selector de base de experimentos
+## Task 4: FR — fix de agregados por SU + selector de base de experimentos ✅ DONE (593868a)
 
 **Files:**
 - Modify: `fr/fr_app.js:1244-1245` (`_aggregadosPorSU`)
@@ -309,7 +309,7 @@ EOF
 
 ---
 
-## Task 5: FR — función `FR.marcarNoFructifico()`
+## Task 5: FR — función `FR.marcarNoFructifico()` ✅ DONE (334e9c7) — review flagged pre-existing gap: ninguno de los 3 terminal-state setters (incluye marcarContaminada/cerrarCiclo ya en produccion) guarda contra bolsa `cancelada`; no introducido por esta tarea, sugerido como follow-up aparte
 
 **Files:**
 - Modify: `fr/fr_app.js:3582-3584` (insertar función nueva entre `marcarContaminada` y `recomputeFlushesLive`)
@@ -388,7 +388,7 @@ EOF
 
 ---
 
-## Task 6: FR — bloque de 3 botones terminales (Contaminación / Cerrar ciclo / No fructificó)
+## Task 6: FR — bloque de 3 botones terminales (Contaminación / Cerrar ciclo / No fructificó) ✅ DONE (a8cb0b4)
 
 **Files:**
 - Modify: `fr/fr_app.js:2101-2151` (bloque que gestiona `frBtnContam`/`frBtnCerrar`/`frContamInfo`)
@@ -575,7 +575,7 @@ EOF
 
 ---
 
-## Task 7: FR — botón HTML + CSS
+## Task 7: FR — botón HTML + CSS ✅ DONE (a23ca93) — FR-side completo, nada colgando
 
 **Files:**
 - Modify: `fr/fr_index.html:116-124`
@@ -655,7 +655,7 @@ git commit -m "feat(fr): boton No fructifico en el panel + su CSS"
 
 ---
 
-## Task 8: SU — helper de estado, acciones Sí/No, y fix del aviso obsoleto
+## Task 8: SU — helper de estado, acciones Sí/No, y fix del aviso obsoleto ✅ DONE (a28e992 + fix bad2ce8) — review encontro bug real (bolsa pendienteConfirmacion:true podia recibir noFructifico:true), corregido y re-verificado. Sugerencia no bloqueante pendiente: guard de pendienteConfirmacion tambien dentro del mutator, no solo en el caller.
 
 Una sola tarea atómica (no partida en dos commits) a propósito: si las funciones
 `suMarcarBolsaNoFructifico`/`suRevisarBolsaSigueEnSeguimiento` se definieran en un commit
@@ -894,7 +894,7 @@ EOF
 
 ---
 
-## Task 9: SU — CSS de los botones y el dot nuevo
+## Task 9: SU — CSS de los botones y el dot nuevo ✅ DONE (ddf4e59) — todo el codigo del plan completo
 
 **Files:**
 - Modify: `su/su_styles.css:2138-2166`
@@ -961,7 +961,7 @@ git commit -m "feat(su): CSS de los botones Si/No del aviso + dot neutro para ar
 
 ---
 
-## Task 10: Verificación manual end-to-end en navegador real
+## Task 10: Verificación manual end-to-end en navegador real ✅ DONE — 9/9 pasos OK en navegador real, localStorage restaurado exacto (31 lotes / 66 bolsas)
 
 Sin test runner en el repo — se verifica igual que el resto del proyecto: navegador real contra
 datos sintéticos que se agregan y se retiran explícitamente (no se toca el backup real del
@@ -1107,7 +1107,7 @@ código correspondiente, corregir, y repetir la verificación desde el paso que 
 
 ---
 
-## Task 11: Documentar el invariante nuevo en `CLAUDE.md`
+## Task 11: Documentar el invariante nuevo en `CLAUDE.md` ✅ DONE — sin commit: CLAUDE.md esta gitignoreado a proposito (notas internas, nunca al repo publico), el plan se equivoco al pedir `git commit` para este archivo. El subagente lo detecto solo y se nego correctamente en vez de forzar el add.
 
 **Files:**
 - Modify: `c:\Users\JET\Desktop\MOBY DICK\biolab-app\CLAUDE.md`
