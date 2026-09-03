@@ -2187,11 +2187,11 @@ body {
 }
 .su-be-btn-si:hover { background: rgba(255, 107, 107, 0.28); }
 .su-be-btn-no {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: var(--text-muted, #999);
+    background: rgba(112, 173, 71, 0.15);
+    border: 1px solid rgba(112, 173, 71, 0.5);
+    color: #70AD47;
 }
-.su-be-btn-no:hover { background: rgba(255,255,255,0.09); }
+.su-be-btn-no:hover { background: rgba(112, 173, 71, 0.28); }
 
 /* Chips de registro */
 .su-kchip {

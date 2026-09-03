@@ -1532,10 +1532,10 @@ function renderizarRegistroLotes() {
                         beRowHtml = `
                 <div class="su-be-row su-be-danger">
                     <span class="su-be-danger-dots"><span></span><span></span><span></span></span>
-                    <span class="su-be-label">Sin registro FR desde hace ${Math.floor(diasSinFR)} días — ¿no fructificó?</span>
+                    <span class="su-be-label">Sin registro FR desde hace ${Math.floor(diasSinFR)} días —</span>
                     <span class="su-be-nf-actions">
-                        <button type="button" class="su-be-btn-si" onclick="event.stopPropagation();suMarcarBolsaNoFructifico('${frB._frUuid||''}','${frB.id||''}')">Sí, no fructificó</button>
-                        <button type="button" class="su-be-btn-no" onclick="event.stopPropagation();suRevisarBolsaSigueEnSeguimiento('${frB._frUuid||''}')">No, sigue en seguimiento</button>
+                        <button type="button" class="su-be-btn-si" onclick="event.stopPropagation();suMarcarBolsaNoFructifico('${frB._frUuid||''}','${frB.id||''}')">No fructificó</button>
+                        <button type="button" class="su-be-btn-no" onclick="event.stopPropagation();suRevisarBolsaSigueEnSeguimiento('${frB._frUuid||''}')">Mantener en seguimiento</button>
                     </span>
                 </div>`;
                     }
