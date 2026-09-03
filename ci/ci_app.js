@@ -5185,6 +5185,48 @@ function _ciResolverGeneticaSnapshot(geneticaId) {
   return { codigoGE: geneticaId, label: geneticaId };
 }
 
+// Chip de genética coloreado con el color real del nodo GE — mismo patrón que
+// _genChipHtml/_resolveGeColor de fr_app.js y su equivalente en su_app.js (ver
+// docs/superpowers/specs/2026-08-31-fr-su-genetica-chip-acortado-design.md). CI tiene una
+// ventaja que FR no tenía: `geneticaId` (campo seg.genetica) YA ES el fenId directamente, sin
+// necesitar resolución multi-fuente. No modifica storage — 100% capa de render.
+function _ciHexToRgba(hex, alpha) {
+  if (typeof hex !== 'string') return null;
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+function _ciResolveGeColor(fenId) {
+  if (!fenId) return null;
+  try {
+    if (window.ge && typeof window.ge.getNode === 'function') {
+      const n = window.ge.getNode(fenId);
+      if (n && n.color) return n.color;
+    }
+  } catch (e) {}
+  try {
+    if (window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+      const r = window.GEResolve.resolverNodoCrudo(fenId);
+      if (r && r.node && r.node.color) return r.node.color;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function _ciGenChipHtml(fullLabel, fenId) {
+  if (!fullLabel) return '';
+  const parts = String(fullLabel).split('/').map(s => s.trim()).filter(Boolean);
+  const label = parts.length ? parts[parts.length - 1] : fullLabel;
+  const hex = _ciResolveGeColor(fenId);
+  const bg = hex ? _ciHexToRgba(hex, 0.15) : null;
+  const border = hex ? _ciHexToRgba(hex, 0.40) : null;
+  const cls = 'ci-chip' + (bg ? '' : ' ci-chip-neutral');
+  const style = bg ? ` style="background:${bg};border-color:${border};color:${esc(hex)}"` : '';
+  return `<span class="${cls}"${style} title="${esc(fullLabel)}">🧬 ${esc(label)}</span>`;
+}
 
 // ─── Listado de cultivos en el subtab ───
 let _ciCultivosFiltroEstadoDefault = 'DISPONIBLE';
