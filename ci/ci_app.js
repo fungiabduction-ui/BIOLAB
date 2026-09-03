@@ -654,9 +654,10 @@ function ciToggleMostrarArchivadas() {
 // _ciFormulaMatchesQuery matchea contra f.ingredientes[].snapshot.nombre — el snapshot
 // INMUTABLE de cada ingrediente, nunca bl2_ings en vivo (invariante de CI: el snapshot no
 // cambia si el ingrediente se edita/renombra después de formular).
+const _CI_DIACRITICS_RE = new RegExp('[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']', 'g');
 function _ciNormalizeSearchText(s) {
   return String(s || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(_CI_DIACRITICS_RE, '')
     .toLowerCase()
     .trim();
 }
