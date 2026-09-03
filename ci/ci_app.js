@@ -678,6 +678,117 @@ function _ciFormulaMatchesQuery(formula, geneticaLabels, normalizedQuery) {
   return false;
 }
 
+function _ciActualizarContadorBusqueda(elId, query, total, archivedShown) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!query) { el.textContent = ''; el.style.display = 'none'; return; }
+  const arch = archivedShown > 0 ? ` — incluye ${archivedShown} archivada${archivedShown > 1 ? 's' : ''}` : '';
+  el.textContent = `${total} fórmula${total === 1 ? '' : 's'} encontrada${total === 1 ? '' : 's'} por "${query}"${arch}`;
+  el.style.display = '';
+}
+
+// Arma el HTML de una card individual. Reemplaza al bloque casi-duplicado que antes vivía
+// dentro de ciRenderDashboard() y de ciRenderFormulasList() por separado (ver spec, sección 6).
+// showUsarComoBase: true en Formulación, false en Dashboard — esa es la única diferencia real
+// que tenían las dos cards originales (Dashboard nunca mostró ese botón).
+function _ciBuildFormulaTile(f, allIngs, segs, showUsarComoBase) {
+  const ingsSorted = [...f.ingredientes].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+  const { c, n, masa } = calcCN(ingsSorted, allIngs);
+  const cn = n > 0 ? (c / n).toFixed(1) : '—';
+
+  const segsF  = segs.filter(s => s.formula_id === f.id);
+  const totalP = segsF.reduce((s, r) => s + (r.placas || 0), 0);
+  const totalC = segsF.reduce((s, r) => s + (r.contaminados || 0), 0);
+  const sanas  = totalP - totalC;
+  const ratio  = totalP > 0 ? Math.round(sanas / totalP * 100) : null;
+  const ratioCol = ratio === null ? 'var(--tx3)'
+    : ratio >= 80 ? 'var(--ac)' : ratio >= 50 ? 'var(--wn)' : 'var(--er)';
+
+  const geneticasUnicas = [...new Set(segsF.map(s => s.genetica).filter(Boolean))];
+  const geneticaChipsHtml = geneticasUnicas.length ? `
+      <div class="ci-dash-gen-chips">
+        ${geneticasUnicas.map(gid => {
+          const snap = _ciResolverGeneticaSnapshot(gid);
+          return _ciGenChipHtml(snap ? snap.label : gid, gid);
+        }).join('')}
+      </div>` : '';
+  const borderHex = geneticasUnicas.length ? _ciResolveGeColor(geneticasUnicas[0]) : null;
+
+  const tileIdDate = (() => {
+    const seg = segsF.filter(s => s.colonizacion)
+      .sort((a, b) => new Date(b.colonizacion) - new Date(a.colonizacion))[0];
+    if (!seg) return ciFormatDate(f.fecha).split(' ')[0];
+    const colDate = _segParseDate(seg.colonizacion);
+    if (!colDate || isNaN(colDate)) return ciFormatDate(f.fecha).split(' ')[0];
+    const colonFmt = ciFormatDate(colDate.toISOString()).split(' ')[0];
+    if (seg.inoculoFecha || seg.inoculoTs) {
+      const inoDate = seg.inoculoFecha ? _segParseDate(seg.inoculoFecha) : new Date(seg.inoculoTs);
+      if (inoDate && !isNaN(inoDate)) {
+        return `${ciFormatDate(inoDate.toISOString()).split(' ')[0]} - ${colonFmt}`;
+      }
+    }
+    return `Col: ${colonFmt}`;
+  })();
+
+  const diasHtml = _ciDiasActivosHtml(_ciDashDiasDesdeInoculacion(segsF));
+  const expChipsHtml = _ciExpFrascoChipsHtml(f.id);
+
+  const statsRow = `
+    <div class="ci-dash-stats-row">
+      <span class="seg-tc-chip" style="color:var(--wn)">C/N ${cn}</span>
+      <span class="seg-tc-chip" style="color:var(--ac3)">${masa.toFixed(0)}g</span>
+      <span class="seg-tc-chip" style="color:var(--ac2)">${f.ingredientes.length} ings</span>
+      ${totalP ? `<span class="seg-tc-chip" style="color:${ratioCol}">🧫 ${sanas}/${totalP} sanas</span>` : ''}
+    </div>`;
+
+  const borderStyle = borderHex ? ` style="border-left:3px solid ${esc(borderHex)}"` : '';
+  const usarComoBaseHtml = showUsarComoBase ? `
+        <button type="button" onclick="event.stopPropagation();ciCargarComoBase('${f.id}')"
+          style="margin-top:8px;width:100%;padding:4px;font-size:11px;background:none;border:1px solid rgba(0,204,51,.25);color:var(--ac);border-radius:3px;cursor:pointer;letter-spacing:.3px"
+          title="Cargar como base para nueva fórmula">📋 Usar como base</button>` : '';
+
+  return `
+      <div class="ci-dash-tile${f.archivada ? ' ci-tile-archivada' : ''}"${borderStyle} onclick="ciDashOpenFormula('${f.id}')">
+        <div class="ci-dash-tile-top">
+          <span class="ci-dash-tile-name">${esc(f.nombre)}</span>
+          <span class="ci-dash-tile-ver">${esc(f.version || 'v1')}</span>
+          ${f.archivada ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:#FFC000;letter-spacing:1px">ARCH</span>' : ''}
+        </div>
+        <div class="ci-dash-tile-id">${f.id} · ${tileIdDate}</div>
+        ${diasHtml}
+        ${geneticaChipsHtml}
+        ${expChipsHtml}
+        ${statsRow}
+        ${usarComoBaseHtml}
+      </div>`;
+}
+
+// Filtra (búsqueda + archivadas) + ordena + arma el HTML de todos los tiles. Único punto que
+// conocen las dos vistas (Dashboard/Formulación) — antes cada una duplicaba esta lógica a mano.
+// Con query no vacío, ignora showArchived (la búsqueda siempre incluye archivadas — decisión
+// del brainstorming, ver spec sección 5).
+function _ciBuildFormulaTilesHtml(forms, segs, allIngs, query, showArchived, showUsarComoBase) {
+  const normalizedQuery = _ciNormalizeSearchText(query);
+  const base = normalizedQuery ? forms : forms.filter(f => showArchived || !f.archivada);
+
+  const conGeneticaLabels = base.map(f => {
+    const segsF = segs.filter(s => s.formula_id === f.id);
+    const geneticaLabels = [...new Set(segsF.map(s => s.genetica).filter(Boolean))]
+      .map(gid => { const snap = _ciResolverGeneticaSnapshot(gid); return snap ? snap.label : gid; });
+    return { f, geneticaLabels };
+  });
+
+  const filtrados = normalizedQuery
+    ? conGeneticaLabels.filter(({ f, geneticaLabels }) => _ciFormulaMatchesQuery(f, geneticaLabels, normalizedQuery))
+    : conGeneticaLabels;
+
+  const ordenados = [...filtrados].sort((a, b) => new Date(b.f.fecha) - new Date(a.f.fecha));
+  const archivedShown = ordenados.filter(({ f }) => f.archivada).length;
+  const html = ordenados.map(({ f }) => _ciBuildFormulaTile(f, allIngs, segs, showUsarComoBase)).join('');
+
+  return { html, total: ordenados.length, archivedShown };
+}
+
 function ciRenderFormulasList() {
   const forms = gDB(K.forms);
   const ings  = gDB(K.ings);
