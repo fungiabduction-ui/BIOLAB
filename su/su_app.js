@@ -1324,7 +1324,12 @@ function _suEscribirBolsaFR(frUuid, mutator) {
 function suMarcarBolsaNoFructifico(frUuid, frId) {
     if (!frUuid) return;
     if (!confirm('Marcar la bolsa ' + (frId || '') + ' como NO FRUCTIFICÓ?\n\nSe archivará en FR. Es reversible desde FR → Archivo.')) return;
+    var bloqueadaPorFlush = false;
     var ok = _suEscribirBolsaFR(frUuid, function(b) {
+        if (Array.isArray(b.flushes) && b.flushes.length > 0) {
+            bloqueadaPorFlush = true;
+            return;
+        }
         b.noFructifico = true;
         b.fechaNoFructifico = _suHoyISOLocal();
         b.noFructificoRevisadoEn = null;
@@ -1337,6 +1342,9 @@ function suMarcarBolsaNoFructifico(frUuid, frId) {
             estado: 'yellow', auto: false, tipo: null, editedAt: null, imagenes: []
         });
     });
+    if (bloqueadaPorFlush) {
+        alert('La bolsa ya tiene una cosecha registrada en FR (se actualizó justo ahora) — no se marcó como NO FRUCTIFICÓ. Revisá el estado actual en FR.');
+    }
     if (ok) renderizarRegistroLotes();
 }
 
