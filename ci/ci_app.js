@@ -2436,6 +2436,22 @@ function _ciDashDiasDesdeInoculacion(segsF) {
   return (txt && txt !== '—') ? txt : null;
 }
 
+// Pinta el resultado de _ciDashDiasDesdeInoculacion en la card de Dashboard/Formulación con
+// dos estados: activo (prefijo "D+", sigue contando — ámbar con punto pulsante, para que se
+// note) vs cerrado (prefijo "D " sin +, ya colonizó — texto neutro, es historia, no alarma).
+// No recalcula nada — el cálculo de días sigue siendo _ciDashDiasDesdeInoculacion/_segFmtDias,
+// sin tocar.
+function _ciDiasActivosHtml(diasTxt) {
+  if (!diasTxt) return '';
+  const activo = diasTxt.indexOf('D+') === 0;
+  const color = activo ? '#FFC000' : 'var(--tx)';
+  const dot = activo ? '<span class="ci-dash-dias-dot"></span>' : '';
+  const sub = activo
+    ? 'desde inoculación · aún sin colonizar'
+    : 'colonizó en ' + diasTxt.replace(/^D\s*/, '') + ' días';
+  return `<div class="ci-dash-dias">${dot}<span class="ci-dash-dias-num" style="color:${color}">${esc(diasTxt)}</span><span class="ci-dash-dias-sub">${esc(sub)}</span></div>`;
+}
+
 /**
  * Actualiza la celda seg-td-dias del row con D+ actual.
  * Llamar cada vez que inoculoTs cambia.
