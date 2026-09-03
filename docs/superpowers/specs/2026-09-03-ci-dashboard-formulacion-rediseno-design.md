@@ -139,7 +139,7 @@ function _ciExpFrascoChipsHtml(frmId) {
     `<span class="ci-chip ci-chip-exp" title="${esc(fr.label || '')}">🔬 ${esc(fr.label || '?')}</span>`
   ).join('');
   const overflow = resto > 0 ? `<span class="ci-chip ci-chip-neutral">+${resto} más</span>` : '';
-  return `<div class="ci-dash-exp-chips">${chips}${overflow}</div>`;
+  return `<div class="ci-dash-gen-chips">${chips}${overflow}</div>`;
 }
 ```
 
@@ -164,7 +164,7 @@ sección 6 — consolidación):
 │ CI-0016 · 19/08                         │  ← .ci-dash-tile-id (ya no lleva "- D N")
 │ ⬤ D+15  desde inoculación · sin colonizar│  ← NUEVO, reemplaza .ci-dash-dias-badge
 │ 🧬 244  🧬 210                          │  ← .ci-dash-gen-chips, ahora con _ciGenChipHtml
-│ 🔬 A' Ca restaurado  🔬 B' Ca+Fosfato…  │  ← NUEVO .ci-dash-exp-chips, solo si hay experimentos
+│ 🔬 A' Ca restaurado  🔬 B' Ca+Fosfato…  │  ← NUEVO, en .ci-dash-gen-chips (mismo wrapper que genética), solo si hay experimentos
 │ C/N 28.4   98g   7 ings   🧫 37/37 sanas│  ← stats como chips en fila (ver abajo), NO grid 2x2
 └────────────────────────────────────────┘
 ```
@@ -238,14 +238,22 @@ con el texto adaptado ("Sin fórmulas que coincidan con \"texto\".").
 Antes de este cambio ya existía duplicación de markup; ahora además hay que duplicar toda la
 lógica de búsqueda/filtrado de archivadas de forma idéntica en los dos lados — sostener eso a
 mano en dos funciones de ~130 líneas cada una es exactamente el riesgo que el propio comentario
-del código ya señalaba. Se extrae un helper nuevo, `_ciBuildFormulaTilesHtml(opts)`:
+del código ya señalaba. Se extraen dos helpers nuevos — `_ciBuildFormulaTile` (una card) y
+`_ciBuildFormulaTilesHtml` (filtra+ordena+arma todas) — **implementados con parámetros
+posicionales, no un objeto de opciones** (así quedó en el plan de implementación, sección Task 7;
+esta sección quedó desactualizada tras el brainstorming original, ver
+`docs/superpowers/plans/2026-09-03-ci-dashboard-formulacion-rediseno.md` para las firmas reales):
 
 ```js
-function _ciBuildFormulaTilesHtml({ forms, segs, allIngs, query, showArchived }) {
+function _ciBuildFormulaTile(f, allIngs, segs, showUsarComoBase) {
+  // Arma el HTML de UNA card — chip GE, chips de experimento, badge de días, stats, borde.
+}
+
+function _ciBuildFormulaTilesHtml(forms, segs, allIngs, query, showArchived, showUsarComoBase) {
   // 1. Filtra por archivada (según showArchived) y por query (según los 3 campos de la sección 5)
   //    — si query no está vacío, ignora showArchived (sección 5).
   // 2. Ordena por fecha desc (igual que hoy).
-  // 3. Devuelve { html, total, totalArchivedShown } — el caller arma el contador y el .empty.
+  // 3. Devuelve { html, total, archivedShown } — el caller arma el contador y el .empty.
 }
 ```
 
