@@ -648,6 +648,35 @@ function ciToggleMostrarArchivadas() {
   ciRenderFormulasList();
 }
 
+// ── Buscador de Dashboard/Formulación — cepa, ingrediente, nombre/ID de fórmula ──
+// _ciNormalizeSearchText: case-insensitive + sin acentos (texto en español). Recibe el query
+// YA normalizado (normalizar una vez por render, no una vez por fórmula).
+// _ciFormulaMatchesQuery matchea contra f.ingredientes[].snapshot.nombre — el snapshot
+// INMUTABLE de cada ingrediente, nunca bl2_ings en vivo (invariante de CI: el snapshot no
+// cambia si el ingrediente se edita/renombra después de formular).
+function _ciNormalizeSearchText(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function _ciFormulaMatchesQuery(formula, geneticaLabels, normalizedQuery) {
+  if (!normalizedQuery) return true;
+  const q = normalizedQuery;
+  if (_ciNormalizeSearchText(formula.nombre).includes(q)) return true;
+  if (_ciNormalizeSearchText(formula.id).includes(q)) return true;
+  const ings = Array.isArray(formula.ingredientes) ? formula.ingredientes : [];
+  for (const ing of ings) {
+    const nombre = ing && ing.snapshot && ing.snapshot.nombre;
+    if (nombre && _ciNormalizeSearchText(nombre).includes(q)) return true;
+  }
+  for (const label of (geneticaLabels || [])) {
+    if (label && _ciNormalizeSearchText(label).includes(q)) return true;
+  }
+  return false;
+}
+
 function ciRenderFormulasList() {
   const forms = gDB(K.forms);
   const ings  = gDB(K.ings);
