@@ -14,7 +14,7 @@
     --dark-primary: #181B22;
     --dark-secondary: #232733;
 
-    /* Aliases para compatibilidad con clases frt-* (FR Trace style) */
+    /* Aliases para compatibilidad con clases frt-* */
     --ac:          var(--fr-accent);
     --ac2:         #7c6fff;
     --ac4:         #44aaff;
@@ -1416,7 +1416,6 @@ p.fr-hint {
 
 /* ============================================================
    IDENTIDAD — VISTA DUAL (Árbol ASCII + Grafo Visual)
-   Reutiliza clases frt-* del sistema FR Trace ★
    ============================================================ */
 
 /* Toggle buttons */

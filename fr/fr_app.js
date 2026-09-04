@@ -2322,7 +2322,6 @@
         };
     }
 
-    /** Árbol ASCII — igual estética que FR Trace ★. */
     /** Árbol ASCII de identidad — usa exclusivamente datos sellados en la bolsa. */
     function _frRenderIdentASCII(d) {
         var b    = d.bolsa;
@@ -2541,7 +2540,6 @@
         return '<div class="frt-ascii-tree">' + H.join('') + '</div>';
     }
 
-    /** Grafo Visual SVG — igual estética que FR Trace ★. */
     /** Grafo visual — usa exclusivamente datos sellados en la bolsa. 5 nodos. */
     function _frRenderIdentGraph(d) {
         var b      = d.bolsa;
