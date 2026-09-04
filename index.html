@@ -99,14 +99,6 @@
 
     <button
       class="tab"
-      data-module="TRACE"
-      onclick="loadModule('TRACE')"
-      title="Módulo de Trazabilidad — cadena completa GE → CI → GR → SU → FR">
-      🔗 TR &mdash; Trazabilidad
-    </button>
-
-    <button
-      class="tab"
       data-module="CFG"
       onclick="loadModule('CFG')"
       title="Gestor de Ingredientes">
@@ -210,15 +202,6 @@
       console.error('[BIOLAB] Error en migración gr_lotes:', e);
     }
   })();
-  </script>
-
-  <!-- Registro del módulo TRACE en el motor SPA -->
-  <script>
-    (function () {
-      if (window.BIOLAB && window.BIOLAB.modules) {
-        window.BIOLAB.modules.TRACE = 'trace/trace_index.html';
-      }
-    })();
   </script>
 
   <!-- Registro del módulo CILAB (Lab analítico) -->
