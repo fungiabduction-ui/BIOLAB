@@ -1972,9 +1972,6 @@
         }
         // 🧬 Identidad — árbol ASCII (línea genética + traza productiva)
         renderIdTree(b);
-        if (typeof window.traceEnhanceFrIdTree === 'function') {
-            try { window.traceEnhanceFrIdTree(); } catch (e) {}
-        }
 
         // Mostrar/ocultar botón sync — solo para bolsas confirmadas (no pendientes)
         var _syncBtn = document.getElementById('frSyncBtn');
