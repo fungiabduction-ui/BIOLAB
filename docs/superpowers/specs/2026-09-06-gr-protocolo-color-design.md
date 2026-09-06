@@ -21,8 +21,14 @@ en la columna GRANO de SU — Registro. Ningún otro módulo cambia de comportam
 Campo nuevo `color` (string hex `#rrggbb` o `null`) en cada objeto de `gr_lotes`
 (`STORAGE_KEY = 'gr_lotes'`, `gr_app.js:15`). Aditivo — lotes existentes sin el campo siguen
 siendo válidos, se tratan como "sin color" (card/chip neutros) hasta que se guarden de nuevo o
-se les asigne color desde la card. **No hay migración retroactiva** — decisión explícita: no
-vale la pena backfillear color a protocolos históricos ya cerrados.
+se les asigne color desde la card.
+
+**Actualización (2026-09-06, mismo día):** la decisión original de esta sección era "sin
+migración retroactiva" — revertida a pedido explícito del usuario apenas se detectó que ya
+tenía 17 lotes reales guardados sin color. `_grMigrarColorBackfillV1()` (`gr_app.js`, mismo
+patrón one-shot que las demás migraciones de este archivo) colorea todo lote sin `.color`,
+ordenado por `fecha` ascendente, vía `_grNextAutoColor()`. Detalle completo: ver "Cuándo se
+asigna" más abajo y la entrada de CLAUDE.md del mismo día.
 
 Key nueva `gr_color_seq` — contador entero (string numérica), independiente de `gr_lotes`. Ver
 regla de asignación abajo.
@@ -294,7 +300,8 @@ Reutiliza `_suHexToRgba` (ya existe, `su_app.js:1208-1215`) y la clase `.su-kchi
 - No se toca `_grFirmaProtocolo` ni la agrupación por receta en Conocimiento
   (`grComputarKnowledge`, `gr_app.js:3876`, tabla "Protocolos de Grano") — el color es por lote
   individual, no por firma/receta compartida (confirmado en brainstorming).
-- No hay migración retroactiva de color para protocolos históricos.
+- ~~No hay migración retroactiva de color para protocolos históricos~~ — revertido el mismo
+  día, ver "Modelo de datos" arriba. `_grMigrarColorBackfillV1()` sí backfillea.
 - `importarJSON` (`gr_app.js:1566`) no backfillea `color` — igual que cualquier otro campo
   nuevo agregado en sesiones anteriores, un lote importado desde un JSON viejo simplemente no lo
   trae, y el protocolo se ve neutro hasta que se guarde de nuevo o se le asigne color desde la
