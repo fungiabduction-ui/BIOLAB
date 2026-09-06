@@ -1516,7 +1516,7 @@
      * Busca el .section-content que contiene el tbody dado y mete los controles
      * antes del .table-wrap, usando clases CSS propias (no inline styles).
      */
-    function _renderControlesTabla(controlId, tbodyId, listaTodas) {
+    function _renderControlesTabla(controlId, tbodyId, listaTodas, bulkExtra) {
         var tbody = document.getElementById(tbodyId);
         if (!tbody) return;
         // Subir: tbody → table → .table-wrap → .section-content
@@ -1536,6 +1536,17 @@
 
         if (isFirstRender) {
             // Primer render: construir el DOM completo.
+            // bulkExtra (opcional): { id, cls, labelBase, fnName } — describe un botón de
+            // acción en lote adicional al de "Eliminar seleccionados" (ej. Cerrar ciclo en
+            // Cosecha, No fructificó en Activo). Ver FR._actualizarContadorSel para cómo
+            // se le actualiza el contador.
+            var bulkBtnHtml = bulkExtra
+                ? '<button class="fr-btn-bulk-count ' + bulkExtra.cls + '" id="' + bulkExtra.id + '" '
+                    +   'data-label-base="' + esc(bulkExtra.labelBase) + '" '
+                    +   'onclick="' + bulkExtra.fnName + '(\'' + tbodyId + '\')">'
+                    +   esc(bulkExtra.labelBase) + ' (0)'
+                    + '</button>'
+                : '';
             ctrl.innerHTML =
                 '<input type="search" class="fr-search-input"'
                 +   ' placeholder="Buscar: ID, SU, GR, Genetica..."'
@@ -1548,10 +1559,12 @@
                 + '<label>'
                 +   '<input type="checkbox" onchange="FR._selTodo(\'' + tbodyId + '\',this.checked)"> Sel. todo'
                 + '</label>'
-                + '<button class="fr-btn-del-sel" id="' + controlId + '_btnDel" '
+                + '<button class="fr-btn-del-sel fr-btn-bulk-count" id="' + controlId + '_btnDel" '
+                +   'data-label-base="🗑 Eliminar seleccionados" '
                 +   'onclick="FR.eliminarSeleccionados(\'' + tbodyId + '\')">'
                 +   '🗑 Eliminar seleccionados (0)'
                 + '</button>'
+                + bulkBtnHtml
                 + '<button class="fr-btn-limpiar" '
                 +   'onclick="FR.limpiezaProfundaFR()" title="Elimina bolsas sin trazabilidad SU+GR válida">'
                 +   '🧹 Limpiar sin trazabilidad'
@@ -1571,7 +1584,9 @@
         }
     }
 
-    /** Actualiza texto y visibilidad del botón eliminar según checkboxes marcados. */
+    /** Actualiza texto y visibilidad de TODOS los botones de acción en lote
+     *  (`.fr-btn-bulk-count`) de la barra de controles según checkboxes marcados.
+     *  Cada botón lleva su label sin contador en `data-label-base`. */
     FR._actualizarContadorSel = function(tabla) {
         if (!tabla) return;
         var checked = tabla.querySelectorAll('.fr-sel-cb:checked').length;
@@ -1580,14 +1595,15 @@
         if (!tableWrap) return;
         var ctrl = tableWrap.previousElementSibling;
         if (!ctrl || !ctrl.classList.contains('fr-tabla-controles')) return;
-        var btn = ctrl.querySelector('.fr-btn-del-sel');
-        if (!btn) return;
-        if (checked > 0) {
-            btn.style.display = '';
-            btn.textContent = '🗑 Eliminar seleccionados (' + checked + ')';
-        } else {
-            btn.style.display = 'none';
-        }
+        ctrl.querySelectorAll('.fr-btn-bulk-count').forEach(function(btn) {
+            var base = btn.dataset.labelBase || '';
+            if (checked > 0) {
+                btn.style.display = '';
+                btn.textContent = base + ' (' + checked + ')';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
     };
 
     /** Selecciona / deselecciona todos los checkboxes de una tabla. */
