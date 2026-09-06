@@ -1450,6 +1450,17 @@ window.grEliminarRegistro = grEliminarRegistro;
             return;
         }
 
+        // Color del protocolo — se resuelve acá (no en recolectarDatosLote(), que tiene
+        // callers de preview no-persistentes vía updateUnidadFisica()) para que la cola
+        // rotativa (_grNextAutoColor) solo avance en un guardado real.
+        const _colorInput = document.getElementById('loteColor');
+        const _colorManual = _colorInput ? _colorInput.dataset.manualEdit === 'true' : false;
+        lote.color = _grResolveLoteColor({
+            existingColor: indiceExistente >= 0 ? lotesData[indiceExistente].color : null,
+            manualEdit: _colorManual,
+            inputValue: _colorInput ? _colorInput.value : null
+        });
+
         if (indiceExistente >= 0) {
             lotesData[indiceExistente] = lote;
         } else {
@@ -1910,22 +1921,11 @@ window.grEliminarRegistro = grEliminarRegistro;
         // RE
         const re = {};
 
-        // Color del protocolo — ver _grResolveLoteColor (sección "COLOR DE PROTOCOLO" arriba)
-        const _loteExistente = lotesData.find(l => l.id === _loteIdActual);
-        const _colorInput = document.getElementById('loteColor');
-        const _colorManual = _colorInput ? _colorInput.dataset.manualEdit === 'true' : false;
-        const _colorFinal = _grResolveLoteColor({
-            existingColor: _loteExistente ? _loteExistente.color : null,
-            manualEdit: _colorManual,
-            inputValue: _colorInput ? _colorInput.value : null
-        });
-
         return {
             id: document.getElementById('loteId').value,
             nombre: document.getElementById('loteNombre').value,
             fecha: document.getElementById('loteFecha').value,
             version: document.getElementById('loteVersion').value,
-            color: _colorFinal,
             componentes,
             dc,
             hm: {},
