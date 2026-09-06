@@ -212,10 +212,22 @@ EOF
 
 ---
 
-### Task 2: Wiring en recolectarDatosLote() y cargarDatosLote()
+### Task 2: Wiring en guardarLote() y cargarDatosLote() [COMPLETADA — ver nota]
+
+> **Nota post-implementación (2026-09-06):** el Step 1 original de esta task (abajo, tachado en
+> espíritu aunque no en texto) resolvía el color dentro de `recolectarDatosLote()`. Code review
+> encontró que esa función tiene callers de preview no-persistentes (`updateUnidadFisica()`,
+> disparado en cada keystroke de UF y dos veces desde `cargarDatosLote()`) que quemaban la cola
+> rotativa sin persistir nada. Lo que se implementó y quedó commiteado (`5458b93` + fix
+> `9bcd1e4`) mueve la resolución a `guardarLote()` — el único boundary de persistencia real —
+> justo antes de `lotesData[indiceExistente] = lote` / `lotesData.push(lote)`, después del gate
+> de consumo CI. `recolectarDatosLote()` no toca `color` en absoluto. Detalle completo y código
+> final: `docs/superpowers/specs/2026-09-06-gr-protocolo-color-design.md`, sección "Cuándo se
+> asigna". El Step 1 de abajo queda como registro de lo que se planeó originalmente, no de lo
+> que se implementó — no usarlo como referencia si se vuelve a tocar este código.
 
 **Files:**
-- Modify: `gr/gr_app.js` (`recolectarDatosLote`, `cargarDatosLote`)
+- Modify: `gr/gr_app.js` (`guardarLote`, `cargarDatosLote`)
 
 - [ ] **Step 1: Insertar la resolución de color en `recolectarDatosLote()`**
 

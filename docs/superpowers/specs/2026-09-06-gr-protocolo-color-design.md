@@ -53,34 +53,43 @@ manual admite cualquier hex (no solo los 12 de la paleta), no hay forma de garan
 colisión contra manual de todas formas; la cola solo se ocupa de que los autoasignados nunca se
 repitan entre sí en protocolos cercanos en el tiempo.
 
-## Cuándo se asigna — `recolectarDatosLote()` (`gr_app.js:1747-1896`)
+## Cuándo se asigna — `guardarLote()`, NO `recolectarDatosLote()`
 
-La función ya calcula `_loteIdActual` (`gr_app.js:1798`) antes del loop de tandas. Al construir
-el objeto de retorno (hoy `gr_app.js:1881-1895`), se agrega:
+**Nota (2026-09-06, corregido durante implementación de Task 2):** el diseño original de esta
+sección proponía resolver el color dentro de `recolectarDatosLote()`. Se descartó en code
+review: esa función también la llama `updateUnidadFisica()` — un preview que corre en cada
+keystroke de los campos UF, en `GR.init()`, y dos veces dentro de `cargarDatosLote()` — y
+ninguno de esos caminos persiste nada. Resolver color ahí adentro hacía que `_grNextAutoColor()`
+quemara la cola rotativa en cada uno de esos casos, tirando el color generado a la basura. La
+resolución real vive en `guardarLote()` — el único boundary de persistencia real para
+`gr_lotes` — inmediatamente antes de la mutación final, después del gate de consumo CI (para
+que un guardado rechazado tampoco consuma cola):
 
 ```js
-var _loteExistente = lotesData.find(function(l) { return l.id === _loteIdActual; });
 var _colorInput = document.getElementById('loteColor');
 var _colorManual = _colorInput && _colorInput.dataset.manualEdit === 'true';
-var color;
-if (_loteExistente && _loteExistente.color && !_colorManual) {
-    color = _loteExistente.color;               // ya asignado, no se toca
-} else if (_colorManual && _colorInput) {
-    color = _colorInput.value;                   // elegido a mano en este form
+lote.color = (function() {
+    if (indiceExistente >= 0 && lotesData[indiceExistente].color && !_colorManual) {
+        return lotesData[indiceExistente].color;   // ya asignado, no se toca
+    }
+    if (_colorManual && _colorInput) {
+        return _colorInput.value;                   // elegido a mano en este form
+    }
+    return _grNextAutoColor();                       // nuevo o sin color previo → siguiente de la cola
+})();
+
+if (indiceExistente >= 0) {
+    lotesData[indiceExistente] = lote;
 } else {
-    color = _grNextAutoColor();                  // nuevo o sin color previo → siguiente de la cola
+    lotesData.push(lote);
 }
 ```
 
 Esto cubre los 3 casos: protocolo ya coloreado que se re-guarda sin tocar el picker (se
 preserva, cero consumo de cola); protocolo nuevo o histórico-sin-color guardado tal cual (se
 autoasigna, consume cola); color cambiado a mano en el form, sea protocolo nuevo o existente
-(se usa el valor del input, sin tocar la cola).
-
-`guardarLote()` (`gr_app.js:1373-1433`) no necesita cambios — ya hace
-`lotesData[indiceExistente] = lote` o `lotesData.push(lote)` con el objeto completo que
-devuelve `recolectarDatosLote()`, así que el `color` resuelto viaja igual que cualquier otro
-campo.
+(se usa el valor del input, sin tocar la cola). `recolectarDatosLote()` queda sin tocar — no
+calcula ni devuelve `color`, es puro lectura-de-form como antes de este feature.
 
 ## UI — Formulación (`gr_index.html`, sección "Datos del Lote", `gr_index.html:66-98`)
 
