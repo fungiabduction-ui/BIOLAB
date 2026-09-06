@@ -1910,11 +1910,22 @@ window.grEliminarRegistro = grEliminarRegistro;
         // RE
         const re = {};
 
+        // Color del protocolo — ver _grResolveLoteColor (sección "COLOR DE PROTOCOLO" arriba)
+        const _loteExistente = lotesData.find(l => l.id === _loteIdActual);
+        const _colorInput = document.getElementById('loteColor');
+        const _colorManual = _colorInput ? _colorInput.dataset.manualEdit === 'true' : false;
+        const _colorFinal = _grResolveLoteColor({
+            existingColor: _loteExistente ? _loteExistente.color : null,
+            manualEdit: _colorManual,
+            inputValue: _colorInput ? _colorInput.value : null
+        });
+
         return {
             id: document.getElementById('loteId').value,
             nombre: document.getElementById('loteNombre').value,
             fecha: document.getElementById('loteFecha').value,
             version: document.getElementById('loteVersion').value,
+            color: _colorFinal,
             componentes,
             dc,
             hm: {},
@@ -1966,6 +1977,13 @@ window.grEliminarRegistro = grEliminarRegistro;
         document.getElementById('loteNombre').value = lote.nombre || '';
         document.getElementById('loteFecha').value = lote.fecha || '';
         document.getElementById('loteVersion').value = lote.version || 'v1';
+
+        const colorInput = document.getElementById('loteColor');
+        if (colorInput) {
+            colorInput.dataset.manualEdit = 'false';
+            colorInput.value = lote.color || '#FFD700';
+            colorInput.style.opacity = lote.color ? '1' : '0.7';
+        }
 
         // CT - Componentes
         const ctTbody = document.getElementById('ctTable').querySelector('tbody');
