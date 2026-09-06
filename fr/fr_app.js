@@ -1266,7 +1266,7 @@
             : diasEntre(b.fechaInicio, hoyISO());
         var ge = _geChipFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
-        var grTxt = _grTxtFromBolsa(b);
+        var grChip = _grChipFromBolsa(b);
         var be = beAcumulado(b.flushes);
         var rend = rendimientoFresco(b.flushes);
         var fN = (b.flushes || []).length;
@@ -1325,7 +1325,7 @@
             + '<td ' + cl + '><strong>' + esc(b.id) + '</strong>' + huerfanaBadge + '</td>'
             + '<td ' + cl + '>' + ge + '</td>'
             + '<td ' + cl + '><span class="fr-traza">' + esc(suTxt) + '</span></td>'
-            + '<td ' + cl + '><span class="fr-traza">' + esc(grTxt) + '</span></td>'
+            + '<td ' + cl + '>' + grChip + '</td>'
             + '<td class="fr-num-days" ' + cl + '>' + (dias != null ? dias + 'd' : '-') + '</td>'
             + '<td ' + cl + '>'
             +   '<span class="fr-chip ' + chipClass + '">' + esc(estadoLabel) + '</span>'
@@ -2986,6 +2986,37 @@
         return (b.grLoteId || '—') + (b.grTandaId ? ' · ' + b.grTandaId : '');
     }
 
+    // Chip de color por protocolo GR — resuelto en vivo contra gr_lotes, nunca persiste nada.
+    // _grTxtFromBolsa (arriba) sigue devolviendo texto plano para búsqueda/orden (_frBuscar,
+    // _sortValue) — este helper nuevo es solo para render. Mismo criterio que _geChipFromBolsa
+    // vs _geTxtFromBolsa (ver spec 2026-08-31-fr-su-genetica-chip-acortado-design.md).
+    function _grColorForSource(s) {
+        if (!s || !s.grLoteId) return null;
+        try {
+            var l = getGRLotesMap()[s.grLoteId];
+            return (l && l.color) || null;
+        } catch (e) { return null; }
+    }
+
+    function _grChipHtml(label, hex) {
+        if (!label) return '—';
+        var bg = hex ? _hexToRgba(hex, 0.15) : null;
+        var border = hex ? _hexToRgba(hex, 0.40) : null;
+        var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + esc(hex) + '"' : '';
+        return '<span class="fr-traza"' + style + ' title="' + esc(label) + '">' + esc(label) + '</span>';
+    }
+
+    function _grChipFromBolsa(b) {
+        if (Array.isArray(b.grSources) && b.grSources.length > 1) {
+            return b.grSources.map(function(s) {
+                var label = (s.grLoteId || '—') + (s.grTandaId ? ' · ' + s.grTandaId : '');
+                return _grChipHtml(label, _grColorForSource(s));
+            }).join(' + ');
+        }
+        var label = (b.grLoteId || '—') + (b.grTandaId ? ' · ' + b.grTandaId : '');
+        return _grChipHtml(label, _grColorForSource({ grLoteId: b.grLoteId }));
+    }
+
     function _geTxtFromBolsa(b) {
         if (Array.isArray(b.grSources) && b.grSources.length > 1) {
             var labels = b.grSources
@@ -3070,7 +3101,7 @@
     function filaPendiente(b) {
         var ge    = _geChipFromBolsa(b);
         var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
-        var grTxt = _grTxtFromBolsa(b);
+        var grChip = _grChipFromBolsa(b);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
         var uuid  = esc(b._frUuid || '');
         // Default = hoy (día en que se confirma el armado), no b.fechaInicio (que en una
@@ -3082,7 +3113,7 @@
             + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
             + '<td>' + ge + '</td>'
             + '<td><span class="fr-traza">' + esc(suTxt) + '</span></td>'
-            + '<td><span class="fr-traza">' + esc(grTxt) + '</span></td>'
+            + '<td>' + grChip + '</td>'
             + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + esc(fechaVal) + '" oninput="FR._draftFechaArmado(\'' + uuid + '\', this.value)" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
             + '<td class="fr-num">' + seco + '</td>'
             + '<td class="fr-acciones" style="white-space:nowrap">'
