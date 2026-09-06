@@ -93,6 +93,13 @@
                         <label for="loteVersion">Versión</label>
                         <input type="text" id="loteVersion" value="v1">
                     </div>
+                    <div class="form-group">
+                        <label for="loteColor">Color</label>
+                        <input type="color" id="loteColor" value="#FFD700"
+                            style="opacity:0.7;width:48px;height:34px;padding:2px;cursor:pointer"
+                            oninput="this.dataset.manualEdit='true';this.style.opacity='1';"
+                            title="Se asigna automáticamente al guardar. Elegí uno para fijarlo a mano.">
+                    </div>
                 </div>
             </div>
         </section>
