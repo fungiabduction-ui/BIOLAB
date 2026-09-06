@@ -1582,6 +1582,16 @@
                 searchEl.value = _frSearch;
             }
         }
+
+        // El tbody se reconstruye completo en CUALQUIER render (ver renderActivos/
+        // renderCosecha/renderArchivo) — los checkboxes siempre vuelven a nacer sin
+        // marcar, así que los botones de acción en lote deben volver a "0 seleccionadas"
+        // en cada llamada, no solo la primera. Sin esto, un botón bulk queda visible con
+        // el conteo viejo después de aplicarse (ej. "Cerrar ciclo (2)" tras cerrar esas
+        // 2 bolsas), aunque un click posterior sea inofensivo (0 checkboxes marcados).
+        ctrl.querySelectorAll('.fr-btn-bulk-count').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
     }
 
     /** Actualiza texto y visibilidad de TODOS los botones de acción en lote
