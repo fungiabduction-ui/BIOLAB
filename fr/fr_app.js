@@ -1729,7 +1729,10 @@
             : todasCosecha;
         lista = lista.filter(_frBuscar);
         lista = _frOrdenar(lista, 'cosecha');
-        _renderControlesTabla('frControlesCosecha', 'frCosechaBody', todasCosecha);
+        _renderControlesTabla('frControlesCosecha', 'frCosechaBody', todasCosecha, {
+            id: 'frBtnCerrarCicloSel', cls: 'fr-btn-cerrar-sel',
+            labelBase: '⏹ Cerrar ciclo', fnName: 'FR.cerrarCicloSeleccionados'
+        });
         _renderThead('frCosechaTable', 'cosecha');
         if (lista.length === 0) {
             tbody.innerHTML = '<tr><td colspan="15" class="fr-empty">'
@@ -3607,6 +3610,60 @@
         }
         saveBolsas();
         renderAll();
+    };
+
+    // ------------------------------------------------------
+    // CERRAR CICLO EN LOTE (bulk, reversible bolsa por bolsa).
+    // Mismo cuerpo que la rama de cierre de FR.cerrarCiclo() de arriba —
+    // nunca la de reabrir ni el guard de contaminada, porque 🟡 Cosecha
+    // excluye por construcción cualquier bolsa ya archivada (esCosecha()
+    // la filtra antes de que llegue a esta tabla). Un solo
+    // saveBolsas()+renderAll() al final, no uno por bolsa.
+    // ------------------------------------------------------
+    FR.cerrarCicloSeleccionados = function(tbodyId) {
+        var tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        var cbs = tbody.querySelectorAll('.fr-sel-cb:checked');
+        if (cbs.length === 0) return;
+        var ids = [];
+        cbs.forEach(function(cb) { if (cb.dataset.frId) ids.push(cb.dataset.frId); });
+        var seleccion = bolsas.filter(function(b) { return ids.indexOf(b.id) !== -1; });
+        // Filtro defensivo: no debería haber ninguna archivada en esta selección
+        // (esCosecha() ya las excluye de la tabla), pero se revalida justo antes
+        // de mutar por si el dato cambió entre el último render y este click.
+        var validas = seleccion.filter(function(b) {
+            return b.contaminada !== true && b.cicloCerrado !== true &&
+                   b.noFructifico !== true && b.cancelada !== true;
+        });
+        if (validas.length === 0) {
+            alert('Ninguna de las bolsas seleccionadas puede cerrarse (ya están archivadas).');
+            return;
+        }
+        var omitidas = seleccion.length - validas.length;
+        var preview = validas.slice(0, 15).map(function(b) { return '• ' + b.id; }).join('\n');
+        if (validas.length > 15) preview += '\n...y ' + (validas.length - 15) + ' más';
+        var msg = 'Cerrar ciclo de ' + validas.length + ' bolsa(s)?\n\n' + preview
+            + (omitidas > 0 ? '\n\n(' + omitidas + ' seleccionada(s) se omiten: ya están archivadas)' : '')
+            + '\n\nSe archivarán en 🔴 Archivo. Es reversible: se pueden reabrir individualmente desde ahí.';
+        if (!confirm(msg)) return;
+
+        validas.forEach(function(b) {
+            var prevEstado = computeEstado(b);
+            b.cicloCerrado = true;
+            var _lastFecha = null;
+            (b.flushes || []).forEach(function(f) {
+                if (f && f.fecha && (!_lastFecha || f.fecha > _lastFecha)) _lastFecha = f.fecha;
+            });
+            b.fechaCierreCiclo = _lastFecha ? _lastFecha.substring(0, 10) : hoyISO();
+            addObsTo(b, 'Ciclo cerrado en lote (bulk) desde Cosecha.', 'manual', 'none');
+            b.estado = computeEstado(b);
+            if (b.estado !== prevEstado) {
+                addObsTo(b, 'Estado: ' + prevEstado + ' -> ' + b.estado, 'auto', 'none');
+            }
+        });
+        saveBolsas();
+        renderAll();
+        alert('✅ ' + validas.length + ' bolsa(s) con ciclo cerrado.');
     };
 
     // ------------------------------------------------------
