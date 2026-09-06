@@ -3702,6 +3702,33 @@ window.grCancelarEdicionSeguimientoNota = function(notaId, original) {
         }
     }
 
+    function _grMigrarColorBackfillV1() {
+        var MIGRACION_KEY = 'biolab_migracion_gr_color_backfill_v1';
+        try {
+            if (localStorage.getItem(MIGRACION_KEY) === '1') return;
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+            var lotes = JSON.parse(raw);
+            if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+            var pendientes = lotes.filter(function(l) { return l && !l.color; });
+            pendientes.sort(function(a, b) {
+                var fa = a.fecha || '', fb = b.fecha || '';
+                if (fa !== fb) return fa < fb ? -1 : 1;
+                return (a.id || '').localeCompare(b.id || '');
+            });
+            pendientes.forEach(function(lote) {
+                lote.color = _grNextAutoColor();
+            });
+            if (pendientes.length > 0) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(lotes));
+                console.log('[GR] Migración color backfill: ' + pendientes.length + ' protocolos coloreados');
+            }
+            localStorage.setItem(MIGRACION_KEY, '1');
+        } catch (e) {
+            console.error('[GR] Error en migración de color backfill:', e);
+        }
+    }
+
 // ==========================================
 // MOTOR ANALÍTICO — Calibración y Conocimiento de Granos
 // Toda la lógica es read-only sobre localStorage. Nunca escribe datos derivados.
@@ -4216,6 +4243,7 @@ function grInit() {
     })();
     _migrarInoculoSourceNull();
     _grMigrarNotasUnificadasV1();
+    _grMigrarColorBackfillV1();
     // Pre-hidratar biblioteca antes de cualquier handler DOM.
     // Esto garantiza que GR.biblioteca esté disponible aunque
     // cualquier otro código dispare accesos tempranos.
