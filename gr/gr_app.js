@@ -1096,6 +1096,14 @@ function _grHexToRgba(hex, alpha) {
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
+window.grSetLoteColor = function grSetLoteColor(loteId, colorValue) {
+    var idx = lotesData.findIndex(function (l) { return l.id === loteId; });
+    if (idx < 0) return;
+    lotesData[idx].color = colorValue;
+    guardarEnStorage();
+    grRenderizarRegistroLotes();
+};
+
     // ==========================================
 // REGISTRO DE LOTES - EQUIVALENTE A SU
 // ==========================================
@@ -1261,9 +1269,17 @@ function grRenderizarRegistroLotes() {
 
         const loteIdSafe = (lote.id || '').replace(/'/g, "\\'");
         const grainFirma = _grFirmaProtocolo(lote);
-        return `<div class="gr-reg-card" onclick="grCargarRegistroYVolver(${realIndex})" title="Cargar registro">
+        const colorVars = lote.color
+            ? ` style="--protocolo-color:${lote.color};--protocolo-bg:${_grHexToRgba(lote.color, 0.07)}"`
+            : '';
+        const colorSwatch = `<input type="color" class="gr-card-color-swatch" value="${lote.color || '#FFD700'}"
+            onclick="event.stopPropagation()"
+            onchange="event.stopPropagation(); grSetLoteColor('${loteIdSafe}', this.value)"
+            title="Cambiar color del protocolo">`;
+        return `<div class="gr-reg-card"${colorVars} onclick="grCargarRegistroYVolver(${realIndex})" title="Cargar registro">
             <div class="gr-card-head">
                 <div class="gr-card-identity">
+                    ${colorSwatch}
                     <span class="gr-card-id">${lote.id || '-'}</span>
                     ${lote.nombre ? `<span class="gr-card-nombre">${lote.nombre}</span>` : ''}
                 </div>

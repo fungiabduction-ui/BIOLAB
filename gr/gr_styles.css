@@ -1427,8 +1427,10 @@ body {
 
 /* Card */
 .gr-reg-card {
-    background: rgba(255, 215, 0, 0.04);
+    background: var(--protocolo-bg, rgba(255, 215, 0, 0.04));
     border: 1px solid rgba(255, 215, 0, 0.18);
+    border-left-width: 4px;
+    border-left-color: var(--protocolo-color, rgba(255, 215, 0, 0.18));
     border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
@@ -1454,6 +1456,19 @@ body {
     gap: 10px;
     flex-shrink: 0;
 }
+.gr-card-color-swatch {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: center;
+}
+.gr-card-color-swatch::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; }
+.gr-card-color-swatch::-webkit-color-swatch { border: none; border-radius: 50%; }
 .gr-card-id {
     font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
