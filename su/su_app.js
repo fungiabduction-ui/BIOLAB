@@ -1243,6 +1243,20 @@ function _suGenChipHtml(fullChainStr, fenId) {
     return '<span class="' + cls + '"' + style + ' title="' + suDbEscapeHtml(fullChainStr) + '">' + suDbEscapeHtml(label) + '</span>';
 }
 
+// Chip de color por protocolo GR para el id de tanda (columna GRANO de Registro). Resuelto en
+// vivo contra el grMap que cada función de render ya arma — cero lecturas nuevas, cero cambios
+// en su_lotes. Mismo mecanismo/paleta que la card de GR (gr_app.js:_grHexToRgba).
+function _suGrTandaChipHtml(grLoteId, grTandaId, grMap) {
+    if (!grTandaId) return '';
+    var l = grMap[grLoteId || ''];
+    var hex = (l && l.color) || null;
+    var bg = hex ? _suHexToRgba(hex, 0.13) : null;
+    var border = hex ? _suHexToRgba(hex, 0.40) : null;
+    var cls = 'su-kchip' + (bg ? '' : ' su-kchip-dim');
+    var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + suDbEscapeHtml(hex) + '"' : '';
+    return '<span class="' + cls + '"' + style + ' title="Lote GR: ' + suDbEscapeHtml(grLoteId || '') + '">' + suDbEscapeHtml(grTandaId) + '</span>';
+}
+
 function suFmt(n, dec) {
     if (n == null || isNaN(n)) return '—';
     var d = (dec == null) ? 1 : dec;
@@ -1473,7 +1487,7 @@ function renderizarRegistroLotes() {
                     }
                 }
                 pesoGranoSub += _us * _pf;
-                grTxtParts.push(s.grTandaId + (_gen ? ' — ' + _suGenChipHtml(_gen, _fenId) : ''));
+                grTxtParts.push(_suGrTandaChipHtml(s.grLoteId, s.grTandaId, grMap) + (_gen ? ' — ' + _suGenChipHtml(_gen, _fenId) : ''));
             });
             if (normSrcs.length === 0) us = parseInt(r.grUsados) || 0;
             var grTxt = grTxtParts.length > 0 ? grTxtParts.join(' + ') : '';
