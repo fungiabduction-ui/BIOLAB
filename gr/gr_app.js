@@ -17,6 +17,11 @@ const BIBLIOTECA_KEY = 'gr_biblioteca';
 const GR_USADOS_KEY = 'gr_usados';       // { [grLoteId]: { [grTandaId]: count } }
 const GR_USADOS_REF_KEY = 'gr_usados_ref'; // { [grLoteId]: { [grTandaId]: [suLoteId, ...] } }
 const SU_STORAGE_KEY_REF = 'su_lotes';
+const GR_COLOR_SEQ_KEY = 'gr_color_seq';
+const GR_COLOR_PALETTE = [
+    '#EF6C57', '#F2A93C', '#C6D94D', '#52B788', '#2FB6A6', '#3FA9DB',
+    '#5C7CE0', '#8B6CE3', '#C15FCB', '#E0568F', '#B0785A', '#6E8894'
+];
 let lotesData = [];
 let _grStorageListener = null;
 let _grVisibilityListener = null;
@@ -1064,6 +1069,33 @@ function actualizarSelectoresCT() {
         return visibles.join(' / ');
     }
     
+    // ==========================================
+// COLOR DE PROTOCOLO — paleta rotativa + tinte de card/chips
+// ==========================================
+
+function _grNextAutoColor() {
+    var idx = 0;
+    try { idx = parseInt(localStorage.getItem(GR_COLOR_SEQ_KEY), 10) || 0; } catch (e) {}
+    var color = GR_COLOR_PALETTE[idx % GR_COLOR_PALETTE.length];
+    try { localStorage.setItem(GR_COLOR_SEQ_KEY, String(idx + 1)); } catch (e) {}
+    return color;
+}
+
+function _grResolveLoteColor(opts) {
+    if (opts.existingColor && !opts.manualEdit) return opts.existingColor;
+    if (opts.manualEdit) return opts.inputValue;
+    return _grNextAutoColor();
+}
+
+function _grHexToRgba(hex, alpha) {
+    if (typeof hex !== 'string') return null;
+    var m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
     // ==========================================
 // REGISTRO DE LOTES - EQUIVALENTE A SU
 // ==========================================
