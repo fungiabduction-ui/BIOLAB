@@ -500,7 +500,19 @@ EOF
 
 ---
 
-### Task 5: Verificación end-to-end de GR en Chrome real
+### Task 5: Verificación end-to-end de GR en Chrome real [SALTEADA — ver nota]
+
+> **Nota (2026-09-06):** se intentó ejecutar esta task con un subagente + `chrome-devtools` MCP.
+> El Step 3 (chequeo de aislamiento) detectó que esa instancia de Chrome **no es un perfil de
+> automatización descartable** — ya tenía datos reales de producción cargados (16 lotes GR
+> reales incluyendo `GR113`, 66 bolsas FR, flags de migración). El subagente frenó ahí, no
+> escribió nada en `localStorage`, cerró la page. El supuesto original de esta task (mismo
+> mecanismo que las sesiones previas con Playwright + Chrome headless descartable) no aplica en
+> este entorno. Consultado el usuario, decidió probar la feature a mano en su propio navegador
+> una vez commiteado todo el plan — esta task y la Task 8 (verificación FR/SU) quedan
+> reemplazadas por esa verificación manual. La cobertura de code review (spec compliance +
+> calidad, 2 rondas por task, con 2 bugs reales encontrados y corregidos en Tasks 2 y 4) sigue
+> vigente sin cambios.
 
 **Files:** ninguno (solo verificación)
 
