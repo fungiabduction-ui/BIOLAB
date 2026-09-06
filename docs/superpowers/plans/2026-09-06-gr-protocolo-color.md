@@ -834,7 +834,14 @@ EOF
 
 ---
 
-### Task 8: Verificación end-to-end de FR/SU en Chrome real
+### Task 8: Verificación end-to-end de FR/SU en Chrome real [SALTEADA — ver Task 5]
+
+> **Nota (2026-09-06):** salteada por el mismo motivo que la Task 5 — el Chrome que controla
+> `chrome-devtools` MCP en este entorno no es un perfil de automatización descartable, comparte
+> estado con los datos reales del usuario. El usuario decidió probar GR+FR+SU a mano en su
+> propio navegador una vez commiteado todo el plan, en vez de arriesgar un seed accidental sobre
+> datos de producción. La cobertura de code review (spec compliance + calidad) de las Tasks 6 y
+> 7 sigue vigente sin cambios — ambas aprobadas.
 
 **Files:** ninguno (solo verificación)
 
@@ -942,13 +949,23 @@ siguiente `---`), agregar:
   matando la diferenciación). Un color elegido a mano no consume la cola.
   `_grResolveLoteColor()` es la única función que decide: preserva el color existente si no se
   tocó el picker, usa el valor del picker si `dataset.manualEdit==='true'`, autoasigna en
-  cualquier otro caso. Sin migración retroactiva — lotes históricos quedan sin color hasta que
-  se re-guarden o se les asigne desde el swatch de la card en Registro (`grSetLoteColor`).
+  cualquier otro caso. **Se llama SOLO desde `guardarLote()`, nunca desde
+  `recolectarDatosLote()`** — bug real encontrado en code review: `recolectarDatosLote()`
+  también la usa `updateUnidadFisica()` (preview no-persistente, dispara en cada keystroke de
+  los campos UF), y resolver color ahí quemaba la cola rotativa para un valor que se descartaba
+  sin guardar nada. Cualquier código nuevo que necesite el color "que se guardaría" de un lote
+  en pantalla debe llamar a `_grResolveLoteColor()` desde un boundary de persistencia real
+  (como `guardarLote()`), nunca desde una función de preview/cálculo en vivo. Sin migración
+  retroactiva — lotes históricos quedan sin color hasta que se re-guarden o se les asigne desde
+  el swatch de la card en Registro (`grSetLoteColor`, que escribe `lotesData[idx].color`
+  directo por id, sin pasar por la cola).
   FR (columna GR, `_grChipFromBolsa`) y SU (columna GRANO, `_suGrTandaChipHtml`) resuelven el
   color **en vivo** contra `gr_lotes` en cada render — mismo mecanismo (custom
-  properties/inline style, fallback neutro si el lote no existe o no tiene color) que ya usa el
-  chip de genética acortado (ver entrada 2026-08-31 más abajo). Ninguno de los dos escribe en
-  su propio storage por esto. Spec: `docs/superpowers/specs/2026-09-06-gr-protocolo-color-design.md`.
+  properties/inline style, fallback neutro si el lote no existe o no tiene color, o si
+  `lote.color` no matchea el regex hex estricto de `_grHexToRgba`/`_hexToRgba`/`_suHexToRgba` —
+  un color corrupto nunca llega a un atributo HTML sin validar) que ya usa el chip de genética
+  acortado (ver entrada 2026-08-31 más abajo). Ninguno de los dos escribe en su propio storage
+  por esto. Spec: `docs/superpowers/specs/2026-09-06-gr-protocolo-color-design.md`.
 ```
 
 - [ ] **Step 3: Commit**
