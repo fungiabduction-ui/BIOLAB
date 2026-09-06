@@ -1427,19 +1427,19 @@ body {
 
 /* Card */
 .gr-reg-card {
-    background: var(--protocolo-bg, rgba(255, 215, 0, 0.04));
+    background: var(--gr-protocolo-bg, rgba(255, 215, 0, 0.04));
     border: 1px solid rgba(255, 215, 0, 0.18);
     border-left-width: 4px;
-    border-left-color: var(--protocolo-color, rgba(255, 215, 0, 0.18));
+    border-left-color: var(--gr-protocolo-color, rgba(255, 215, 0, 0.18));
     border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
     transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 .gr-reg-card:hover {
-    background: var(--protocolo-bg-hover, rgba(255, 215, 0, 0.08));
-    border-color: var(--protocolo-color, var(--highlight, #FFD700));
-    box-shadow: inset 3px 0 0 var(--protocolo-color, var(--highlight, #FFD700));
+    background: var(--gr-protocolo-bg-hover, rgba(255, 215, 0, 0.08));
+    border-color: var(--gr-protocolo-color, var(--highlight, #FFD700));
+    box-shadow: inset 3px 0 0 var(--gr-protocolo-color, var(--highlight, #FFD700));
 }
 
 /* ── Cabecera de card: flex — identity · grain · right ── */

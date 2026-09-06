@@ -1097,9 +1097,12 @@ function _grHexToRgba(hex, alpha) {
 }
 
 window.grSetLoteColor = function grSetLoteColor(loteId, colorValue) {
-    var idx = lotesData.findIndex(function (l) { return l.id === loteId; });
+    var raw = localStorage.getItem(STORAGE_KEY);
+    var lotesFrescos = raw ? JSON.parse(raw) : [];
+    var idx = lotesFrescos.findIndex(function (l) { return l.id === loteId; });
     if (idx < 0) return;
-    lotesData[idx].color = colorValue;
+    lotesFrescos[idx].color = colorValue;
+    lotesData = lotesFrescos;
     guardarEnStorage();
     grRenderizarRegistroLotes();
 };
@@ -1271,7 +1274,7 @@ function grRenderizarRegistroLotes() {
         const grainFirma = _grFirmaProtocolo(lote);
         const _colorValido = (lote.color && _grHexToRgba(lote.color, 1)) ? lote.color : null;
         const colorVars = _colorValido
-            ? ` style="--protocolo-color:${_colorValido};--protocolo-bg:${_grHexToRgba(_colorValido, 0.07)};--protocolo-bg-hover:${_grHexToRgba(_colorValido, 0.12)}"`
+            ? ` style="--gr-protocolo-color:${_colorValido};--gr-protocolo-bg:${_grHexToRgba(_colorValido, 0.07)};--gr-protocolo-bg-hover:${_grHexToRgba(_colorValido, 0.12)}"`
             : '';
         const colorSwatch = `<input type="color" class="gr-card-color-swatch" value="${_colorValido || '#FFD700'}"
             onclick="event.stopPropagation()"
