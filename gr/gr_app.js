@@ -1269,10 +1269,11 @@ function grRenderizarRegistroLotes() {
 
         const loteIdSafe = (lote.id || '').replace(/'/g, "\\'");
         const grainFirma = _grFirmaProtocolo(lote);
-        const colorVars = lote.color
-            ? ` style="--protocolo-color:${lote.color};--protocolo-bg:${_grHexToRgba(lote.color, 0.07)}"`
+        const _colorValido = (lote.color && _grHexToRgba(lote.color, 1)) ? lote.color : null;
+        const colorVars = _colorValido
+            ? ` style="--protocolo-color:${_colorValido};--protocolo-bg:${_grHexToRgba(_colorValido, 0.07)};--protocolo-bg-hover:${_grHexToRgba(_colorValido, 0.12)}"`
             : '';
-        const colorSwatch = `<input type="color" class="gr-card-color-swatch" value="${lote.color || '#FFD700'}"
+        const colorSwatch = `<input type="color" class="gr-card-color-swatch" value="${_colorValido || '#FFD700'}"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation(); grSetLoteColor('${loteIdSafe}', this.value)"
             title="Cambiar color del protocolo">`;

@@ -1437,9 +1437,9 @@ body {
     transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 .gr-reg-card:hover {
-    background: rgba(255, 215, 0, 0.08);
-    border-color: var(--highlight, #FFD700);
-    box-shadow: inset 3px 0 0 var(--highlight, #FFD700);
+    background: var(--protocolo-bg-hover, rgba(255, 215, 0, 0.08));
+    border-color: var(--protocolo-color, var(--highlight, #FFD700));
+    box-shadow: inset 3px 0 0 var(--protocolo-color, var(--highlight, #FFD700));
 }
 
 /* ── Cabecera de card: flex — identity · grain · right ── */
