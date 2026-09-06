@@ -1678,7 +1678,10 @@
             : todasEnCultivo;
         enCultivo = enCultivo.filter(_frBuscar);
         enCultivo = _frOrdenar(enCultivo, 'activos');
-        _renderControlesTabla('frControlesActivos', 'frActivosBody', todasEnCultivo);
+        _renderControlesTabla('frControlesActivos', 'frActivosBody', todasEnCultivo, {
+            id: 'frBtnNoFructificoSel', cls: 'fr-btn-nofructifico-sel',
+            labelBase: '🕳 No fructificaron', fnName: 'FR.noFructificoSeleccionados'
+        });
         _renderThead('frActivosTable', 'activos');
         if (enCultivo.length === 0) {
             tbody.innerHTML = '<tr><td colspan="14" class="fr-empty">'
@@ -3741,6 +3744,59 @@
         }
         saveBolsas();
         renderAll();
+    };
+
+    // ------------------------------------------------------
+    // NO FRUCTIFICÓ EN LOTE (bulk, reversible bolsa por bolsa).
+    // Mismo cuerpo que la rama de cierre de FR.marcarNoFructifico() de
+    // arriba — nunca la de reabrir ni los guards de contaminada/
+    // cicloCerrado/flushes>0, porque 🟢 Activo excluye por construcción
+    // cualquier bolsa con esas condiciones (esEnCultivo() la filtra antes
+    // de que llegue a esta tabla). Un solo saveBolsas()+renderAll() al
+    // final, no uno por bolsa.
+    // ------------------------------------------------------
+    FR.noFructificoSeleccionados = function(tbodyId) {
+        var tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        var cbs = tbody.querySelectorAll('.fr-sel-cb:checked');
+        if (cbs.length === 0) return;
+        var ids = [];
+        cbs.forEach(function(cb) { if (cb.dataset.frId) ids.push(cb.dataset.frId); });
+        var seleccion = bolsas.filter(function(b) { return ids.indexOf(b.id) !== -1; });
+        // Filtro defensivo: no debería haber ninguna archivada ni con cosechas
+        // en esta selección (esEnCultivo() ya las excluye de la tabla), pero se
+        // revalida justo antes de mutar por si el dato cambió entre el último
+        // render y este click.
+        var validas = seleccion.filter(function(b) {
+            return b.contaminada !== true && b.cicloCerrado !== true &&
+                   b.noFructifico !== true && b.cancelada !== true &&
+                   (!Array.isArray(b.flushes) || b.flushes.length === 0);
+        });
+        if (validas.length === 0) {
+            alert('Ninguna de las bolsas seleccionadas puede marcarse (ya archivadas o con cosechas).');
+            return;
+        }
+        var omitidas = seleccion.length - validas.length;
+        var preview = validas.slice(0, 15).map(function(b) { return '• ' + b.id; }).join('\n');
+        if (validas.length > 15) preview += '\n...y ' + (validas.length - 15) + ' más';
+        var msg = 'Marcar ' + validas.length + ' bolsa(s) como NO FRUCTIFICÓ?\n\n' + preview
+            + (omitidas > 0 ? '\n\n(' + omitidas + ' seleccionada(s) se omiten: ya archivadas o con cosechas)' : '')
+            + '\n\nSe archivarán en 🔴 Archivo. Es reversible individualmente desde ahí.';
+        if (!confirm(msg)) return;
+
+        validas.forEach(function(b) {
+            var prevEstado = computeEstado(b);
+            b.noFructifico = true;
+            b.fechaNoFructifico = hoyISO();
+            addObsTo(b, 'Bolsa marcada como NO FRUCTIFICÓ en lote (bulk) desde Activo.', 'manual', 'yellow');
+            b.estado = computeEstado(b);
+            if (b.estado !== prevEstado) {
+                addObsTo(b, 'Estado: ' + prevEstado + ' -> ' + b.estado, 'auto', 'none');
+            }
+        });
+        saveBolsas();
+        renderAll();
+        alert('✅ ' + validas.length + ' bolsa(s) marcada(s) como no fructificó.');
     };
 
     FR.recomputeFlushesLive = function() {
