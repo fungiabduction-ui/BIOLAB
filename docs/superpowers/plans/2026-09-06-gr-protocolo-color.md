@@ -371,7 +371,18 @@ EOF
 
 ---
 
-### Task 4: Tinte de card + swatch clickeable en Registro
+### Task 4: Tinte de card + swatch clickeable en Registro [COMPLETADA — ver nota]
+
+> **Nota post-implementación (2026-09-06):** el código de los Steps 2-3 de abajo es el que se
+> implementó PRIMERO (commit `d34b889`), pero quedó superado por 2 rondas de fixes posteriores:
+> code review encontró que el `:hover` apagaba el color del protocolo y que `lote.color` se
+> interpolaba sin validar en el `style` (fix `655f718`); la revisión holística final encontró
+> que `grSetLoteColor` podía pisar un guardado concurrente de otra pestaña por mutar
+> `lotesData` en memoria en vez de releer fresco, y que las custom properties no llevaban
+> prefijo de módulo (fix `183abd6`). **El código final y correcto está documentado en
+> `docs/superpowers/specs/2026-09-06-gr-protocolo-color-design.md`, sección "UI — Registro"** —
+> no usar los snippets de abajo como referencia si se vuelve a tocar este código, en particular
+> no "restaurar" el `:hover` a dorado fijo pensando que es una limpieza.
 
 **Files:**
 - Modify: `gr/gr_app.js` (`grRenderizarRegistroLotes`, sección "COLOR DE PROTOCOLO")

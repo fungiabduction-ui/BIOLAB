@@ -133,51 +133,83 @@ Reset a `manualEdit:false` en cada carga — el flag vive por sesión de edició
 protocolo; la preservación del color ya guardado la resuelve `recolectarDatosLote()` mirando
 `lotesData`, no el flag.
 
-## UI — Registro (`grRenderizarRegistroLotes`, `gr_app.js:1094-1255`)
+## UI — Registro (`grRenderizarRegistroLotes`, `gr_app.js`)
+
+**Actualizado 2026-09-06 (mismo día) para reflejar el código final, post 2 rondas de fixes de
+code review — la versión anterior de esta sección quedó desactualizada en cuanto al `:hover` y
+a la validación de hex, ver abajo.**
 
 **Card teñida (estilo aprobado: borde izquierdo + fondo sutil).** Se agrega, antes del
-`return` del template de card (`gr_app.js:1232`):
+`return` del template de card:
 
 ```js
-var colorVars = lote.color
-    ? ' style="--protocolo-color:' + lote.color + ';--protocolo-bg:' + _grHexToRgba(lote.color, 0.07) + '"'
+const _colorValido = (lote.color && _grHexToRgba(lote.color, 1)) ? lote.color : null;
+const colorVars = _colorValido
+    ? ` style="--gr-protocolo-color:${_colorValido};--gr-protocolo-bg:${_grHexToRgba(_colorValido, 0.07)};--gr-protocolo-bg-hover:${_grHexToRgba(_colorValido, 0.12)}"`
     : '';
 ```
 
-Y se inserta `colorVars` en el `<div class="gr-reg-card"${colorVars} onclick=...>`. CSS nuevo en
-`gr_styles.css`, junto a `.gr-reg-card` (`gr_styles.css:1429-1436`):
+`_colorValido` reusa `_grHexToRgba` como validador (devuelve `null` ante cualquier hex
+inválido/corrupto) — nunca se interpola `lote.color` crudo en el `style`. Sin esta guarda, un
+`.color` corrupto en storage (posible vía `importarJSON`, que no valida al importar) produciría
+`--gr-protocolo-bg:null` en el atributo — un valor CSS inválido-pero-seteado que NO dispara el
+fallback de `var(..., fallback)` (el fallback solo aplica cuando la property está *sin setear*,
+no cuando está seteada a basura). `_colorValido` cierra ese hueco de raíz.
+
+Se inserta `colorVars` en el `<div class="gr-reg-card"${colorVars} onclick=...>`. CSS en
+`gr_styles.css`, `.gr-reg-card`:
 
 ```css
 .gr-reg-card {
+    background: var(--gr-protocolo-bg, rgba(255, 215, 0, 0.04));
+    border: 1px solid rgba(255, 215, 0, 0.18);
     border-left-width: 4px;
-    border-left-color: var(--protocolo-color, rgba(255, 215, 0, 0.18));
-    background: var(--protocolo-bg, rgba(255, 215, 0, 0.04));
-    /* resto de la regla existente sin cambios */
+    border-left-color: var(--gr-protocolo-color, rgba(255, 215, 0, 0.18));
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.gr-reg-card:hover {
+    background: var(--gr-protocolo-bg-hover, rgba(255, 215, 0, 0.08));
+    border-color: var(--gr-protocolo-color, var(--highlight, #FFD700));
+    box-shadow: inset 3px 0 0 var(--gr-protocolo-color, var(--highlight, #FFD700));
 }
 ```
 
 Mismo mecanismo de custom property que ya usa `ge_app.js:696,766` con `--node-color` — no se
-introduce un patrón nuevo. El `:hover` existente (`gr_styles.css:1437-1441`, gold accent) no se
-toca: sigue disparando igual sobre cards coloreadas, es la señal de interacción, no de
-identidad del protocolo.
+introduce un patrón nuevo, y las 3 properties llevan el prefijo `--gr-` (Regla 7, "protocolo"
+es vocabulario compartido con CI/SU). **El `:hover` SÍ se tocó, a diferencia de lo que decía la
+versión anterior de esta sección** — la primera implementación lo dejó intacto (gold fijo), y
+code review encontró que eso apagaba el color del protocolo justo en el momento en que el
+usuario tiene el mouse encima, la única interacción que siempre precede a un click. El fix
+agrega `--gr-protocolo-bg-hover` (alpha 0.12, un poco más intenso que el 0.07 de reposo) y hace
+que `border-color`/`box-shadow` en hover lean del mismo `--gr-protocolo-color` que la card en
+reposo, con el dorado como fallback de siempre. **Si se vuelve a tocar este bloque, no
+"restaurar" el hover a gold fijo pensando que es una limpieza — sería reintroducir este bug.**
 
-**Swatch clickeable junto al ID**, dentro de `gr-card-identity` (`gr_app.js:1234-1237`), antes
-del span de nombre:
+**Swatch clickeable junto al ID**, dentro de `gr-card-identity`, antes del span de nombre:
 
 ```js
-'<input type="color" class="gr-card-color-swatch" value="' + (lote.color || '#FFD700') + '" '
-    + 'onclick="event.stopPropagation()" '
-    + 'onchange="event.stopPropagation(); grSetLoteColor(\'' + loteIdSafe + '\', this.value)" '
-    + 'title="Cambiar color del protocolo">'
+const colorSwatch = `<input type="color" class="gr-card-color-swatch" value="${_colorValido || '#FFD700'}"
+    onclick="event.stopPropagation()"
+    onchange="event.stopPropagation(); grSetLoteColor('${loteIdSafe}', this.value)"
+    title="Cambiar color del protocolo">`;
 ```
 
-`grSetLoteColor` (nuevo, expuesto en `window` por Regla 4):
+`grSetLoteColor` (nuevo, expuesto en `window` por Regla 4). **Relee `gr_lotes` fresco de
+localStorage antes de mutar** (no confía en el `lotesData` en memoria, que puede estar stale si
+otra pestaña guardó algo desde que esta montó — mismo criterio que el fix de `_suEscribirBolsaFR`,
+2026-09-02, documentado en CLAUDE.md):
 
 ```js
-window.grSetLoteColor = function(loteId, colorValue) {
-    var idx = lotesData.findIndex(function(l) { return l.id === loteId; });
+window.grSetLoteColor = function grSetLoteColor(loteId, colorValue) {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    var lotesFrescos = raw ? JSON.parse(raw) : [];
+    var idx = lotesFrescos.findIndex(function (l) { return l.id === loteId; });
     if (idx < 0) return;
-    lotesData[idx].color = colorValue;
+    lotesFrescos[idx].color = colorValue;
+    lotesData = lotesFrescos;
     guardarEnStorage();
     grRenderizarRegistroLotes();
 };
