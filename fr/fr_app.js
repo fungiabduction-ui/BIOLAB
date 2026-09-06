@@ -1598,7 +1598,7 @@
         ctrl.querySelectorAll('.fr-btn-bulk-count').forEach(function(btn) {
             var base = btn.dataset.labelBase || '';
             if (checked > 0) {
-                btn.style.display = '';
+                btn.style.display = 'inline-block';
                 btn.textContent = base + ' (' + checked + ')';
             } else {
                 btn.style.display = 'none';
