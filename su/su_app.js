@@ -1429,6 +1429,7 @@ function renderizarRegistroLotes() {
             <span>FR ID</span>
             <span>TANDA</span>
             <span>GENÉTICA</span>
+            <span>GR</span>
             <span>SU SECO</span>
             <span>HIDRATA&shy;CIÓN</span>
             <span>BOLSAS</span>
@@ -1475,26 +1476,9 @@ function renderizarRegistroLotes() {
         // Sub-filas
         const subs = db.map(function(r, i) {
             var normSrcs = suDbNormSources(r, lote.grProtocolo || '');
-            var us = 0, pesoGranoSub = 0, grTxtParts = [];
+            var us = 0, pesoGranoSub = 0, genTxtParts = [], grTxtParts = [];
             var _vistosLoteGr = {};
-            // Agrupar por grLoteId antes de recorrer — si dos fuentes del mismo lote no son
-            // contiguas en normSrcs (ej. se agregaron en momentos distintos), el dedup del chip
-            // de lote solo suprime el chip repetido, nunca la genética; agrupar evita que un
-            // chip de genética "huérfano" (sin su chip de lote al lado) quede pegado visualmente
-            // a la fuente de OTRO lote que quedó en el medio. No cambia `us`/`pesoGranoSub`
-            // (sumas, no dependen de orden) ni el conteo de `normSrcs.length` usado más abajo.
-            var _normSrcsAgrupados = (function() {
-                var buckets = {}, orden = [];
-                normSrcs.forEach(function(s) {
-                    var k = s.grLoteId || '';
-                    if (!buckets[k]) { buckets[k] = []; orden.push(k); }
-                    buckets[k].push(s);
-                });
-                var out = [];
-                orden.forEach(function(k) { out = out.concat(buckets[k]); });
-                return out;
-            })();
-            _normSrcsAgrupados.forEach(function(s) {
+            normSrcs.forEach(function(s) {
                 var _us = parseInt(s.grUsados) || 0;
                 us += _us;
                 var _grL = grMap[s.grLoteId || ''];
@@ -1508,19 +1492,19 @@ function renderizarRegistroLotes() {
                     }
                 }
                 pesoGranoSub += _us * _pf;
-                // Vista rápida: el chip de lote GR solo se muestra la primera vez que aparece
-                // en esta sub-fila — repetir el mismo lote (varias tandas del mismo GR) no
-                // aporta nada a un vistazo rápido, la trazabilidad completa por tanda vive en FR.
+                if (_gen) genTxtParts.push(_suGenChipHtml(_gen, _fenId));
+                // Columna GR (separada de GENÉTICA, mismo criterio visual que FR): un chip por
+                // lote distinto — varias tandas del mismo lote no repiten el chip. Trazabilidad
+                // completa por tanda vive en FR, acá es solo vista rápida.
                 var _loteGrId = s.grLoteId || '';
-                var _yaVistoLote = _loteGrId && _vistosLoteGr[_loteGrId];
-                if (_loteGrId) _vistosLoteGr[_loteGrId] = true;
-                var _chipLote = _yaVistoLote ? '' : _suGrLoteChipHtml(_loteGrId, grMap);
-                var _chipGen = _gen ? _suGenChipHtml(_gen, _fenId) : '';
-                var _pieza = _chipLote && _chipGen ? (_chipLote + ' — ' + _chipGen) : (_chipLote || _chipGen);
-                if (_pieza) grTxtParts.push(_pieza);
+                if (_loteGrId && !_vistosLoteGr[_loteGrId]) {
+                    _vistosLoteGr[_loteGrId] = true;
+                    grTxtParts.push(_suGrLoteChipHtml(_loteGrId, grMap));
+                }
             });
             if (normSrcs.length === 0) us = parseInt(r.grUsados) || 0;
-            var grTxt = grTxtParts.length > 0 ? grTxtParts.join(' + ') : '';
+            var genTxt = genTxtParts.join(' + ');
+            var grTxt = grTxtParts.join(' + ');
             var bo = parseInt(r.bolsas) || 0;
             var subId = r.tanda || (loteId + '-' + (i + 1));
             var di = 'data-idx="' + realIndex + '" data-dbidx="' + i + '"';
@@ -1649,7 +1633,8 @@ function renderizarRegistroLotes() {
                 <div class="su-card-sub">
                     <span>${frBadge}</span>
                     <span class="su-sub-tid">${subId}</span>
-                    <span class="su-sub-gen">${grTxt}</span>
+                    <span class="su-sub-gen">${genTxt}</span>
+                    <span class="su-sub-gr">${grTxt}</span>
                     <span class="su-sub-col">${sustTxt}</span>
                     <span class="su-sub-col">${hydTxt}</span>
                     <span class="su-sub-col">${bo}</span>
