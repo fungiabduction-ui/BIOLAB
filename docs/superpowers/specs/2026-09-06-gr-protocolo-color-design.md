@@ -228,6 +228,33 @@ ver `_abbrevGen`/`_genChipHtml` entre FR y SU).
 
 ## Propagación — FR (`fr_app.js`)
 
+**Actualización (2026-09-06, tras probar en real):** lo que sigue describe la primera versión
+implementada (loteId + tandaId, ej. "GR304 · GRT274B"). El usuario probó la app y pidió sacar
+la tanda de esta vista rápida — "necesito ver el ID del GR y listo", la trazabilidad por tanda
+la revisa en el panel de detalle de FR, no en la tabla. **Versión final:** `_grChipFromBolsa`
+muestra solo `grLoteId` (nunca `grTandaId`), y en el caso multi-fuente dedupea por `grLoteId`
+— si dos fuentes de la misma bolsa vienen del mismo lote (distintas tandas), el chip aparece
+una sola vez. `_grColorForSource(s)` se sigue llamando con la primera fuente de cada lote visto
+(no importa cuál, el color es propiedad del lote, no de la tanda). Código final:
+```js
+function _grChipFromBolsa(b) {
+    if (Array.isArray(b.grSources) && b.grSources.length > 1) {
+        var vistos = {};
+        var chips = [];
+        b.grSources.forEach(function(s) {
+            var loteId = s.grLoteId || '—';
+            if (vistos[loteId]) return;
+            vistos[loteId] = true;
+            chips.push(_grChipHtml(loteId, _grColorForSource(s)));
+        });
+        return chips.join(' + ');
+    }
+    return _grChipHtml(b.grLoteId || '—', _grColorForSource({ grLoteId: b.grLoteId }));
+}
+```
+`_grTxtFromBolsa` (texto plano, usado por `_frBuscar`/`_sortValue`) no se tocó — sigue
+incluyendo la tanda, es una función de búsqueda/orden, no de display.
+
 La columna GR de la tabla (`filaTabla`, celda `grTxt`, hoy texto plano dentro de
 `.fr-traza`: `fr_app.js:1328`; y `filaPendiente`, `fr_app.js:3085`) pasa de
 `_grTxtFromBolsa(b)` a un nuevo `_grChipFromBolsa(b)`, mismo criterio que ya se usó para
@@ -276,7 +303,45 @@ igual para bolsas nuevas y ya selladas").
 
 ## Propagación — SU (`su_app.js`)
 
-Columna GRANO de las sub-filas en cards de Registro. Hoy (`su_app.js:1476`):
+**Actualización (2026-09-06, mismo motivo que FR arriba):** versión final muestra solo el
+lote GR (`_suGrLoteChipHtml(grLoteId, grMap)`, reemplaza a `_suGrTandaChipHtml`), deduplicado
+por sub-fila. Como una sub-fila puede tener varias fuentes del mismo lote con genéticas
+distintas por tanda (`_gen`/`_fenId` se siguen calculando por fuente, nunca deduplicados — solo
+el chip de ID se suprime en repeticiones), las fuentes se agrupan por `grLoteId` ANTES de
+recorrerlas, para que dos fuentes del mismo lote no contiguas en el array no queden separadas
+por el chip de otro lote en el medio (bug real encontrado en la revisión holística final,
+corregido antes del commit). Código final del loop dentro de `db.map(function(r, i) {...})`:
+```js
+var normSrcs = suDbNormSources(r, lote.grProtocolo || '');
+var us = 0, pesoGranoSub = 0, grTxtParts = [];
+var _vistosLoteGr = {};
+var _normSrcsAgrupados = (function() {
+    var buckets = {}, orden = [];
+    normSrcs.forEach(function(s) {
+        var k = s.grLoteId || '';
+        if (!buckets[k]) { buckets[k] = []; orden.push(k); }
+        buckets[k].push(s);
+    });
+    var out = [];
+    orden.forEach(function(k) { out = out.concat(buckets[k]); });
+    return out;
+})();
+_normSrcsAgrupados.forEach(function(s) {
+    // ...cálculo de us/pesoGranoSub/gen/fenId sin cambios...
+    var _loteGrId = s.grLoteId || '';
+    var _yaVistoLote = _loteGrId && _vistosLoteGr[_loteGrId];
+    if (_loteGrId) _vistosLoteGr[_loteGrId] = true;
+    var _chipLote = _yaVistoLote ? '' : _suGrLoteChipHtml(_loteGrId, grMap);
+    var _chipGen = _gen ? _suGenChipHtml(_gen, _fenId) : '';
+    var _pieza = _chipLote && _chipGen ? (_chipLote + ' — ' + _chipGen) : (_chipLote || _chipGen);
+    if (_pieza) grTxtParts.push(_pieza);
+});
+```
+`us`/`pesoGranoSub` son sumas — agrupar el orden de recorrido no cambia su resultado, solo el
+orden de display de `grTxtParts`.
+
+Columna GRANO de las sub-filas en cards de Registro. Sección original (primera versión, ya
+superada por lo de arriba) — hoy (`su_app.js:1476`):
 
 ```js
 grTxtParts.push(s.grTandaId + (_gen ? ' — ' + _suGenChipHtml(_gen, _fenId) : ''));
