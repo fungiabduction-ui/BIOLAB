@@ -265,6 +265,14 @@
         } catch (e) {}
         return m;
     }
+    function getSULotesMap() {
+        var m = {};
+        try {
+            var arr = JSON.parse(localStorage.getItem(SU_KEY) || '[]') || [];
+            arr.forEach(function(l) { m[l.id] = l; });
+        } catch (e) {}
+        return m;
+    }
 
     // ======================================================
     // CÁLCULOS
@@ -1265,7 +1273,6 @@
             : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico)
             : diasEntre(b.fechaInicio, hoyISO());
         var ge = _geChipFromBolsa(b);
-        var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
         var grChip = _grChipFromBolsa(b);
         var be = beAcumulado(b.flushes);
         var rend = rendimientoFresco(b.flushes);
@@ -1324,7 +1331,7 @@
             + '<td class="fr-num-days" ' + cl + ' title="Fecha de armado de la bolsa">' + esc(fEntrada) + '</td>'
             + '<td ' + cl + '><strong>' + esc(b.id) + '</strong>' + huerfanaBadge + '</td>'
             + '<td ' + cl + '>' + ge + '</td>'
-            + '<td ' + cl + '><span class="fr-traza">' + esc(suTxt) + '</span></td>'
+            + '<td ' + cl + '>' + _suChipFromBolsa(b) + '</td>'
             + '<td ' + cl + '>' + grChip + '</td>'
             + '<td class="fr-num-days" ' + cl + '>' + (dias != null ? dias + 'd' : '-') + '</td>'
             + '<td ' + cl + '>'
@@ -3024,6 +3031,21 @@
         return _grChipHtml(b.grLoteId || '—', _grColorForSource({ grLoteId: b.grLoteId }));
     }
 
+    // Chip de color por protocolo SU — mismo mecanismo que el chip GR de arriba, reutiliza
+    // _grChipHtml tal cual (genérico label+hex→span, a pesar del nombre). Una bolsa FR tiene
+    // un solo suLoteId (a diferencia de grSources[], no hay caso multi-fuente que dedupear).
+    function _suColorForBolsa(b) {
+        if (!b || !b.suLoteId) return null;
+        try {
+            var l = getSULotesMap()[b.suLoteId];
+            return (l && l.color) || null;
+        } catch (e) { return null; }
+    }
+
+    function _suChipFromBolsa(b) {
+        return _grChipHtml(b.suLoteId || '—', _suColorForBolsa(b));
+    }
+
     function _geTxtFromBolsa(b) {
         if (Array.isArray(b.grSources) && b.grSources.length > 1) {
             var labels = b.grSources
@@ -3107,7 +3129,6 @@
 
     function filaPendiente(b) {
         var ge    = _geChipFromBolsa(b);
-        var suTxt = (b.suLoteId || '—') + (b.suSubTanda ? ' · ' + b.suSubTanda : '');
         var grChip = _grChipFromBolsa(b);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
         var uuid  = esc(b._frUuid || '');
@@ -3119,7 +3140,7 @@
         return '<tr class="fr-row fr-row-pendiente">'
             + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
             + '<td>' + ge + '</td>'
-            + '<td><span class="fr-traza">' + esc(suTxt) + '</span></td>'
+            + '<td>' + _suChipFromBolsa(b) + '</td>'
             + '<td>' + grChip + '</td>'
             + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + esc(fechaVal) + '" oninput="FR._draftFechaArmado(\'' + uuid + '\', this.value)" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
             + '<td class="fr-num">' + seco + '</td>'
