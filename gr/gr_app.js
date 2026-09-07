@@ -1144,6 +1144,10 @@ function grRenderizarRegistroLotes() {
     // Pre-build maps una sola vez para todo el render (O(n) en vez de O(n×m))
     const _fMap = _grFormsMap();
     const _cMap = _grCultivosMap();
+    const _anMap = {};
+    lotesData.forEach(function(l) {
+        if (l && l.id) _anMap[l.id] = window.grComputarAnalisis(l.id);
+    });
 
     // Filtrar lotes fantasmas
     const lotesValidos = lotesData.filter(l => {
@@ -1168,6 +1172,16 @@ function grRenderizarRegistroLotes() {
         if (_grSortMode === 'fecha_asc')  return new Date(a.fecha) - new Date(b.fecha);
         if (_grSortMode === 'id_asc')     return (a.id || '').localeCompare(b.id || '');
         if (_grSortMode === 'nombre')     return (a.nombre || '').localeCompare(b.nombre || '');
+        if (_grSortMode === 'beProm') {
+            const beA = (_anMap[a.id] && _anMap[a.id].fr.bolsasTrackeadas > 0) ? _anMap[a.id].fr.bePromedio : -1;
+            const beB = (_anMap[b.id] && _anMap[b.id].fr.bolsasTrackeadas > 0) ? _anMap[b.id].fr.bePromedio : -1;
+            return beB - beA;
+        }
+        if (_grSortMode === 'beMejor') {
+            const bmA = (_anMap[a.id] && _anMap[a.id].fr.bolsasTrackeadas > 0) ? _anMap[a.id].fr.beMejor : -1;
+            const bmB = (_anMap[b.id] && _anMap[b.id].fr.bolsasTrackeadas > 0) ? _anMap[b.id].fr.beMejor : -1;
+            return bmB - bmA;
+        }
         if (_grSortMode === 'disp_desc') {
             const dispA = (Array.isArray(a.dg) ? a.dg : []).reduce((s, r) => {
                 const u = (_usadosForSort[a.id] && _usadosForSort[a.id][r.tanda] != null)
@@ -1192,6 +1206,10 @@ function grRenderizarRegistroLotes() {
         const dgArr      = Array.isArray(lote.dg) ? lote.dg : [];
         const usadosLote = usadosMap[lote.id] || {};
         const usadosRefLote = usadosRefMap[lote.id] || {};
+        const _an = _anMap[lote.id];
+        const beChip = (_an && _an.fr.bolsasTrackeadas > 0)
+            ? `<span class="gr-stat-chip" title="${_an.fr.bolsasTrackeadas} bolsa${_an.fr.bolsasTrackeadas !== 1 ? 's' : ''} FR trackeada${_an.fr.bolsasTrackeadas !== 1 ? 's' : ''}">🏆 BE ${_an.fr.bePromedio.toFixed(0)}% prom · 🥇 ${_an.fr.beMejor.toFixed(0)}% mejor</span>`
+            : '';
 
         const sumFrascos = dgArr.reduce((s, r) => s + (parseFloat(r.frascos) || 0), 0);
         const sumContam  = dgArr.reduce((s, r) => s + (parseInt(r.contaminados) || 0), 0);
@@ -1298,6 +1316,7 @@ function grRenderizarRegistroLotes() {
                 <span class="gr-stat-chip">${sumFrascos} ud</span>
                 ${contamChip}
                 <span class="gr-stat-chip ${dispClass}">▸ ${sumDisp} disponibles</span>
+                ${beChip}
                 ${acciones}
             </div>
             ${dgArr.length > 0 ? `<div class="gr-card-tandas">${tandasHtml}</div>` : ''}
@@ -3918,6 +3937,7 @@ window.grComputarAnalisis = function grComputarAnalisis(grLoteId) {
         fr: {
             bolsasTrackeadas: frLinkadas.length,
             bePromedio: bePromedio,
+            beMejor: beValues.length > 0 ? Math.max.apply(null, beValues) : 0,
             biomasaFrescaTotal: biomasaFrescaTotal,
             biomasaSecaTotal: biomasaSecaTotal,
             rendFrescoPorBolsa: frLinkadas.length > 0 ? biomasaFrescaTotal / frLinkadas.length : 0,
