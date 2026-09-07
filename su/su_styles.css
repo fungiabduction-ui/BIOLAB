@@ -1988,9 +1988,12 @@ body {
 /* Card individual */
 .su-reg-card {
     border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-left-width: 4px;
+    border-left-color: var(--su-protocolo-color, var(--border, rgba(255,255,255,0.1)));
     border-radius: 10px;
     overflow: hidden;
-    background: var(--card-bg, rgba(255,255,255,0.03));
+    background: var(--su-protocolo-bg, var(--card-bg, rgba(255,255,255,0.03)));
+    transition: border-color 160ms ease, background 160ms ease;
 }
 
 /* Card header */
@@ -2003,7 +2006,7 @@ body {
     transition: background 150ms ease;
 }
 .su-card-head:hover {
-    background: rgba(139, 92, 246, 0.07);
+    background: var(--su-protocolo-bg-hover, rgba(139, 92, 246, 0.07));
 }
 .su-card-head-edit {
     background: rgba(139, 92, 246, 0.06);
@@ -2026,6 +2029,15 @@ body {
     font-size: 11px;
     color: var(--text-muted, #999);
     font-variant-numeric: tabular-nums;
+}
+.su-card-color-swatch {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 50%;
+    cursor: pointer;
+    background: none;
 }
 
 /* Header de columnas de sub-filas — barra contrastante */

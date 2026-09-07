@@ -13,6 +13,11 @@
 
 const SU_STORAGE_KEY = 'su_lotes';
 const SU_BIBLIOTECA_KEY = 'su_biblioteca';
+const SU_COLOR_SEQ_KEY = 'su_color_seq';
+const SU_COLOR_PALETTE = [
+    '#EF6C57', '#F2A93C', '#C6D94D', '#52B788', '#2FB6A6', '#3FA9DB',
+    '#5C7CE0', '#8B6CE3', '#C15FCB', '#E0568F', '#B0785A', '#6E8894'
+];
 
 // Biblioteca de materiales por defecto
 const bibliotecaDefault = {
@@ -148,6 +153,7 @@ window.SU.init = function suInit() {
 
     try { cargarBibliotecaDesdeStorage(); } catch (e) { console.warn('SU.init cargarBiblioteca:', e); }
     try { _suMigrarNotasUnificadasV1(); }  catch (e) { console.warn('SU.init migracion notas:', e); }
+    try { _suMigrarColorBackfillV1(); }    catch (e) { console.warn('SU.init migracion color:', e); }
     try { cargarLotesDesdeStorage(); }     catch (e) { console.warn('SU.init cargarLotes:', e); }
     try { inicializarEventos(); }          catch (e) { console.warn('SU.init eventos:', e); }
     try { establecerFechaActual(); }       catch (e) { console.warn('SU.init fecha:', e); }
@@ -858,6 +864,17 @@ function guardarLote() {
             _suPropagarRenameFR(uuidAnterior || lote._uuid, idAnterior, lote.id);
         }
 
+        // Color del protocolo — se resuelve acá (no en recolectarDatosLote(), que tiene
+        // callers de preview no-persistentes vía exportarJSON()/exportarExcel()) para que
+        // la cola rotativa (_suNextAutoColor) solo avance en un guardado real.
+        const _colorInput = document.getElementById('loteColor');
+        const _colorManual = _colorInput ? _colorInput.dataset.manualEdit === 'true' : false;
+        lote.color = _suResolveLoteColor({
+            existingColor: lotesData[indiceExistente].color,
+            manualEdit: _colorManual,
+            inputValue: _colorInput ? _colorInput.value : null
+        });
+
         lotesData[indiceExistente] = lote;
     } else {
         // Lote nuevo: asignar _uuid definitivo
@@ -868,6 +885,14 @@ function guardarLote() {
             alert('El ID "' + lote.id + '" ya existe. Cambiá la fecha para obtener un nuevo ID.');
             return;
         }
+
+        const _colorInput = document.getElementById('loteColor');
+        const _colorManual = _colorInput ? _colorInput.dataset.manualEdit === 'true' : false;
+        lote.color = _suResolveLoteColor({
+            existingColor: null,
+            manualEdit: _colorManual,
+            inputValue: _colorInput ? _colorInput.value : null
+        });
 
         lotesData.push(lote);
     }
@@ -1011,6 +1036,12 @@ function cargarDatosLote(lote) {
     loteIdEl.title = 'Podés editar el ID — la identidad del registro está protegida por su UUID interno';
     document.getElementById('loteFecha').value = lote.fecha || '';
     document.getElementById('loteEstructura').value = lote.estructura || '';
+    var colorInput = document.getElementById('loteColor');
+    if (colorInput) {
+        colorInput.dataset.manualEdit = 'false';
+        colorInput.value = lote.color || '#1F4E79';
+        colorInput.style.opacity = lote.color ? '1' : '0.7';
+    }
     // loteSteril / loteNotas eliminados del UI (valores se preservan en el modelo si existían)
     
     document.getElementById('suFibra').value = lote.fibra || 0;
@@ -1260,6 +1291,44 @@ function _suGrLoteChipHtml(grLoteId, grMap) {
     return '<span class="' + cls + '"' + style + ' title="Lote GR: ' + suDbEscapeHtml(grLoteId) + '">' + suDbEscapeHtml(grLoteId) + '</span>';
 }
 
+// ==========================================
+// COLOR DE PROTOCOLO — paleta rotativa + tinte de card/chips
+// Mismo mecanismo que GR (gr_app.js), cola independiente (SU_COLOR_SEQ_KEY != GR_COLOR_SEQ_KEY).
+// Ver docs/superpowers/specs/2026-09-07-su-protocolo-color-design.md
+// ==========================================
+
+function _suNextAutoColor() {
+    var idx = 0;
+    try { idx = parseInt(localStorage.getItem(SU_COLOR_SEQ_KEY), 10) || 0; } catch (e) {}
+    var color = SU_COLOR_PALETTE[idx % SU_COLOR_PALETTE.length];
+    try { localStorage.setItem(SU_COLOR_SEQ_KEY, String(idx + 1)); } catch (e) {}
+    return color;
+}
+
+function _suResolveLoteColor(opts) {
+    if (opts.existingColor && !opts.manualEdit) return opts.existingColor;
+    if (opts.manualEdit) return opts.inputValue;
+    return _suNextAutoColor();
+}
+
+// Relee su_lotes fresco de localStorage antes de mutar (no confía en lotesData en memoria,
+// que puede estar stale si otra pestaña guardó algo desde que esta montó) — mismo criterio que
+// _suEscribirBolsaFR (2026-09-02) y grSetLoteColor (2026-09-06). A diferencia de GR (que
+// identifica el lote solo por id, sin concepto de uuid), acá se busca primero por _uuid
+// (identidad estable de SU) y se cae a id solo para lotes históricos sin uuid.
+window.suSetLoteColor = function suSetLoteColor(uuid, loteId, colorValue) {
+    var raw = localStorage.getItem(SU_STORAGE_KEY);
+    var lotesFrescos = raw ? JSON.parse(raw) : [];
+    var idx = -1;
+    if (uuid) idx = lotesFrescos.findIndex(function (l) { return l._uuid === uuid; });
+    if (idx < 0 && loteId) idx = lotesFrescos.findIndex(function (l) { return l.id === loteId; });
+    if (idx < 0) return;
+    lotesFrescos[idx].color = colorValue;
+    lotesData = lotesFrescos;
+    guardarEnStorage();
+    renderizarRegistroLotes();
+};
+
 function suFmt(n, dec) {
     if (n == null || isNaN(n)) return '—';
     var d = (dec == null) ? 1 : dec;
@@ -1449,6 +1518,16 @@ function renderizarRegistroLotes() {
         const frMap = _suGetFRMap(lote);
         const tandaCount = db.length;
 
+        const _colorValido = (lote.color && _suHexToRgba(lote.color, 1)) ? lote.color : null;
+        const colorVars = _colorValido
+            ? ` style="--su-protocolo-color:${_colorValido};--su-protocolo-bg:${_suHexToRgba(_colorValido, 0.07)};--su-protocolo-bg-hover:${_suHexToRgba(_colorValido, 0.12)}"`
+            : '';
+        const loteIdSafe = loteId.replace(/'/g, "\\'");
+        const colorSwatch = `<input type="color" class="su-card-color-swatch" value="${_colorValido || '#1F4E79'}"
+            onclick="event.stopPropagation()"
+            onchange="event.stopPropagation(); suSetLoteColor('${lote._uuid || ''}', '${loteIdSafe}', this.value)"
+            title="Cambiar color del protocolo">`;
+
         // Cabecera de card
         const cardHead = modoEdicionRegistros ? `
             <div class="su-card-head su-card-head-edit">
@@ -1459,6 +1538,7 @@ function renderizarRegistroLotes() {
                 <button class="btn-small" style="background:var(--danger);color:white" onclick="event.stopPropagation(); eliminarRegistro(${realIndex})">✕</button>
             </div>` : `
             <div class="su-card-head" onclick="suCargarRegistroYVolver(${realIndex})" title="Click para cargar en Formulación" style="cursor:pointer">
+                ${colorSwatch}
                 <span class="su-card-id">${loteId}</span>
                 <span class="su-card-date">${fechaFmt}</span>
                 <span class="su-card-spacer"></span>
@@ -1652,7 +1732,7 @@ function renderizarRegistroLotes() {
                     onclick="suAgregarSubfila(${realIndex})">+ sub-fila</button>
             </div>` : '';
 
-        return `<div class="su-reg-card">${cardHead}${subs}${addSubBtn}</div>`;
+        return `<div class="su-reg-card"${colorVars}>${cardHead}${subs}${addSubBtn}</div>`;
     }).join('');
 }
 
@@ -2710,6 +2790,37 @@ function _suMigrarNotasUnificadasV1() {
         localStorage.setItem(MIGRACION_KEY, '1');
     } catch (e) {
         console.error('[SU] Error en migración de notas unificadas:', e);
+    }
+}
+
+// Migración one-shot: colorea todo lote de su_lotes sin .color, ordenado por fecha ascendente,
+// consumiendo la cola rotativa (_suNextAutoColor). Mismo patrón que _grMigrarColorBackfillV1
+// (gr_app.js, 2026-09-06) — a diferencia de GR, acá se decide migrar desde el día 1 en vez de
+// revertir la decisión sobre la marcha. Ver docs/superpowers/specs/2026-09-07-su-protocolo-color-design.md
+function _suMigrarColorBackfillV1() {
+    var MIGRACION_KEY = 'biolab_migracion_su_color_backfill_v1';
+    try {
+        if (localStorage.getItem(MIGRACION_KEY) === '1') return;
+        var raw = localStorage.getItem(SU_STORAGE_KEY);
+        if (!raw) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+        var lotes = JSON.parse(raw);
+        if (!Array.isArray(lotes)) { localStorage.setItem(MIGRACION_KEY, '1'); return; }
+        var pendientes = lotes.filter(function(l) { return l && !l.color; });
+        pendientes.sort(function(a, b) {
+            var fa = a.fecha || '', fb = b.fecha || '';
+            if (fa !== fb) return fa < fb ? -1 : 1;
+            return (a.id || '').localeCompare(b.id || '');
+        });
+        pendientes.forEach(function(lote) {
+            lote.color = _suNextAutoColor();
+        });
+        if (pendientes.length > 0) {
+            localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotes));
+            console.log('[SU] Migración color backfill: ' + pendientes.length + ' lotes coloreados');
+        }
+        localStorage.setItem(MIGRACION_KEY, '1');
+    } catch (e) {
+        console.error('[SU] Error en migración de color backfill:', e);
     }
 }
 
