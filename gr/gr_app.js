@@ -1351,9 +1351,17 @@ function grRenderizarRegistroLotes() {
             : '';
 
 
-        const contamChip = sumContam > 0
-            ? `<span class="gr-stat-chip gr-chip-contam">✕ ${sumContam} contaminación</span>`
-            : `<span class="gr-stat-chip gr-chip-dim">— contaminación</span>`;
+        // Footer de totales (tandas/ud/contam/disponibles) — 2026-09-07, movido de entre
+        // cabecera y grid (donde quedaba "descolgado", palabra del usuario) a debajo del grid
+        // de tandas. Barra con separadores verticales, patrón propio de esta card (SU no tiene
+        // un footer equivalente). Solo contaminación/disponibles llevan color de alerta —
+        // tandas/ud son dato de rutina, sin colorear. Ver spec
+        // 2026-09-07-gr-card-visual-rediseno-design.md, Decisión 3.
+        const contamFooter = sumContam > 0
+            ? `<span class="tot warn">✕ <b>${sumContam}</b> contaminación</span>`
+            : `<span class="tot">— contaminación</span>`;
+        const _dispHex = dispClass === 'gr-disp-agotado' ? '#FF6B6B' : dispClass === 'gr-disp-bajo' ? '#FFC000' : '#70AD47';
+        const dispFooter = `<span class="tot">▸ <b style="color:${_dispHex}">${sumDisp}</b> disponibles</span>`;
 
         const loteIdSafe = (lote.id || '').replace(/'/g, "\\'");
         const grainFirma = _grFirmaProtocolo(lote);
@@ -1379,14 +1387,15 @@ function grRenderizarRegistroLotes() {
                     <button class="gr-traza-toggle" onclick="event.stopPropagation(); grToggleTrazabilidad('${loteIdSafe}', this)" title="Ver trazabilidad">▶ Trazabilidad</button>
                 </div>
             </div>
-            <div class="gr-card-stats-bar">
-                <span class="gr-stat-chip">${dgArr.length} tanda${dgArr.length !== 1 ? 's' : ''}</span>
-                <span class="gr-stat-chip">${sumFrascos} ud</span>
-                ${contamChip}
-                <span class="gr-stat-chip ${dispClass}">▸ ${sumDisp} disponibles</span>
+            ${dgArr.length > 0 ? `<div class="gr-card-tandas">${tandasHeaderHtml}${tandasHtml}</div>` : ''}
+            <div class="gr-card-footer">
+                <span class="tot">${dgArr.length} tanda${dgArr.length !== 1 ? 's' : ''}</span>
+                <span class="tot">${sumFrascos} ud</span>
+                ${contamFooter}
+                ${dispFooter}
+                <span class="gr-footer-spacer"></span>
                 ${acciones}
             </div>
-            ${dgArr.length > 0 ? `<div class="gr-card-tandas">${tandasHeaderHtml}${tandasHtml}</div>` : ''}
             <div class="gr-traza-panel" id="grTraza_${lote.id}" style="display:none"></div>
         </div>`;
     }).join('');

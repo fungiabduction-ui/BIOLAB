@@ -1520,32 +1520,31 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* ── Stats bar: chips horizontales bajo el header ── */
-.gr-card-stats-bar {
+/* ── Footer de totales: barra con separadores verticales, debajo del grid de tandas ──
+   Reemplaza la vieja .gr-card-stats-bar (pills entre cabecera y grid, quedaba "descolgada"
+   — palabra del usuario tras probarlo en real). Solo contaminación/disponibles llevan color de
+   alerta, tandas/ud quedan neutros (dato de rutina). */
+.gr-card-footer {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 14px 9px;
-    flex-wrap: wrap;
-}
-.gr-stat-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
+    padding: 7px 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 11.5px;
     color: var(--text-muted);
-    white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
-.gr-stat-chip.gr-disp-ok      { color: #70AD47; border-color: rgba(112,173,71,0.28);   background: rgba(112,173,71,0.10); }
-.gr-stat-chip.gr-disp-bajo    { color: #FFC000; border-color: rgba(255,193,0,0.38);    background: rgba(255,193,0,0.13);  }
-.gr-stat-chip.gr-disp-agotado { color: #FF6B6B; border-color: rgba(255,107,107,0.45); background: rgba(255,107,107,0.15); }
-.gr-stat-chip.gr-chip-contam  { color: #FF6B6B; border-color: rgba(255,107,107,0.45); background: rgba(192,0,0,0.12); }
-.gr-stat-chip.gr-chip-dim     { color: var(--text-muted); }
+.gr-card-footer .tot {
+    padding: 0 12px;
+    border-right: 1px solid rgba(255,255,255,0.08);
+}
+.gr-card-footer .tot:first-child { padding-left: 0; }
+.gr-card-footer .tot:last-of-type { border-right: none; }
+.gr-card-footer .tot b { color: var(--text-light); }
+.gr-card-footer .tot.warn b { color: #FF6B6B; }
+.gr-footer-spacer {
+    margin-left: auto;
+    border-right: none !important;
+}
 
 .gr-card-controls {
     display: flex;

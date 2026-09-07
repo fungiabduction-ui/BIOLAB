@@ -67,6 +67,26 @@ idéntico en header y filas). Columnas: **TANDA | GENÉTICA | UD | CONTAM | DISP
   de un `grid-template-columns` de 5 columnas que no correspondía a ninguna versión real de la
   fila (bug preexistente, no introducido en esta sesión).
 
+## Decisión 3 — Footer de totales, movido de entre cabecera y grid a debajo del grid (Opción C del mockup `footer-stats.html`)
+
+Segundo reporte del usuario tras probar en real: las 4 pills de `.gr-card-stats-bar` (tandas/ud/
+contaminación/disponibles), ubicadas entre la cabecera y el grid de tandas, quedaban
+"descolgadas" (palabra textual) — ni pertenecen visualmente a la cabecera ni al grid, flotan en
+el medio. Se bajan a un footer nuevo (`.gr-card-footer`) debajo del grid de tandas.
+
+Formato elegido (de 3 mockups — A: mismas pills reubicadas, B: texto quieto sin pills, **C:
+barra de totales con separadores verticales, elegida por el usuario**): cada dato en su propio
+bloque separado por una línea vertical fina (`border-right`), sin fondo de pill. Solo
+contaminación y disponibles llevan color de alerta — tandas/ud son conteo de rutina, quedan en
+gris neutro siempre. Disponibles conserva la escala de 3 niveles ya existente en el resto de GR
+(`gr-disp-ok`/`bajo`/`agotado` → verde/ámbar/rojo, vía color inline sobre el número — no une
+`.tot` con las clases de pill viejas, que traían background/border que no aplican a este
+formato). Contaminación es binaria: gris si 0, rojo si `> 0`. Reemplaza `.gr-card-stats-bar`/
+`.gr-stat-chip` (eliminadas de `gr_styles.css`, confirmado sin otros usos en el repo) por
+`.gr-card-footer`/`.tot`. Los botones de acción (editar/eliminar, solo en modo edición) se
+mueven junto con el resto del footer, mismo comportamiento de siempre (`margin-left:auto` vía
+`.gr-footer-spacer`).
+
 ## Fuera de alcance
 
 - No se toca el panel "▶ Trazabilidad" (`grToggleTrazabilidad`/`grComputarAnalisis` como vista de
