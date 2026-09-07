@@ -3006,15 +3006,22 @@
         return '<span class="fr-traza"' + style + ' title="' + esc(label) + '">' + esc(label) + '</span>';
     }
 
+    // Vista rápida (Activo/Cosecha/Archivo/Pendientes): un chip por LOTE GR, nunca por tanda —
+    // la tanda es detalle de trazabilidad, no hace falta en un vistazo rápido de la tabla.
+    // Multi-fuente: dedupeado por grLoteId (varias tandas del mismo lote no repiten el chip).
     function _grChipFromBolsa(b) {
         if (Array.isArray(b.grSources) && b.grSources.length > 1) {
-            return b.grSources.map(function(s) {
-                var label = (s.grLoteId || '—') + (s.grTandaId ? ' · ' + s.grTandaId : '');
-                return _grChipHtml(label, _grColorForSource(s));
-            }).join(' + ');
+            var vistos = {};
+            var chips = [];
+            b.grSources.forEach(function(s) {
+                var loteId = s.grLoteId || '—';
+                if (vistos[loteId]) return;
+                vistos[loteId] = true;
+                chips.push(_grChipHtml(loteId, _grColorForSource(s)));
+            });
+            return chips.join(' + ');
         }
-        var label = (b.grLoteId || '—') + (b.grTandaId ? ' · ' + b.grTandaId : '');
-        return _grChipHtml(label, _grColorForSource({ grLoteId: b.grLoteId }));
+        return _grChipHtml(b.grLoteId || '—', _grColorForSource({ grLoteId: b.grLoteId }));
     }
 
     function _geTxtFromBolsa(b) {

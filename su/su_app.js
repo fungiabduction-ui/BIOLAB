@@ -1246,15 +1246,18 @@ function _suGenChipHtml(fullChainStr, fenId) {
 // Chip de color por protocolo GR para el id de tanda (columna GRANO de Registro). Resuelto en
 // vivo contra el grMap que cada función de render ya arma — cero lecturas nuevas, cero cambios
 // en su_lotes. Mismo mecanismo/paleta que la card de GR (gr_app.js:_grHexToRgba).
-function _suGrTandaChipHtml(grLoteId, grTandaId, grMap) {
-    if (!grTandaId) return '';
-    var l = grMap[grLoteId || ''];
+// Vista rápida (Registro): un chip por LOTE GR, nunca por tanda — la trazabilidad completa por
+// tanda vive en FR. Se llama una sola vez por lote distinto dentro de una sub-fila (dedup en el
+// call site, ver grTxtParts en renderizarRegistroLotes).
+function _suGrLoteChipHtml(grLoteId, grMap) {
+    if (!grLoteId) return '';
+    var l = grMap[grLoteId];
     var hex = (l && l.color) || null;
     var bg = hex ? _suHexToRgba(hex, 0.13) : null;
     var border = hex ? _suHexToRgba(hex, 0.40) : null;
     var cls = 'su-kchip' + (bg ? '' : ' su-kchip-dim');
     var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + suDbEscapeHtml(hex) + '"' : '';
-    return '<span class="' + cls + '"' + style + ' title="Lote GR: ' + suDbEscapeHtml(grLoteId || '') + '">' + suDbEscapeHtml(grTandaId) + '</span>';
+    return '<span class="' + cls + '"' + style + ' title="Lote GR: ' + suDbEscapeHtml(grLoteId) + '">' + suDbEscapeHtml(grLoteId) + '</span>';
 }
 
 function suFmt(n, dec) {
@@ -1473,7 +1476,25 @@ function renderizarRegistroLotes() {
         const subs = db.map(function(r, i) {
             var normSrcs = suDbNormSources(r, lote.grProtocolo || '');
             var us = 0, pesoGranoSub = 0, grTxtParts = [];
-            normSrcs.forEach(function(s) {
+            var _vistosLoteGr = {};
+            // Agrupar por grLoteId antes de recorrer — si dos fuentes del mismo lote no son
+            // contiguas en normSrcs (ej. se agregaron en momentos distintos), el dedup del chip
+            // de lote solo suprime el chip repetido, nunca la genética; agrupar evita que un
+            // chip de genética "huérfano" (sin su chip de lote al lado) quede pegado visualmente
+            // a la fuente de OTRO lote que quedó en el medio. No cambia `us`/`pesoGranoSub`
+            // (sumas, no dependen de orden) ni el conteo de `normSrcs.length` usado más abajo.
+            var _normSrcsAgrupados = (function() {
+                var buckets = {}, orden = [];
+                normSrcs.forEach(function(s) {
+                    var k = s.grLoteId || '';
+                    if (!buckets[k]) { buckets[k] = []; orden.push(k); }
+                    buckets[k].push(s);
+                });
+                var out = [];
+                orden.forEach(function(k) { out = out.concat(buckets[k]); });
+                return out;
+            })();
+            _normSrcsAgrupados.forEach(function(s) {
                 var _us = parseInt(s.grUsados) || 0;
                 us += _us;
                 var _grL = grMap[s.grLoteId || ''];
@@ -1487,7 +1508,16 @@ function renderizarRegistroLotes() {
                     }
                 }
                 pesoGranoSub += _us * _pf;
-                grTxtParts.push(_suGrTandaChipHtml(s.grLoteId, s.grTandaId, grMap) + (_gen ? ' — ' + _suGenChipHtml(_gen, _fenId) : ''));
+                // Vista rápida: el chip de lote GR solo se muestra la primera vez que aparece
+                // en esta sub-fila — repetir el mismo lote (varias tandas del mismo GR) no
+                // aporta nada a un vistazo rápido, la trazabilidad completa por tanda vive en FR.
+                var _loteGrId = s.grLoteId || '';
+                var _yaVistoLote = _loteGrId && _vistosLoteGr[_loteGrId];
+                if (_loteGrId) _vistosLoteGr[_loteGrId] = true;
+                var _chipLote = _yaVistoLote ? '' : _suGrLoteChipHtml(_loteGrId, grMap);
+                var _chipGen = _gen ? _suGenChipHtml(_gen, _fenId) : '';
+                var _pieza = _chipLote && _chipGen ? (_chipLote + ' — ' + _chipGen) : (_chipLote || _chipGen);
+                if (_pieza) grTxtParts.push(_pieza);
             });
             if (normSrcs.length === 0) us = parseInt(r.grUsados) || 0;
             var grTxt = grTxtParts.length > 0 ? grTxtParts.join(' + ') : '';
