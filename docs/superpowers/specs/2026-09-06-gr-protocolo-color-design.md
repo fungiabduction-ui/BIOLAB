@@ -301,6 +301,29 @@ Es 100% capa de render — no escribe en `fr_bolsas`, no migra nada, se resuelve
 `gr_lotes` en cada render (mismo criterio ya documentado para el chip de genética: "funciona
 igual para bolsas nuevas y ya selladas").
 
+## Propagación — SU: columna GR separada de GENÉTICA (2026-09-07)
+
+Segundo pedido tras probar en real: la columna "GENÉTICA" mezclaba el chip de lote GR y el
+chip de genética en la misma celda — el usuario pidió separarlos, mismo criterio visual que ya
+usa FR (columnas `GE`/`GR` independientes). Elegido, tras comparar 3 opciones con mockup: **una
+columna "GR" nueva, angosta, inmediatamente después de "GENÉTICA"** (no una celda de 2 líneas,
+no la columna GR antes que TANDA).
+
+`subHeaderHtml` gana un `<span>GR</span>` entre `GENÉTICA` y `SU SECO` (12 columnas en vez de
+11). `grid-template-columns` de `.su-sub-header`/`.su-card-sub` pasa de
+`105px 68px 1fr 65px 82px 52px 58px 96px 78px 78px 65px` a
+`105px 68px 1fr 78px 65px 82px 52px 58px 96px 78px 78px 65px` (78px nuevo, mismo ancho que
+`BOLSA INOC.`/`GRANO`). Clase nueva `.su-sub-gr` (flex-wrap, centrado) para que 2+ chips de
+lote quepan sin truncar.
+
+En el loop de sub-fila, lo que antes era un solo acumulador mixto (`grTxtParts`, lote+genética
+por fuente) se separa en dos: `genTxtParts` (un chip de genética por fuente, nunca deduplicado
+— tandas distintas del mismo lote pueden tener genética distinta) y `grTxtParts` (chip de lote,
+deduplicado por `grLoteId`, igual que antes). El paso de "agrupar por lote antes de recorrer"
+que se agregó el 2026-09-06 para evitar que un chip de genética quedara pegado visualmente al
+lote equivocado **ya no hace falta y se sacó** — ese problema solo existía cuando ambos vivían
+en la misma celda; con columnas separadas no hay adyacencia posicional que proteger.
+
 ## Propagación — SU (`su_app.js`)
 
 **Actualización (2026-09-06, mismo motivo que FR arriba):** versión final muestra solo el
