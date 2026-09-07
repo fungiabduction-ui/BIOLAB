@@ -77,6 +77,51 @@ function _abbrevGen(s) {
     return s ? s.replace(/Psilocybe cubensis/gi, 'PC') : s;
 }
 
+// Chip de genética acortado al último eslabón, coloreado con el color del nodo GE — mismo
+// mecanismo que _suGenChipHtml/_genChipHtml (SU/FR, ver spec 2026-08-31-fr-su-genetica-chip-acortado-design.md).
+// No modifica storage — 100% capa de render, para la columna GENÉTICA del grid de tandas.
+function _grResolveGeColor(fenId) {
+    if (!fenId) return null;
+    try {
+        if (window.ge && typeof window.ge.getNode === 'function') {
+            var n = window.ge.getNode(fenId);
+            if (n && n.color) return n.color;
+        }
+    } catch (e) {}
+    try {
+        if (window.GEResolve && typeof window.GEResolve.resolverNodoCrudo === 'function') {
+            var r = window.GEResolve.resolverNodoCrudo(fenId);
+            if (r && r.node && r.node.color) return r.node.color;
+        }
+    } catch (e) {}
+    return null;
+}
+
+// Copia local minima — _grEscHtml (definida mas abajo, dentro del panel de config de
+// biblioteca) no es de fiar como accesible desde aca sin auditar todo el archivo; mismo
+// criterio de duplicacion de utilidades chicas ya establecido entre modulos (ver comentario
+// de _grEscHtml: "cada modulo mantiene su propia copia").
+function _grGenEsc(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// tooltipText es opcional — cuando la tanda agrega el nombre de fórmula CI al final de la
+// cadena (ver `gen` en tandasHtml), ese sufijo no debe entrar en la extracción del último
+// eslabón (rompería el label), así que se pasa aparte solo para el title.
+function _grGenChipHtml(fullChainStr, fenId, tooltipText) {
+    if (!fullChainStr) return '—';
+    var parts = String(fullChainStr).split('/').map(function(s) { return s.trim(); }).filter(Boolean);
+    var label = parts.length > 0 ? parts[parts.length - 1] : fullChainStr;
+    var hex = _grResolveGeColor(fenId);
+    var bg = hex ? _grHexToRgba(hex, 0.13) : null;
+    var border = hex ? _grHexToRgba(hex, 0.40) : null;
+    var cls = 'gr-gen-chip' + (bg ? '' : ' gr-gen-chip-dim');
+    var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + hex + '"' : '';
+    var title = tooltipText || fullChainStr;
+    return '<span class="' + cls + '"' + style + ' title="' + _grGenEsc(title) + '">' + _grGenEsc(label) + '</span>';
+}
+
 // ── Etiqueta dinámica de unidad física (Frasco / Bolsa / …) ─────────────────
 // Se actualiza al cargar un lote o al cambiar ufEstructura.
 var _grUfEstructura = 'Frasco';
@@ -1206,9 +1251,27 @@ function grRenderizarRegistroLotes() {
         const dgArr      = Array.isArray(lote.dg) ? lote.dg : [];
         const usadosLote = usadosMap[lote.id] || {};
         const usadosRefLote = usadosRefMap[lote.id] || {};
+        // Franja de resultado (hidratación + BE) en la cabecera, separada de las pills de
+        // capacidad del stats-bar — decisión de diseño 2026-09-07 (ver spec), la mezcla de un
+        // chip largo en la fila de pills cortas se veía amontonada. ⏳ marca BE parcial (no
+        // todas las bolsas linkeadas llegaron a un estado terminal todavía); sin ⏳ = ciclo
+        // completo. El detalle exacto (N/M) vive en el title, no en el texto visible.
         const _an = _anMap[lote.id];
-        const beChip = (_an && _an.fr.bolsasTrackeadas > 0)
-            ? `<span class="gr-stat-chip" title="${_an.fr.bolsasTrackeadas} bolsa${_an.fr.bolsasTrackeadas !== 1 ? 's' : ''} FR trackeada${_an.fr.bolsasTrackeadas !== 1 ? 's' : ''}">🏆 BE ${_an.fr.bePromedio.toFixed(0)}% prom · 🥇 ${_an.fr.beMejor.toFixed(0)}% mejor</span>`
+        const _hidVal = kpi && kpi.hidratacion > 0 ? kpi.hidratacion : null;
+        const _beDatos = _an && _an.fr.bolsasTrackeadas > 0;
+        const _perfParts = [];
+        if (_hidVal != null) _perfParts.push(`💧 ${_hidVal.toFixed(0)}%`);
+        let _perfTitle = '';
+        if (_beDatos) {
+            const _cerradas = _an.fr.bolsasCerradas || 0;
+            const _total = _an.fr.bolsasTrackeadas;
+            const _partial = _cerradas < _total;
+            _perfParts.push(`🏆 ${_an.fr.bePromedio.toFixed(0)}%${_partial ? ' ⏳' : ''}`);
+            const _estadoTxt = _partial ? `${_cerradas}/${_total} bolsas cerradas, resto en curso` : 'ciclo completo';
+            _perfTitle = `BE promedio ${_an.fr.bePromedio.toFixed(1)}% · mejor bolsa ${_an.fr.beMejor.toFixed(1)}% · ${_estadoTxt}`;
+        }
+        const perfChip = _perfParts.length > 0
+            ? `<span class="gr-card-perf"${_perfTitle ? ` title="${_grGenEsc(_perfTitle)}"` : ''}>${_perfParts.join(' · ')}</span>`
             : '';
 
         const sumFrascos = dgArr.reduce((s, r) => s + (parseFloat(r.frascos) || 0), 0);
@@ -1254,34 +1317,38 @@ function grRenderizarRegistroLotes() {
                         : '');
                 if (fNombre) gen += ` — ${fNombre}`;
             }
-            const colon  = r.colonizacion
-                ? `<span class="gr-tanda-chip gr-chip-dim" title="Fin colonización">✅ ${_grFormatFecha(r.colonizacion)}</span>` : '';
+            const genChip = _grGenChipHtml(r.genetica || '', r.fenId, gen);
+            // COL.: chip siempre presente (nunca celda vacía) — ⏳ PENDIENTE mientras no se
+            // cargó fecha de colonización, pedido explícito 2026-09-07 (antes esta columna no
+            // existía como tal, la fecha se mezclaba con los demás chips de estado).
+            const colon = r.colonizacion
+                ? `<span class="gr-td-chip gr-td-chip-ok" title="Fin colonización">✅ ${_grFormatFecha(r.colonizacion)}</span>`
+                : `<span class="gr-td-chip gr-td-chip-pend" title="Colonización aún no registrada">⏳ PENDIENTE</span>`;
             const suRefs = (r.tanda && usadosRefLote[r.tanda] && usadosRefLote[r.tanda].length > 0)
                 ? usadosRefLote[r.tanda].join(' / ') : null;
             const suTag  = usados > 0
-                ? `<span class="gr-tanda-chip gr-chip-su" title="${suRefs ? suRefs : 'Usado en SU'}">🧱 ${usados} ud SU</span>`
+                ? `<span class="gr-td-chip gr-chip-su" title="${suRefs ? suRefs : 'Usado en SU'}">🧱 ${usados} ud SU</span>`
                 : '';
             const exIds  = grGetExIdsGR(lote.id, r.tanda);
             const exTag  = exIds.length > 0
-                ? `<span class="gr-tanda-chip gr-chip-ex" title="Usado en experimento">🔬 ${exIds.join(' · ')}</span>`
+                ? `<span class="gr-td-chip gr-chip-ex" title="Usado en experimento">🔬 ${exIds.join(' · ')}</span>`
                 : '';
             const tdispClass = disp === 0 ? 'gr-disp-agotado'
                 : disp <= Math.max(1, Math.floor(uds * 0.2)) ? 'gr-disp-bajo' : 'gr-disp-ok';
-            const metaTanda = [colon, suTag, exTag].filter(Boolean).join('');
 
-            return `<div class="gr-tanda-row">
-                <div class="gr-tanda-left">
-                    <span class="gr-tanda-id">${t}</span>
-                    <span class="gr-tanda-gen">${gen}</span>
-                </div>
-                <div class="gr-tanda-right">
-                    <span class="gr-tanda-uds">${uds} ud</span>
-                    ${co > 0 ? `<span class="gr-tanda-chip gr-chip-contam">✕ ${co}</span>` : ''}
-                    <span class="gr-tanda-disp ${tdispClass}">▸ ${disp}</span>
-                    ${metaTanda ? `<div class="gr-tanda-meta">${metaTanda}</div>` : ''}
-                </div>
+            return `<div class="gr-td-row">
+                <span class="gr-td-id">${t}</span>
+                <span>${genChip}</span>
+                <span class="gr-td-num">${uds}</span>
+                <span class="gr-td-num"${co > 0 ? ' style="color:#FF6B6B"' : ''}>${co > 0 ? '✕ ' + co : '—'}</span>
+                <span class="gr-td-disp ${tdispClass}">▸ ${disp}</span>
+                <span class="gr-td-col">${colon}</span>
+                <span class="gr-td-uso">${suTag}${exTag}</span>
             </div>`;
         }).join('');
+        const tandasHeaderHtml = dgArr.length > 0
+            ? `<div class="gr-td-header"><span>TANDA</span><span>GENÉTICA</span><span>UD</span><span>CONTAM</span><span>DISP</span><span>COL.</span><span>USO</span></div>`
+            : '';
 
 
         const contamChip = sumContam > 0
@@ -1307,6 +1374,7 @@ function grRenderizarRegistroLotes() {
                 </div>
                 <div class="gr-card-grain" title="${grainFirma}">${grainFirma}</div>
                 <div class="gr-card-right">
+                    ${perfChip}
                     <span class="gr-card-fecha">${_grFormatFecha(lote.fecha)}</span>
                     <button class="gr-traza-toggle" onclick="event.stopPropagation(); grToggleTrazabilidad('${loteIdSafe}', this)" title="Ver trazabilidad">▶ Trazabilidad</button>
                 </div>
@@ -1316,10 +1384,9 @@ function grRenderizarRegistroLotes() {
                 <span class="gr-stat-chip">${sumFrascos} ud</span>
                 ${contamChip}
                 <span class="gr-stat-chip ${dispClass}">▸ ${sumDisp} disponibles</span>
-                ${beChip}
                 ${acciones}
             </div>
-            ${dgArr.length > 0 ? `<div class="gr-card-tandas">${tandasHtml}</div>` : ''}
+            ${dgArr.length > 0 ? `<div class="gr-card-tandas">${tandasHeaderHtml}${tandasHtml}</div>` : ''}
             <div class="gr-traza-panel" id="grTraza_${lote.id}" style="display:none"></div>
         </div>`;
     }).join('');
@@ -3877,6 +3944,9 @@ window.grComputarAnalisis = function grComputarAnalisis(grLoteId) {
     });
     var bePromedio = beValues.length > 0
         ? beValues.reduce(function(a, b) { return a + b; }, 0) / beValues.length : 0;
+    var bolsasCerradas = frLinkadas.filter(function(b) {
+        return b.cancelada === true || b.contaminada === true || b.cicloCerrado === true || b.noFructifico === true;
+    }).length;
 
     // Detalle por tanda
     var tandas = [];
@@ -3936,6 +4006,7 @@ window.grComputarAnalisis = function grComputarAnalisis(grLoteId) {
         suLotes: suUsados,
         fr: {
             bolsasTrackeadas: frLinkadas.length,
+            bolsasCerradas: bolsasCerradas,
             bePromedio: bePromedio,
             beMejor: beValues.length > 0 ? Math.max.apply(null, beValues) : 0,
             biomasaFrescaTotal: biomasaFrescaTotal,

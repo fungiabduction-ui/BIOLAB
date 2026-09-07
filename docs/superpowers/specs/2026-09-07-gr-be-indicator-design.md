@@ -1,5 +1,13 @@
 # GR — Indicador de BE por protocolo + orden por BE en Registro
 
+> **Actualización (2026-09-07, mismo día):** la ubicación del chip descrita más abajo ("chip de
+> BE en `.gr-card-stats-bar`") quedó obsoleta a las pocas horas — el usuario reportó que un chip
+> largo mezclado con las pills cortas de capacidad se veía amontonado. Se movió a la cabecera de
+> la card como franja de texto compacta, y se le agregó indicador de parcial/cerrado (`⏳`) que
+> esta spec original no contemplaba. El cálculo (`grComputarAnalisis`, `_anMap`, sort por BE)
+> sigue exactamente como se describe acá — lo que cambió es dónde y cómo se muestra. Ver
+> `docs/superpowers/specs/2026-09-07-gr-card-visual-rediseno-design.md` para el diseño vigente.
+
 ## Objetivo
 
 Mostrar, por cada card de protocolo en GR — Registro, la Eficiencia Biológica (BE) agregada de

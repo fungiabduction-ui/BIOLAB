@@ -1508,6 +1508,17 @@ body {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+/* Franja de resultado (hidratación + BE), separada de las pills de capacidad del
+   stats-bar — 2026-09-07, ver docs/superpowers/specs/2026-09-07-gr-card-visual-rediseno-design.md */
+.gr-card-perf {
+    font-size: 11px;
+    color: #bbb;
+    white-space: nowrap;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-variant-numeric: tabular-nums;
+}
 
 /* ── Stats bar: chips horizontales bajo el header ── */
 .gr-card-stats-bar {
@@ -1557,70 +1568,56 @@ body {
     line-height: 1.5;
 }
 
-/* ── Filas de tanda: flex layout — ID+Genética | stats+meta ── */
+/* ── Filas de tanda: grid alineado — mismo mecanismo que .su-sub-header/.su-card-sub de SU,
+   ver docs/superpowers/specs/2026-09-07-gr-card-visual-rediseno-design.md.
+   Columnas: TANDA | GENÉTICA | UD | CONTAM | DISP | COL. | USO ── */
 .gr-card-tandas { padding: 2px 0; }
 
-.gr-tanda-row {
-    display: flex;
-    align-items: center;
+.gr-td-header {
+    display: grid;
+    grid-template-columns: 70px minmax(120px,1.4fr) 45px 50px 50px 70px minmax(80px,1fr);
     gap: 0;
     padding: 5px 14px;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #1D1D1D;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 215, 0, 0.75);
+}
+.gr-td-header span { text-align: center; }
+.gr-td-header span:first-child,
+.gr-td-header span:nth-child(2) { text-align: left; }
+
+.gr-td-row {
+    display: grid;
+    grid-template-columns: 70px minmax(120px,1.4fr) 45px 50px 50px 70px minmax(80px,1fr);
+    align-items: center;
+    gap: 0;
+    padding: 6px 14px;
     border-top: 1px solid rgba(255,255,255,0.05);
     background: rgba(255,255,255,0.015);
     color: var(--text-muted);
     transition: background 160ms ease;
     cursor: pointer;
 }
-.gr-tanda-row:hover { background: rgba(255, 215, 0, 0.06); }
+.gr-td-row:hover { background: rgba(255, 215, 0, 0.06); }
 
-/* Zona izquierda: ID + genética — se expande, trunca si es largo */
-.gr-tanda-left {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    padding-right: 12px;
-}
-.gr-tanda-id {
+.gr-td-id {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     font-weight: 800;
     color: var(--highlight, #FFD700);
     white-space: nowrap;
-    flex-shrink: 0;
 }
-.gr-tanda-gen {
-    font-size: 11.5px;
-    font-style: italic;
-    color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Zona derecha: stats alineados, sin desbordarse */
-.gr-tanda-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-/* Unidades */
-.gr-tanda-uds {
-    font-size: 12px;
+.gr-td-num {
+    text-align: center;
     font-weight: 600;
     color: var(--text-light);
-    white-space: nowrap;
-    min-width: 44px;
-    text-align: right;
     font-variant-numeric: tabular-nums;
 }
-.gr-tanda-disp {
-    display: inline-flex;
-    align-items: center;
+.gr-td-disp {
+    justify-self: center;
     padding: 2px 9px;
     border-radius: 999px;
     font-weight: 700;
@@ -1628,14 +1625,41 @@ body {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
-.gr-tanda-meta {
+.gr-td-col {
     display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-left: 2px;
+    justify-content: center;
+}
+.gr-td-uso {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
 }
 
-.gr-tanda-chip {
+/* Genética: último eslabón coloreado por cepa (GE), igual que _suGenChipHtml/_genChipHtml de
+   SU/FR — sin color resuelto cae a .gr-gen-chip-dim, nunca a un color hardcodeado. */
+.gr-gen-chip {
+    display: inline-block;
+    max-width: 100%;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.06);
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+}
+.gr-gen-chip-dim {
+    border-color: var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-muted);
+}
+
+.gr-td-chip {
     display: inline-block;
     padding: 1px 7px;
     border-radius: 999px;
@@ -1646,6 +1670,12 @@ body {
     background: rgba(255,255,255,0.04);
     color: var(--text-muted);
     white-space: nowrap;
+}
+.gr-td-chip-ok { color: var(--text-muted); }
+.gr-td-chip-pend {
+    background: rgba(255,193,0,0.13);
+    border-color: rgba(255,193,0,0.38);
+    color: #FFC000;
 }
 
 /* Chips de color */
@@ -1701,10 +1731,10 @@ body {
     .gr-kpi-bar { grid-template-columns: repeat(2, 1fr); }
     .gr-card-head { flex-wrap: wrap; }
     .gr-card-grain { display: none; }
-    .gr-tanda-row {
-        grid-template-columns: 60px 1fr 70px 70px auto;
+    .gr-td-header, .gr-td-row {
+        grid-template-columns: 55px 1fr 40px 0 45px 60px minmax(70px,1fr);
     }
-    .gr-tanda-row > *:nth-child(4) { display: none; } /* ocultar contam en mobile */
+    .gr-td-header > *:nth-child(4), .gr-td-row > *:nth-child(4) { display: none; } /* ocultar contam en mobile */
 }
 
 /* ==========================================
