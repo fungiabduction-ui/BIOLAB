@@ -1419,7 +1419,7 @@ body {
     border-radius: 6px;
     border: 1px solid rgba(168,103,63,0.30);
     background: var(--dark, #1D1D1D);
-    color: #c4b5fd;
+    color: #C9946B;
     text-align: center;
     letter-spacing: 0.4px;
     transition: border-color 150ms, box-shadow 150ms;
