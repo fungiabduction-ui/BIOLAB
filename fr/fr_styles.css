@@ -278,11 +278,12 @@ body {
 /* MÉTRICAS RESUMEN */
 /* ============================================ */
 .metrics-panel {
-    background: var(--dark-primary);
+    background: linear-gradient(180deg, var(--dark-primary), var(--dark-bg));
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 18px;
     margin-bottom: 20px;
+    box-shadow: var(--shadow-card);
 }
 
 .metrics-panel h2 {
@@ -299,7 +300,7 @@ body {
 }
 
 .metric-card {
-    background: var(--dark-secondary);
+    background: linear-gradient(180deg, var(--dark-secondary), var(--dark-primary));
     border: 1px solid var(--border);
     border-left: 3px solid var(--fr-main);
     border-radius: 8px;
@@ -307,6 +308,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    box-shadow: var(--shadow-card);
 }
 
 .metric-card.fr-color-ok    { border-left-color: var(--fr-ok); }
@@ -362,11 +364,12 @@ body {
 /* SECTION CARDS */
 /* ============================================ */
 .section-card {
-    background: var(--dark-primary);
+    background: linear-gradient(180deg, var(--dark-primary), var(--dark-bg));
     border: 1px solid var(--border);
     border-radius: 12px;
     margin-bottom: 16px;
     overflow: hidden;
+    box-shadow: var(--shadow-card);
 }
 
 .section-header {
