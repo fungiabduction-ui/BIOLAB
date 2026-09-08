@@ -107,7 +107,7 @@ header {
   top: 0;
   z-index: 100;
   gap: 20px;
-  border-bottom: 1px solid rgba(124,111,255,0.2);
+  border-bottom: 1px solid rgba(139,124,246,0.2);
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .clab-hdr-stats {

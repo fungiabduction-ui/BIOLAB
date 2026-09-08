@@ -87,6 +87,36 @@ body {
     min-height: 100vh;
 }
 
+/* Header de módulo — banda sticky edge-to-edge, mismo patrón que
+   GE/CI/CILAB. Vive FUERA de .app-container (hermano anterior en el
+   body) para no quedar inset por su padding/max-width. */
+.fr-header {
+    background: #0a0a0a;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(232,99,122,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.fr-header .fr-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fr-main);
+    letter-spacing: .3px;
+    display: block;
+}
+.fr-header .fr-header-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: .2px;
+    display: block;
+    margin-top: 2px;
+}
+
 .app-container {
     max-width: 1800px;
     margin: 0 auto;

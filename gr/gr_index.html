@@ -9,17 +9,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <header class="gr-header">
+        <div>
+            <span class="gr-header-title">🌾 Grano (GR)</span>
+            <span class="gr-header-sub">spawn inoculado · frascos por tanda</span>
+        </div>
+    </header>
     <div class="app-container">
         <!-- Selector de lote oculto: requerido por gr_app.js, controlado desde el banner del host -->
         <select id="loteSelector" class="lote-selector" style="display:none">
             <option value="">-- Seleccionar lote --</option>
         </select>
-
-        <!-- Identidad breve del módulo -->
-        <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:14px">
-            <span style="font-size:16px;font-weight:700;color:#E8A83D;letter-spacing:.3px">🌾 Grano (GR)</span>
-            <span style="font-size:11px;color:#A0A0A0;letter-spacing:.2px">spawn inoculado · frascos por tanda</span>
-        </div>
 
         <!-- Sub-navegación GR (Formulación / Registro / Config) -->
         <div class="gr-subnav">

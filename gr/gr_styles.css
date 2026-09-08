@@ -50,6 +50,37 @@ body {
     line-height: 1.5;
 }
 
+/* Header de módulo — banda sticky edge-to-edge, mismo patrón que
+   GE/CI/CILAB (ver ge_styles.css .ge-header). Vive FUERA de
+   .app-container (hermano anterior en el body) para no quedar
+   inset por su padding/max-width. */
+.gr-header {
+    background: #0a0a0a;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(232,168,61,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.gr-header .gr-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #E8A83D;
+    letter-spacing: .3px;
+    display: block;
+}
+.gr-header .gr-header-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: .2px;
+    display: block;
+    margin-top: 2px;
+}
+
 .app-container {
     max-width: 1400px;
     margin: 0 auto;

@@ -71,31 +71,39 @@
   gap: 20px;
 }
 
-/* ── Module header con gradiente cfg ── */
+/* ── Header de módulo — banda sticky edge-to-edge, mismo patrón que
+   GE/CI/CILAB/GR/SU/FR. Vive FUERA de .cfg-root (hermano anterior)
+   para no quedar inset por su padding. ── */
 .module-header {
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 16px;
-  position: relative;
-  overflow: hidden;
+  background: #0a0a0a;
+  padding: 14px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(124,135,152,0.25);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 .module-header h1 {
   font-family: 'Inter', sans-serif;
-  font-size: 1.4rem;
+  font-size: 16px;
   font-weight: 700;
-  margin: 0 0 4px 0;
+  margin: 0;
+  letter-spacing: .3px;
 }
 
 .module-header p {
-  font-size: 0.85rem;
-  margin: 0;
-  opacity: 0.85;
+  font-size: 11px;
+  margin: 2px 0 0 0;
+  color: var(--text-muted);
+  letter-spacing: .2px;
 }
 
 .module-header.cfg {
-  background: linear-gradient(135deg, var(--surface-3) 0%, var(--surface-1) 100%);
-  color: var(--text-light);
+  color: var(--cfg-accent);
+}
+.module-header.cfg p {
+  color: var(--text-muted);
 }
 
 /* ── Card ── */

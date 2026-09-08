@@ -90,7 +90,7 @@ header {
   top: 0;
   z-index: 100;
   gap: 20px;
-  border-bottom: 1px solid rgba(0,200,50,0.2);
+  border-bottom: 1px solid rgba(45,212,191,0.2);
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
