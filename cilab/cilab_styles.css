@@ -13,26 +13,31 @@
   --highlight:     #70AD47;
   --warning:       #ED7D31;
   --danger:        #C00000;
-  --bg:            #1D1D1D;
-  --bg-secondary:  #2D2D2D;
-  --bg-tertiary:   #3D3D3D;
-  --text-light:    #F5F5F5;
+
+  /* Superficies — repuntadas a shared/design_tokens.css */
+  --bg:            var(--surface-1);
+  --bg-secondary:  var(--surface-2);
+  --bg-tertiary:   var(--surface-3);
+  --text-light:    var(--text);
   --text-muted:    #A0A0A0;
-  --border:        #404040;
-  --border-light:  #505050;
+  --border:        var(--line);
+  --border-light:  var(--line-strong);
+
   --ac:  #70AD47;
-  --ac2: #7C6FFF;
+  /* --ac2 es la identidad de módulo de CILAB — ya era violeta,
+     ahora repunta al token compartido (mismo tono, SSoT única) */
+  --ac2: var(--cilab-accent);
   --ac3: #FF6B35;
   --ac4: #44AAFF;
-  --tx:  #F5F5F5;
-  --tx2: #A0A0A0;
-  --tx3: #666666;
+  --tx:  var(--text);
+  --tx2: var(--text-muted);
+  --tx3: var(--text-dim);
   --er:  #C00000;
   --wn:  #00CC33;
-  --br:  #404040;
-  --s1:  #1D1D1D;
-  --s2:  #2D2D2D;
-  --s3:  #3D3D3D;
+  --br:  var(--line);
+  --s1:  var(--surface-1);
+  --s2:  var(--surface-2);
+  --s3:  var(--surface-3);
   --mo:  'JetBrains Mono', monospace;
 
   /* Estados de ruta metabólica — semánticos */
@@ -158,11 +163,11 @@ header {
    CARDS
    ════════════════════════════════════════════ */
 .clab-card {
-  background: var(--bg-secondary);
+  background: linear-gradient(180deg, var(--bg-secondary), var(--bg));
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: var(--shadow-card);
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .clab-card:hover { border-color: var(--border-light); }
