@@ -4,23 +4,36 @@
    ======================================== */
 
 :root {
-    --primary: #1F4E79;
-    --primary-light: #2E7DCC;
-    --secondary: #4472C4;
-    --accent: #5B9BD5;
+    /* Identidad de módulo SU — terracota/tierra. --primary/--secondary/
+       --accent eran 3 tonos de azul sin relación con el terracota real
+       usado en --su-fibra — se consolidan. --su-primary (bug real: se
+       usaba en varios selectores del archivo sin estar nunca definida
+       acá, siempre caía al fallback hardcodeado #8B5CF6 violeta) ahora
+       existe de verdad. */
+    --primary: var(--su-accent);
+    --primary-light: #C08661;
+    --secondary: var(--su-accent);
+    --accent: var(--su-accent);
+    --su-primary: var(--su-accent);
     --highlight: #70AD47;
     --warning: #ED7D31;
     --danger: #C00000;
-    --dark: #1D1D1D;
-    --dark-secondary: #2D2D2D;
-    --dark-tertiary: #3D3D3D;
-    --text-light: #F5F5F5;
+
+    /* Superficies — repuntadas a shared/design_tokens.css */
+    --dark: var(--surface-1);
+    --dark-secondary: var(--surface-2);
+    --dark-tertiary: var(--surface-3);
+    --text-light: var(--text);
     --text-muted: #A0A0A0;
-    --border: #404040;
-    --border-light: #505050;
-    
-    /* Colores SU específicos */
-    --su-fibra: #8B5A2B;
+    --border: var(--line);
+    --border-light: var(--line-strong);
+
+    /* Colores SU específicos — funcionales (fibra/agua/hidratación),
+       NO identidad de módulo. --su-fibra pasa a ser el MISMO valor
+       que la identidad de módulo (terracota) porque conceptualmente
+       ya representaba lo mismo (sustrato/fibra); --su-agua/--su-hyd
+       quedan como acentos funcionales puntuales, no de fondo de tile. */
+    --su-fibra: var(--su-accent);
     --su-agua: #44aaff;
     --su-aditivo: #70AD47;
     --su-hyd: #ED7D31;
@@ -132,37 +145,34 @@ body {
 }
 
 .metric-card {
-    background: var(--dark-tertiary);
+    background: linear-gradient(180deg, var(--dark-tertiary), var(--dark-secondary));
     border-radius: 10px;
     padding: 15px;
     text-align: center;
     border: 1px solid var(--border);
     transition: transform 0.2s, border-color 0.2s;
+    box-shadow: var(--shadow-card);
 }
 
 .metric-card:hover {
     transform: translateY(-2px);
-    border-color: var(--accent);
+    border-color: var(--su-accent);
 }
 
+/* Único acento reservado para el dato MÁS relevante de la fila —
+   antes 4 clases (highlight/su-fibra/su-agua/su-hyd) coloreaban tiles
+   sin ningún criterio de jerarquía. Ahora solo existe UNA variante
+   destacada, con el acento de identidad. */
 .metric-card.highlight {
-    border-color: var(--highlight);
-    background: rgba(112, 173, 71, 0.1);
+    border-color: var(--su-accent);
+    background: rgba(168, 103, 63, 0.12);
 }
 
-.metric-card.su-fibra {
-    border-color: var(--su-fibra);
-    background: rgba(139, 90, 43, 0.15);
-}
-
-.metric-card.su-agua {
-    border-color: var(--su-agua);
-    background: rgba(68, 170, 255, 0.15);
-}
-
+.metric-card.su-fibra,
+.metric-card.su-agua,
 .metric-card.su-hyd {
-    border-color: var(--su-hyd);
-    background: rgba(237, 125, 49, 0.15);
+    border-color: var(--border);
+    background: linear-gradient(180deg, var(--dark-tertiary), var(--dark-secondary));
 }
 
 .metric-label {
@@ -180,19 +190,13 @@ body {
 }
 
 .metric-card.highlight .metric-value {
-    color: var(--highlight);
+    color: var(--su-accent);
 }
 
-.metric-card.su-fibra .metric-value {
-    color: var(--su-fibra);
-}
-
-.metric-card.su-agua .metric-value {
-    color: var(--su-agua);
-}
-
+.metric-card.su-fibra .metric-value,
+.metric-card.su-agua .metric-value,
 .metric-card.su-hyd .metric-value {
-    color: var(--su-hyd);
+    color: var(--text-light);
 }
 
 .metric-unit {
