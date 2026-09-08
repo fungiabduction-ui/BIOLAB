@@ -3,20 +3,27 @@
    ======================================== */
 
  :root {
-    --primary: #FFD700;
-    --primary-light: #FFEB3B;
-    --secondary: #FFC107;
-    --accent: #FFA000;
+    /* Identidad de módulo GR — dorado grano, un solo tono en vez de 3
+       ambares distintos sin sistema (--primary/--secondary/--accent
+       eran #FFD700/#FFC107/#FFA000, tres amarillos ligeramente
+       distintos usados sin criterio — ver auditoría). Se consolidan
+       los 3 al mismo token compartido. */
+    --primary: var(--gr-accent);
+    --primary-light: #F2C168;
+    --secondary: var(--gr-accent);
+    --accent: var(--gr-accent);
     --highlight: #70AD47;
     --warning: #ED7D31;
     --danger: #C00000;
-    --dark: #1D1D1D;
-    --dark-secondary: #2D2D2D;
-    --dark-tertiary: #3D3D3D;
-    --text-light: #F5F5F5;
+
+    /* Superficies — repuntadas a shared/design_tokens.css */
+    --dark: var(--surface-1);
+    --dark-secondary: var(--surface-2);
+    --dark-tertiary: var(--surface-3);
+    --text-light: var(--text);
     --text-muted: #A0A0A0;
-    --border: #404040;
-    --border-light: #505050;
+    --border: var(--line);
+    --border-light: var(--line-strong);
 }
 
 * {
@@ -1097,9 +1104,9 @@ body {
     color: var(--text, #F5F5F5);
 }
 .gr-subtab.active {
-    background: var(--highlight, #70AD47);
-    color: #fff;
-    border-color: var(--highlight, #70AD47);
+    background: var(--gr-accent);
+    color: #1D1D1D;
+    border-color: var(--gr-accent);
     font-weight: 700;
 }
 .gr-subpanel {
