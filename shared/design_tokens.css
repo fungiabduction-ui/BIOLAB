@@ -1,0 +1,76 @@
+/* ============================================================
+   BIOLAB ENGINE — shared/design_tokens.css
+   SSoT de tokens visuales compartidos por los 7 módulos + shell.
+   Cargado como <link> ESTÁTICO en index.html (igual que main.css)
+   — a diferencia del CSS de cada módulo, este NUNCA se descarga al
+   cambiar de módulo (ver main.js:519-570, cleanTrackedAssets).
+   Por eso los 7 colores de identidad de módulo viven acá: el nav
+   principal necesita poder colorear los 7 tabs en todo momento,
+   no solo mientras el módulo correspondiente está cargado.
+   No tocar sin leer docs/superpowers/specs/2026-09-07-sistema-diseno-visual-unificado-design.md
+   ============================================================ */
+
+:root {
+  /* ── Superficies (reemplaza la escala gris plana vieja #1D1D1D/#2D2D2D/#3D3D3D) ── */
+  --surface-0: #0B0D11;   /* fondo de página, más profundo que surface-1 */
+  --surface-1: #0F1115;   /* fondo base de módulo */
+  --surface-2: #171A21;   /* tarjetas / paneles */
+  --surface-3: #1E222C;   /* elementos anidados dentro de una tarjeta */
+  --surface-deep: #0a0a0a; /* header/shell, el más profundo de todos */
+
+  /* ── Texto ── */
+  --text: #F2F4F8;
+  --text-muted: #9AA1B2;
+  --text-dim: #666E80;
+
+  /* ── Bordes ── */
+  --line: #262B36;
+  --line-soft: #1C2029;
+  --line-strong: #343B4A;
+
+  /* ── Radios ── */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 20px;
+
+  /* ── Espaciado (base 4px) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ── Sombra — dos niveles, no más ── */
+  --shadow-card: 0 8px 20px -12px rgba(0,0,0,.5);
+  --shadow-float: 0 30px 60px -20px rgba(0,0,0,.6);
+
+  /* ── Semántico universal — YA coincide con los valores hardcodeados
+     que los 7 módulos usan hoy (--highlight/--warning/--danger,
+     --fr-ok/--fr-warn/--fr-bad, --wn/--er). Se define acá solo como
+     SSoT de referencia / para CFG, que hoy no tiene ninguno propio.
+     NO se le pide a ningún módulo que cambie su alias existente —
+     ya tienen el valor correcto. ── */
+  --ok: #70AD47;
+  --warn: #ED7D31;
+  --danger: #C00000;
+
+  /* ── Transiciones (ya existen en main.css, SSoT acá también) ── */
+  --t-fast: .15s ease;
+  --t-base: .25s ease;
+  --t-slow: .4s ease;
+
+  /* ── Identidad de módulo — un color por eslabón del pipeline biológico.
+     Ver spec para el razonamiento de cada elección. FR usa el sufijo
+     "-brand" porque "--fr-accent" ya está tomado por el verde matrix
+     de datos en vivo de FR (no se toca, es un acento distinto). ── */
+  --ge-accent: #ECEFF4;      /* blanco/platino — fuente de verdad */
+  --ci-accent: #2DD4BF;      /* teal — cultivo in-vitro */
+  --cilab-accent: #8B7CF6;   /* violeta — motor analítico */
+  --gr-accent: #E8A83D;      /* dorado — grano */
+  --su-accent: #A8673F;      /* terracota — sustrato/tierra */
+  --fr-accent-brand: #E8637A;/* coral — fructificación */
+  --cfg-accent: #7C8798;     /* gris pizarra — infraestructura, no biología */
+}
