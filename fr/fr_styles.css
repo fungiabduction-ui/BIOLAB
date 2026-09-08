@@ -891,10 +891,10 @@ body {
 .fr-btn-cerrar:active { transform: translateY(1px); }
 .fr-btn-cerrar.is-reabrir {
     color: var(--fr-main-soft);
-    border-color: rgba(229,183,59,0.5);
+    border-color: rgba(236,132,148,0.5);
 }
 .fr-btn-cerrar.is-reabrir:hover {
-    background: rgba(229,183,59,0.10);
+    background: rgba(236,132,148,0.10);
     color: var(--fr-main-soft);
     border-color: var(--fr-main-soft);
     box-shadow: 0 0 0 2px rgba(232,99,122,0.18);
