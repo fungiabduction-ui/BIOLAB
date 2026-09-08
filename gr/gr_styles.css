@@ -1209,7 +1209,7 @@ body {
 }
 
 #dgTable tr.dg-row:hover td.dg-disponibles-cell {
-    background-color: rgba(255, 215, 0, 0.08);
+    background-color: rgba(232, 168, 61, 0.08);
 }
 
 #dgTable .dg-disponibles {
@@ -1238,7 +1238,7 @@ body {
 
 #dgTable tr.dg-total-row {
     border-top: 2px solid var(--primary, #FFA000);
-    background-color: rgba(255, 160, 0, 0.06);
+    background-color: rgba(232, 168, 61, 0.06);
 }
 
 #dgTable tr.dg-total-row td {
@@ -1322,7 +1322,7 @@ body {
 
 .gr-registro-arrow {
     padding-left: 18px !important;
-    color: var(--highlight, #FFD700);
+    color: var(--gr-accent);
     font-weight: 600;
     letter-spacing: 0.3px;
     white-space: nowrap;
@@ -1455,7 +1455,7 @@ body {
     align-items: center;
     gap: 10px;
     padding: 11px 14px 10px;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.10);
+    border-bottom: 1px solid rgba(232, 168, 61, 0.10);
 }
 .gr-card-identity {
     display: flex;
@@ -1480,7 +1480,7 @@ body {
     font-family: 'JetBrains Mono', monospace;
     font-size: 14px;
     font-weight: 800;
-    color: var(--highlight, #FFD700);
+    color: var(--gr-accent);
     letter-spacing: 0.3px;
 }
 .gr-card-nombre {
@@ -1589,7 +1589,7 @@ body {
     color: #1D1D1D;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    background: rgba(255, 215, 0, 0.75);
+    background: rgba(232, 168, 61, 0.75);
 }
 .gr-td-header span { text-align: center; }
 .gr-td-header span:first-child,
@@ -1607,13 +1607,13 @@ body {
     transition: background 160ms ease;
     cursor: pointer;
 }
-.gr-td-row:hover { background: rgba(255, 215, 0, 0.06); }
+.gr-td-row:hover { background: rgba(232, 168, 61, 0.06); }
 
 .gr-td-id {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     font-weight: 800;
-    color: var(--highlight, #FFD700);
+    color: var(--gr-accent);
     white-space: nowrap;
 }
 .gr-td-num {
@@ -1751,7 +1751,7 @@ body {
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 215, 0, 0.25);
+    border: 1px solid rgba(232, 168, 61, 0.25);
     background: transparent;
     color: var(--text-muted, #888);
     cursor: pointer;
@@ -1760,18 +1760,18 @@ body {
     line-height: 1.5;
 }
 .gr-traza-toggle:hover {
-    background: rgba(255, 215, 0, 0.10);
-    border-color: var(--highlight, #FFD700);
-    color: var(--highlight, #FFD700);
+    background: rgba(232, 168, 61, 0.10);
+    border-color: var(--gr-accent);
+    color: var(--gr-accent);
 }
 .gr-traza-toggle.active {
-    background: rgba(255, 215, 0, 0.12);
-    border-color: var(--highlight, #FFD700);
-    color: var(--highlight, #FFD700);
+    background: rgba(232, 168, 61, 0.12);
+    border-color: var(--gr-accent);
+    color: var(--gr-accent);
 }
 
 .gr-traza-panel {
-    border-top: 1px solid rgba(255, 215, 0, 0.12);
+    border-top: 1px solid rgba(232, 168, 61, 0.12);
     background: rgba(0, 0, 0, 0.25);
 }
 .gr-traza-panel-inner {
@@ -1805,8 +1805,8 @@ body {
 }
 
 .gr-traza-tanda-row {
-    background: rgba(255, 215, 0, 0.03);
-    border: 1px solid rgba(255, 215, 0, 0.1);
+    background: rgba(232, 168, 61, 0.03);
+    border: 1px solid rgba(232, 168, 61, 0.1);
     border-radius: 6px;
     padding: 8px 12px;
     display: flex;
@@ -1818,8 +1818,8 @@ body {
 .gr-traza-fr { color: var(--highlight, #70AD47); font-size: 0.82rem; }
 .gr-traza-chip {
     display: inline-block;
-    background: rgba(255, 215, 0, 0.1);
-    border: 1px solid rgba(255, 215, 0, 0.25);
+    background: rgba(232, 168, 61, 0.1);
+    border: 1px solid rgba(232, 168, 61, 0.25);
     border-radius: 4px;
     padding: 1px 6px;
     font-size: 0.75rem;
@@ -1900,7 +1900,7 @@ body {
 .gr-know-table th {
     text-align: left;
     padding: 8px 10px;
-    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    border-bottom: 1px solid rgba(232, 168, 61, 0.2);
     color: var(--text-muted, #A0A0A0);
     font-size: 0.75rem;
     font-weight: 600;
@@ -1916,14 +1916,14 @@ body {
 }
 /* Fila de grupo (protocolo agregado) */
 .gr-know-group-row td {
-    background: rgba(255, 215, 0, 0.04);
-    border-top: 1px solid rgba(255, 215, 0, 0.18);
+    background: rgba(232, 168, 61, 0.04);
+    border-top: 1px solid rgba(232, 168, 61, 0.18);
     border-bottom: none;
     padding-top: 12px;
     padding-bottom: 6px;
 }
 .gr-know-group-row + .gr-know-group-row td {
-    border-top: 2px solid rgba(255, 215, 0, 0.18);
+    border-top: 2px solid rgba(232, 168, 61, 0.18);
 }
 /* Fila de lote individual */
 .gr-know-lote-row td {
@@ -1935,7 +1935,7 @@ body {
     color: var(--text-muted, #A0A0A0);
 }
 .gr-know-lote-row:last-child td {
-    border-bottom: 2px solid rgba(255, 215, 0, 0.12);
+    border-bottom: 2px solid rgba(232, 168, 61, 0.12);
     padding-bottom: 10px;
 }
 .gr-know-lote-row {
@@ -1993,8 +1993,8 @@ body {
     gap: 8px;
 }
 .gr-know-obs {
-    background: rgba(255, 215, 0, 0.04);
-    border: 1px solid rgba(255, 215, 0, 0.15);
+    background: rgba(232, 168, 61, 0.04);
+    border: 1px solid rgba(232, 168, 61, 0.15);
     border-left: 3px solid var(--highlight, #70AD47);
     border-radius: 6px;
     padding: 10px 14px;
