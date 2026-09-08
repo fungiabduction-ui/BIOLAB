@@ -4,6 +4,10 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
+  /* --primary (verde) queda para usos semánticos/success internos de GE
+     (badges CREATE, toasts, chips de taxonomía, mini-btn) — NO es la
+     identidad del módulo. La identidad (blanco) es --ge-accent, usada
+     solo en .btn-primary/.tab.active/.ct/.logo h1 (ver más abajo). */
   --primary:      #00CC33;
   --primary-dim:  #00AA22;
   --accent:       #00AA22;
@@ -11,21 +15,28 @@
   --warning:      #ED7D31;
   --danger:       #C00000;
 
-  --bg:           #161616;
-  --bg2:          #1F1F1F;
-  --bg3:          #2A2A2A;
-  --bg4:          #353535;
+  /* Identidad de módulo GE (blanco/platino) — NO se redeclara acá.
+     shared/design_tokens.css ya define --ge-accent en su :root, cargado
+     antes de este archivo; los selectores de abajo lo referencian
+     directo con var(--ge-accent). Redeclararlo acá con el mismo nombre
+     sería una auto-referencia cíclica. */
 
-  --tx:           #F2F2F2;
-  --tx2:          #B0B0B0;
-  --tx3:          #777777;
+  /* Superficies — repuntadas a shared/design_tokens.css */
+  --bg:           var(--surface-1);
+  --bg2:          var(--surface-2);
+  --bg3:          var(--surface-3);
+  --bg4:          var(--line-strong);
 
-  --bd:           #353535;
-  --bd2:          #4A4A4A;
+  --tx:           var(--text);
+  --tx2:          var(--text-muted);
+  --tx3:          var(--text-dim);
 
-  --c-species:    #70AD47;   /* verde */
-  --c-strain:     #7C6FFF;   /* violeta */
-  --c-phenotype:  #44AAFF;   /* azul */
+  --bd:           var(--line);
+  --bd2:          var(--line-strong);
+
+  --c-species:    #70AD47;
+  --c-strain:     #7C6FFF;
+  --c-phenotype:  #44AAFF;
 
   --st-normal:    #00CC33;
   --st-positivo:  #44AAFF;
@@ -34,7 +45,7 @@
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
   --shadow-md: 0 4px 12px rgba(0,0,0,.45);
-  --shadow-lg: 0 12px 36px rgba(0,0,0,.55);
+  --shadow-lg: var(--shadow-float);
 }
 
 /* ── RESET ── */
@@ -73,7 +84,7 @@ body {
 .logo h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--ge-accent);
   letter-spacing: .2px;
 }
 .ge-header .logo-sub {
@@ -132,9 +143,9 @@ body {
 .tab:hover { background: var(--bg3); color: var(--tx); }
 .tab.active {
   background: var(--bg3);
-  color: var(--primary);
-  border-color: rgba(0,204,51,.4);
-  box-shadow: 0 0 0 1px rgba(0,204,51,.15);
+  color: var(--ge-accent);
+  border-color: rgba(236,239,244,.4);
+  box-shadow: 0 0 0 1px rgba(236,239,244,.15);
 }
 
 /* ═════════════════ MAIN / VIEWS ═════════════════ */
@@ -156,10 +167,10 @@ body {
 }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-primary {
-  background: var(--primary);
-  color: #001a05;
+  background: var(--ge-accent);
+  color: #14161A;
 }
-.btn-primary:hover { background: var(--primary-dim); transform: translateY(-1px); }
+.btn-primary:hover { background: #D8DCE3; transform: translateY(-1px); }
 .btn-secondary {
   background: var(--bg3);
   color: var(--tx);
@@ -209,10 +220,10 @@ body {
 
 /* ═════════════════ CARDS ═════════════════ */
 .card {
-  background: var(--bg2);
+  background: linear-gradient(180deg, var(--bg2), var(--bg));
   border: 1px solid var(--bd);
   border-radius: 12px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 .card.pad { padding: 18px; }
 .card-danger { border-color: rgba(192,0,0,.35); }
@@ -221,7 +232,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .8px;
-  color: var(--primary);
+  color: var(--ge-accent);
   margin-bottom: 8px;
 }
 .ct-sub {
@@ -267,10 +278,10 @@ body {
   .split { grid-template-columns: 1fr; }
 }
 .split-tree, .split-panel {
-  background: var(--bg2);
+  background: linear-gradient(180deg, var(--bg2), var(--bg));
   border: 1px solid var(--bd);
   border-radius: 12px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   min-height: 520px;
 }
