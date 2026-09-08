@@ -10,6 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 
+  <!-- Tokens de diseño compartidos — SSoT de colores/espaciado/tipografía.
+       Se carga ANTES de main.css para que main.css pueda consumir sus
+       variables. Estático, igual que main.css: sobrevive toda la sesión. -->
+  <link rel="stylesheet" href="shared/design_tokens.css">
   <!-- Shell principal — NO incluye estilos de módulos -->
   <link rel="stylesheet" href="main.css">
 </head>
