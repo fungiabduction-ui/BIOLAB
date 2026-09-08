@@ -1,10 +1,39 @@
 /* ============================================================
-   cfg_styles.css — Estilos del módulo CFG
-   Solo clases usadas por el panel de Configuración.
-   Las variables CSS (:root) se asumen definidas globalmente
-   en main.css; solo se incluyen aquí si el módulo se carga
-   en modo standalone sin el shell principal.
+   MÓDULO CFG - Estilos
+   :root PROPIO — antes este archivo no definía ninguno y dependía
+   de que otro módulo hubiera dejado el suyo en el DOM (bug real,
+   encontrado en auditoría 2026-09-08: --text-light/--text-muted
+   quedaban indefinidas porque main.css usa --tx/--tx2/--tx3, no esos
+   nombres — CFG los necesitaba y nunca los tuvo garantizados).
    ============================================================ */
+:root {
+    /* Identidad de módulo CFG — gris pizarra. No es parte de la
+       biología del pipeline (GE→CI→CILAB→GR→SU→FR), es infraestructura
+       del sistema — acento neutro a propósito. */
+    --accent: var(--cfg-accent);
+
+    /* Superficies — repuntadas a shared/design_tokens.css */
+    --bg-secondary: var(--surface-2);
+    --bg-tertiary: var(--surface-3);
+    --border: var(--line);
+    --border-light: var(--line-strong);
+    --text-light: var(--text);
+    --text-muted: #9AA1B2;
+
+    /* Aliases ya usados por .ct.wn/.ct.er/.ct.pur/.ct.blu/.ct.or —
+       antes resueltos por el :root que main.css deja siempre en el
+       DOM (--wn/--er/--ac2/--ac3/--ac4), ahora definidos acá también
+       para que CFG sea autocontenido y no dependa de ningún otro
+       archivo cargado antes. Mismos valores que main.css, sin cambios
+       de color. */
+    --wn:  #00CC33;
+    --er:  #C00000;
+    --ac:  #70AD47;
+    --ac2: #7C6FFF;
+    --ac3: #FF6B35;
+    --ac4: #44AAFF;
+    --danger: #C00000;
+}
 
 /* ── Utilidades de margen usadas en el HTML del módulo ── */
 .mb12 { margin-bottom: 12px; }
@@ -65,8 +94,8 @@
 }
 
 .module-header.cfg {
-  background: linear-gradient(135deg, #555 0%, #3D3D3D 100%);
-  color: #F5F5F5;
+  background: linear-gradient(135deg, var(--surface-3) 0%, var(--surface-1) 100%);
+  color: var(--text-light);
 }
 
 /* ── Card ── */
@@ -138,7 +167,7 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(255, 160, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(124, 135, 152, 0.25);
 }
 
 select option { background: var(--bg-secondary); }
