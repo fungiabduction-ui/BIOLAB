@@ -120,7 +120,9 @@ El usuario pidió explícitamente que FR (el módulo de referencia) también se 
 ## Normalización adicional identificada (más allá de lo pedido)
 
 - **Botón "Backup de CI" (rojo, no destructivo)** → pasa a secundario. Es un bug de semántica de color, no solo estética.
-- **KPI tiles de GR y SU** (cada uno con borde de color distinto sin criterio) → pasan a neutros por default, con el acento de módulo reservado solo para el dato más relevante de esa vista.
+- **KPI tiles de SU** (cada uno con borde de color distinto sin criterio) → pasan a neutros por default, con el acento de módulo reservado solo para el dato más relevante de esa vista. (Corrección post-auditoría de código: en GR el "borde naranja" que se ve en el screenshot es el estado `:hover` de `.metric-card`, no un color fijo por tile — GR solo tiene 2 estados reales, gris default y verde `.highlight`. El problema real de GR no son las tiles, es el punto siguiente.)
+- **GR tiene DOS sistemas de tabs con color "activo" distinto sin razón**: `.gr-subtab.active` (Formulación/Registro/Biblioteca/Conocimiento) usa verde `--highlight` (#70AD47), mientras `.config-tab.active` (Agentes/Aditivos/Granos dentro de Biblioteca) usa dorado `--primary` (#FFD700) — el color de marca real de GR. Se unifican ambos a dorado (el acento de identidad de GR).
+- **GR mezcla dos tonos de ámbar sin sistema** (`--accent` #FFA000 para el header de "Métricas en Tiempo Real", `--secondary` #FFC107 para el resto de headers de sección) → se unifican a un solo tono (el acento de identidad de GR).
 - **Headers de sección con colores sueltos** (CFG: verde/rojo por sección sin relación con nada; GR: naranja/dorado mezclados con el verde de la tab activa del propio GR) → se resuelven usando SIEMPRE el acento de identidad del módulo para headers de sección, reservando `--danger` solo para secciones realmente peligrosas (ej. "Hard Reset" en CFG sí amerita rojo).
 - **Sub-tabs inconsistentes entre módulos** (píldora sólida vs. recuadro con borde vs. violeta) → un único patrón (ver sección de componentes) aplicado a los 7.
 
@@ -131,6 +133,14 @@ El usuario pidió explícitamente que FR (el módulo de referencia) también se 
 3. Por cada módulo (GE, CI, CILAB, GR, SU, FR, CFG): podar su `:root` a solo tokens propios (acento de identidad + alias de dominio sin equivalente compartido); aplicar el nuevo lenguaje de componentes (botones/tarjetas/chips-vs-pills/tablas/tabs/foco) reemplazando las reglas actuales equivalentes.
 4. Cada módulo se verifica con screenshot real (servidor local, chrome-devtools) antes/después — no se da por terminado un módulo sin confirmación visual, siguiendo la disciplina de "no busco quick fix" del usuario.
 5. Ningún cambio toca `localStorage`, schemas de datos, `main.js`, o la lógica de `GR_COLOR_PALETTE`/`SU_COLOR_PALETTE`/chips de protocolo — solo CSS y los `data-module` ya existentes en el HTML.
+
+## Addendum (2026-09-08) — corrección arquitectónica encontrada al planificar
+
+Al pasar de spec a plan se detectó un problema real que esta spec no contemplaba: `main.js` (`cleanPreviousAssets()`/`cleanTrackedAssets()`, `main.js:519-570`) **elimina del DOM el `<link>` de CSS del módulo anterior** cada vez que se cambia de módulo (`removeCss: true` por default). Solo `main.css` (cargado como `<link>` estático en `index.html`, nunca trackeado como "asset inyectado") sobrevive toda la sesión.
+
+Consecuencia: si el acento de identidad de cada módulo (`--gr-accent`, `--su-accent`, etc.) se definiera dentro del `:root` de CADA módulo (como decía la sección "Paleta de identidad" más arriba), esa variable dejaría de existir en el DOM apenas el usuario navega a otro módulo — y el nav principal (`main.css`, siempre visible, muestra los 7 tabs a la vez) no podría colorear un tab de un módulo que no está cargado en ese momento.
+
+**Corrección:** los 7 valores hex de identidad de módulo se definen en `shared/design_tokens.css` (cargado como `<link>` estático en `index.html`, igual que `main.css` — sobrevive toda la sesión, nunca se descarga) bajo nombres propios sin colisión (`--ge-accent`, `--ci-accent`, `--cilab-accent`, `--gr-accent`, `--su-accent`, `--fr-accent-brand`, `--cfg-accent` — nótese `--fr-accent-brand` en vez de `--fr-accent`, porque ese nombre ya está tomado por el verde matrix de datos en vivo de FR, ver sección FR arriba). Cada módulo, en su propio `:root`, solo referencia el valor global con una línea (ej. FR: `--fr-main: var(--fr-accent-brand);`) — mantiene el nombre interno que ya usa en cientos de reglas (`var(--fr-main)`) intacto, sin tener que renombrar nada dentro del archivo de 2000+ líneas. No cambia ningún color ni ninguna decisión ya aprobada — solo dónde vive la fuente de verdad del valor.
 
 ## Validado con el usuario
 
