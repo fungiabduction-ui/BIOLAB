@@ -908,7 +908,7 @@ body {
 }
 
 .result-card.highlight {
-    background: rgba(139, 92, 246, 0.15);
+    background: rgba(168, 103, 63, 0.15);
     border-color: var(--su-primary);
 }
 
@@ -1266,9 +1266,9 @@ body {
 }
 
 .su-subtab.active {
-    background: var(--su-primary, #8B5CF6);
+    background: var(--su-primary);
     color: #fff;
-    border-color: var(--su-primary, #8B5CF6);
+    border-color: var(--su-primary);
     font-weight: 700;
 }
 
@@ -1322,9 +1322,9 @@ body {
     gap: 6px;
     padding: 7px 16px;
     border-radius: 8px;
-    border: 1px solid rgba(139, 92, 246, 0.40);
-    background: rgba(139, 92, 246, 0.10);
-    color: #a78bfa;
+    border: 1px solid rgba(168, 103, 63, 0.40);
+    background: rgba(168, 103, 63, 0.10);
+    color: #C9946B;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -1332,8 +1332,8 @@ body {
     white-space: nowrap;
 }
 .su-btn-add-tanda:hover {
-    background: rgba(139, 92, 246, 0.20);
-    border-color: rgba(139, 92, 246, 0.65);
+    background: rgba(168, 103, 63, 0.20);
+    border-color: rgba(168, 103, 63, 0.65);
 }
 
 /* Aviso de inconsistencia como strip */
@@ -1371,7 +1371,7 @@ body {
     align-items: stretch;
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(255,255,255,0.09);
-    border-left: 3px solid rgba(139,92,246,0.30);
+    border-left: 3px solid rgba(168,103,63,0.30);
     border-radius: 10px;
     overflow: hidden;
     min-height: 54px;
@@ -1381,7 +1381,7 @@ body {
 
 .db-row:hover {
     border-color: rgba(255,255,255,0.16);
-    border-left-color: rgba(139,92,246,0.60);
+    border-left-color: rgba(168,103,63,0.60);
     box-shadow: 0 2px 12px rgba(0,0,0,0.25);
 }
 
@@ -1408,7 +1408,7 @@ body {
     border-right: 1px solid rgba(255,255,255,0.07);
     flex-shrink: 0;
     min-width: 82px;
-    background: rgba(139,92,246,0.04);
+    background: rgba(168,103,63,0.04);
 }
 
 .db-row .db-tanda {
@@ -1417,7 +1417,7 @@ body {
     font-size: 0.84rem;
     font-weight: 700;
     border-radius: 6px;
-    border: 1px solid rgba(139,92,246,0.30);
+    border: 1px solid rgba(168,103,63,0.30);
     background: var(--dark, #1D1D1D);
     color: #c4b5fd;
     text-align: center;
@@ -1426,8 +1426,8 @@ body {
 }
 .db-row .db-tanda:focus {
     outline: none;
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 2px rgba(139,92,246,0.18);
+    border-color: #C9946B;
+    box-shadow: 0 0 0 2px rgba(168,103,63,0.18);
 }
 
 /* db-bolsas oculto */
@@ -1612,7 +1612,7 @@ body {
     transition: border-color 120ms;
 }
 .db-source-row:hover {
-    border-color: rgba(139,92,246,0.25);
+    border-color: rgba(168,103,63,0.25);
 }
 
 /* Columna genérica dentro de source-row */
@@ -1639,7 +1639,7 @@ body {
     padding: 3px 5px;
     font-size: 0.79rem;
     border-radius: 4px;
-    border: 1px solid rgba(139,92,246,0.30);
+    border: 1px solid rgba(168,103,63,0.30);
     background: rgba(255,255,255,0.04);
     color: var(--text-light, #eee);
     cursor: pointer;
@@ -1649,8 +1649,8 @@ body {
 .db-source-row .db-lote-select:focus,
 .db-source-row .db-grano-select:focus {
     outline: none;
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 2px rgba(139,92,246,0.14);
+    border-color: #C9946B;
+    box-shadow: 0 0 0 2px rgba(168,103,63,0.14);
 }
 
 /* Input frascos usados */
@@ -1718,15 +1718,15 @@ body {
     border-left: 1px solid rgba(255,255,255,0.06);
     border-radius: 0;
     background: transparent;
-    color: rgba(139,92,246,0.55);
+    color: rgba(168,103,63,0.55);
     font-size: 1.1rem;
     font-weight: 500;
     cursor: pointer;
     transition: color 150ms, background 150ms;
 }
 .db-row > .db-btn-add-fuente:hover {
-    color: #a78bfa;
-    background: rgba(139,92,246,0.08);
+    color: #C9946B;
+    background: rgba(168,103,63,0.08);
 }
 
 /* ── Botón ✕ eliminar fila ───────────────────────────────── */
@@ -1806,8 +1806,8 @@ body {
     transition: border-color 150ms, background 150ms;
 }
 .db-gen-chip:hover {
-    border-color: rgba(139,92,246,0.40);
-    background: rgba(139,92,246,0.05);
+    border-color: rgba(168,103,63,0.40);
+    background: rgba(168,103,63,0.05);
 }
 .db-gen-name { font-size: 12px; font-weight: 600; color: var(--text-light, #eee); }
 .db-gen-meta { font-size: 10.5px; color: var(--text-muted, #888); }
@@ -1820,18 +1820,18 @@ body {
     padding: 3px 10px;
     font-size: 0.77rem;
     background: transparent;
-    border: 1px dashed rgba(139,92,246,0.30);
+    border: 1px dashed rgba(168,103,63,0.30);
     border-radius: 5px;
-    color: rgba(139,92,246,0.65);
+    color: rgba(168,103,63,0.65);
     cursor: pointer;
     transition: color 150ms, border-color 150ms, background 150ms;
     margin-top: 3px;
     align-self: flex-start;
 }
 .db-btn-add-fuente:hover {
-    color: #a78bfa;
-    border-color: rgba(139,92,246,0.55);
-    background: rgba(139,92,246,0.06);
+    color: #C9946B;
+    border-color: rgba(168,103,63,0.55);
+    background: rgba(168,103,63,0.06);
 }
 
 /* ── Selects globales (overrides cascada lote → tanda) ────── */
@@ -1840,7 +1840,7 @@ body {
     padding: 5px 7px;
     background: rgba(255,255,255,0.04);
     color: var(--text-light, #F5F5F5);
-    border: 1px solid rgba(139,92,246,0.35);
+    border: 1px solid rgba(168,103,63,0.35);
     border-radius: 5px;
     font-size: 0.81rem;
     cursor: pointer;
@@ -1849,9 +1849,9 @@ body {
 }
 #dbTable .db-lote-select:hover,
 #dbTable .db-lote-select:focus {
-    border-color: #a78bfa;
+    border-color: #C9946B;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(139,92,246,0.14);
+    box-shadow: 0 0 0 2px rgba(168,103,63,0.14);
 }
 
 #dbTable .db-grano-select {
@@ -1867,7 +1867,7 @@ body {
 }
 #dbTable .db-grano-select:hover,
 #dbTable .db-grano-select:focus {
-    border-color: #a78bfa;
+    border-color: #C9946B;
     outline: none;
 }
 
@@ -1906,11 +1906,11 @@ body {
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    background: rgba(139,92,246,0.12);
-    border: 1px solid rgba(139,92,246,0.30);
+    background: rgba(168,103,63,0.12);
+    border: 1px solid rgba(168,103,63,0.30);
     border-radius: 12px;
     font-size: 0.78rem;
-    color: #a78bfa;
+    color: #C9946B;
     white-space: nowrap;
 }
 .db-fuente-chip .db-chip-usados { color: #FFC000; font-weight: 600; }
@@ -2013,7 +2013,7 @@ body {
     background: var(--su-protocolo-bg-hover, rgba(139, 92, 246, 0.07));
 }
 .su-card-head-edit {
-    background: rgba(139, 92, 246, 0.06);
+    background: rgba(168, 103, 63, 0.06);
     gap: 8px;
     flex-wrap: wrap;
 }
@@ -2057,7 +2057,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.6px;
     line-height: 1.25;
-    background: rgba(139, 92, 246, 0.75);
+    background: rgba(168, 103, 63, 0.75);
     border-radius: 8px;
 }
 .su-sub-header span { text-align: center; white-space: normal; word-break: break-word; }
@@ -2072,14 +2072,14 @@ body {
     align-items: center;
     gap: 0;
     padding: 6px 14px;
-    border-top: 1px dashed rgba(139, 92, 246, 0.18);
-    background: rgba(139, 92, 246, 0.025);
+    border-top: 1px dashed rgba(168, 103, 63, 0.18);
+    background: rgba(168, 103, 63, 0.025);
     font-size: 12px;
     color: var(--text-muted, #999);
     font-variant-numeric: tabular-nums;
 }
 .su-card-sub:hover {
-    background: rgba(139, 92, 246, 0.07);
+    background: rgba(168, 103, 63, 0.07);
     color: var(--text-light, #e5e7eb);
 }
 .su-card-sub-edit {
@@ -2149,7 +2149,7 @@ body {
     gap: 7px;
     padding: 2px 14px 6px 33px;
     border-top: none;
-    background: rgba(139, 92, 246, 0.025);
+    background: rgba(168, 103, 63, 0.025);
     font-size: 11px;
 }
 .su-be-dot {
@@ -2244,9 +2244,9 @@ body {
     color: var(--text-muted, #888);
 }
 .su-kchip-fr {
-    background: rgba(139, 92, 246, 0.12);
-    border-color: rgba(139, 92, 246, 0.35);
-    color: #a78bfa;
+    background: rgba(168, 103, 63, 0.12);
+    border-color: rgba(168, 103, 63, 0.35);
+    color: #C9946B;
 }
 .su-kchip-pending {
     background: rgba(255, 192, 0, 0.10);
