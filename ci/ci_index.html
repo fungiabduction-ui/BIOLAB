@@ -16,7 +16,7 @@
 <header>
   <div class="logo-wrap">
     <div class="logo">
-      <span style="font-size:16px;font-weight:700;color:#00CC33;letter-spacing:2px">
+      <span style="font-size:16px;font-weight:700;color:#2DD4BF;letter-spacing:2px">
         BIOLAB <span style="color:#A0A0A0;font-weight:400">ENGINE</span>
         <span style="font-size:11px;color:#666">v3</span>
         &nbsp;—&nbsp;
@@ -63,7 +63,7 @@
   <div id="ci-dash-grid-wrap">
     <div class="card">
       <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span style="color:#00CC33">📊 Dashboard CI — Fórmulas activas</span>
+        <span style="color:#2DD4BF">📊 Dashboard CI — Fórmulas activas</span>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="text" id="ci-dash-search" placeholder="🔍 Buscar cepa, ingrediente, nombre o ID…" oninput="ciRenderDashboard()"
                  style="padding:6px 10px;border-radius:6px;background:var(--bg-tertiary);color:var(--tx);border:1px solid var(--border);font-size:12px;width:240px">
@@ -93,7 +93,7 @@
 
     <!-- Header compacto -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#00CC33;letter-spacing:2px;text-transform:uppercase">🧫 Nueva Fórmula CI</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#2DD4BF;letter-spacing:2px;text-transform:uppercase">🧫 Nueva Fórmula CI</span>
       <input type="text" id="ci-new-nombre" placeholder="Nombre de la fórmula…"
         style="flex:1;min-width:0;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--tx);padding:7px 10px;border-radius:6px;font-size:13px;font-family:'Inter',sans-serif">
       <input type="datetime-local" id="ci-new-fecha"
@@ -207,7 +207,7 @@
   <!-- ── Resumen de Fórmulas CI (tiles) ── -->
   <div class="card">
     <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span style="color:#00CC33">📋 Fórmulas CI</span>
+      <span style="color:#2DD4BF">📋 Fórmulas CI</span>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <input type="text" id="ci-formulas-search" placeholder="🔍 Buscar cepa, ingrediente, nombre o ID…" oninput="ciRenderFormulasList()"
                style="padding:6px 10px;border-radius:6px;background:var(--bg-tertiary);color:var(--tx);border:1px solid var(--border);font-size:12px;width:240px">
@@ -234,10 +234,10 @@
 <div id="ci-sub-cfg" class="ci-subpanel" style="display:none">
 
   <!-- Banner de ownership -->
-  <div class="card" style="border-color:rgba(0,204,51,0.3);background:rgba(0,204,51,0.04)">
+  <div class="card" style="border-color:rgba(45,212,191,0.3);background:rgba(45,212,191,0.04)">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00CC33;letter-spacing:2px;font-weight:700;margin-bottom:4px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#2DD4BF;letter-spacing:2px;font-weight:700;margin-bottom:4px">
           ⚗ CILAB — SINGLE SOURCE OF TRUTH
         </div>
         <div style="font-size:13px;color:var(--tx2);line-height:1.5">
@@ -247,11 +247,11 @@
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-p" id="ci-btn-crear-ing" onclick="ciIrACilabCrear()"
-          style="background:#00CC33;color:#1D1D1D;font-weight:700;padding:8px 16px;font-size:13px">
+          style="background:#2DD4BF;color:#052A26;font-weight:700;padding:8px 16px;font-size:13px">
           ＋ Crear ingrediente en CILAB
         </button>
         <button class="btn btn-s" onclick="ciIrACilab()"
-          style="border-color:#00CC33;color:#00CC33;padding:8px 16px;font-size:13px">
+          style="border-color:#2DD4BF;color:#2DD4BF;padding:8px 16px;font-size:13px">
           → Ir a CILAB
         </button>
       </div>
@@ -310,7 +310,7 @@
 
   <div class="card">
     <div class="ct" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span style="color:#00CC33">🧫 Cultivos CI — Inóculos Validados</span>
+      <span style="color:#2DD4BF">🧫 Cultivos CI — Inóculos Validados</span>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="ci-cultivos-filter-estado" onchange="ciFiltrarCultivos()"
                 style="padding:6px;border-radius:6px;background:var(--bg-tertiary);color:var(--text-light);border:1px solid var(--border);font-size:12px">
