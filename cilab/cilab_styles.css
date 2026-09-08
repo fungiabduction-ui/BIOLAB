@@ -1509,7 +1509,7 @@ header {
 
 /* Botón ⚡ Optimizar */
 .clab-btn-opt {
-  background: linear-gradient(135deg, #7C6FFF 0%, #5A4FCC 100%);
+  background: linear-gradient(135deg, #8B7CF6 0%, #5A4FCC 100%);
   color: #fff;
   font-weight: 700;
   border: none;
@@ -1519,17 +1519,17 @@ header {
   font-size: 13px;
   letter-spacing: 0.3px;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(124,111,255,0.35);
+  box-shadow: 0 2px 8px rgba(139,124,246,0.35);
   white-space: nowrap;
 }
 .clab-btn-opt:hover {
-  background: linear-gradient(135deg, #9180FF 0%, #6B5FDD 100%);
-  box-shadow: 0 4px 16px rgba(124,111,255,0.55);
+  background: linear-gradient(135deg, #9E92F8 0%, #6B5FDD 100%);
+  box-shadow: 0 4px 16px rgba(139,124,246,0.55);
   transform: translateY(-1px);
 }
 .clab-btn-opt:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(124,111,255,0.3);
+  box-shadow: 0 2px 6px rgba(139,124,246,0.3);
 }
 
 /* Modal overlay */
