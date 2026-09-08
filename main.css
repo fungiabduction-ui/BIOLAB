@@ -6,7 +6,10 @@
 
 /* ── Variables globales compartidas por todos los módulos ── */
 :root {
-  /* Colores primarios */
+  /* Colores primarios — el shell (header/nav/splash) conserva su verde
+     matrix propio, es identidad del SISTEMA completo, no de un módulo.
+     No se toca por esta iniciativa (no hay pedido de cambiarlo y no
+     aporta a la confusión detectada). */
   --primary:        #00CC33;
   --primary-light:  #00AA22;
   --accent:         #00AA22;
@@ -14,30 +17,32 @@
   --warning:        #ED7D31;
   --danger:         #C00000;
 
-  /* Aliases semánticos usados en módulos */
-  --ac:   #70AD47;   /* verde oliva */
-  --ac2:  #7C6FFF;   /* violeta */
-  --ac3:  #FF6B35;   /* naranja */
-  --ac4:  #44AAFF;   /* celeste */
-  --wn:   #00CC33;   /* verde alerta ok */
-  --er:   #C00000;   /* rojo error */
+  /* Aliases semánticos usados en módulos — sin cambios de valor */
+  --ac:   #70AD47;
+  --ac2:  #7C6FFF;
+  --ac3:  #FF6B35;
+  --ac4:  #44AAFF;
+  --wn:   #00CC33;
+  --er:   #C00000;
 
-  /* Tipografía */
-  --tx:   #F5F5F5;
-  --tx2:  #A0A0A0;
-  --tx3:  #666666;
+  /* Tipografía — repuntada a shared/design_tokens.css */
+  --tx:   var(--text);
+  --tx2:  var(--text-muted);
+  --tx3:  var(--text-dim);
 
-  /* Superficies */
-  --bg:            #1D1D1D;
-  --bg-secondary:  #2D2D2D;
-  --bg-tertiary:   #3D3D3D;
-  --bg-deep:       #0a0a0a;
+  /* Superficies — repuntadas a shared/design_tokens.css.
+     Reemplaza la escala gris plana (#1D1D1D/#2D2D2D/#3D3D3D) por la
+     base fría de FR, ahora compartida por los 7 módulos. */
+  --bg:            var(--surface-1);
+  --bg-secondary:  var(--surface-2);
+  --bg-tertiary:   var(--surface-3);
+  --bg-deep:       var(--surface-deep);
 
-  /* Bordes */
-  --border:        #404040;
-  --border-light:  #505050;
+  /* Bordes — repuntados a shared/design_tokens.css */
+  --border:        var(--line);
+  --border-light:  var(--line-strong);
 
-  /* Transiciones */
+  /* Transiciones — sin cambios de valor (ya coinciden con shared) */
   --t-fast:  0.15s ease;
   --t-base:  0.25s ease;
   --t-slow:  0.4s ease;
@@ -194,6 +199,8 @@ body {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Fallback genérico (no debería aplicarse nunca si los 7 data-module
+   de abajo cubren todos los tabs — se deja por robustez) */
 .tab.active {
   background: var(--bg-deep);
   color: var(--primary);
@@ -201,6 +208,73 @@ body {
   font-weight: 700;
   box-shadow: 0 0 8px rgba(0, 204, 51, 0.18);
   text-shadow: 0 0 6px rgba(0, 204, 51, 0.25);
+  transform: translateY(0);
+}
+
+/* Tab activo coloreado con la identidad del módulo correspondiente.
+   Usa los tokens de shared/design_tokens.css (--ge-accent, etc.) —
+   NUNCA los del :root de cada módulo, porque ese CSS se descarga al
+   cambiar de módulo (main.js:519-570) y estos 7 selectores deben
+   funcionar siempre, para cualquier tab, esté o no cargado. */
+.tab.active[data-module="GE"] {
+  background: var(--bg-deep);
+  color: var(--ge-accent);
+  border-color: var(--ge-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(236, 239, 244, 0.18);
+  transform: translateY(0);
+}
+.tab.active[data-module="CI"] {
+  background: var(--bg-deep);
+  color: var(--ci-accent);
+  border-color: var(--ci-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.22);
+  text-shadow: 0 0 6px rgba(45, 212, 191, 0.25);
+  transform: translateY(0);
+}
+.tab.active[data-module="CILAB"] {
+  background: var(--bg-deep);
+  color: var(--cilab-accent);
+  border-color: var(--cilab-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(139, 124, 246, 0.22);
+  text-shadow: 0 0 6px rgba(139, 124, 246, 0.25);
+  transform: translateY(0);
+}
+.tab.active[data-module="GR"] {
+  background: var(--bg-deep);
+  color: var(--gr-accent);
+  border-color: var(--gr-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(232, 168, 61, 0.22);
+  text-shadow: 0 0 6px rgba(232, 168, 61, 0.25);
+  transform: translateY(0);
+}
+.tab.active[data-module="SU"] {
+  background: var(--bg-deep);
+  color: var(--su-accent);
+  border-color: var(--su-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(168, 103, 63, 0.22);
+  text-shadow: 0 0 6px rgba(168, 103, 63, 0.25);
+  transform: translateY(0);
+}
+.tab.active[data-module="FR"] {
+  background: var(--bg-deep);
+  color: var(--fr-accent-brand);
+  border-color: var(--fr-accent-brand);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(232, 99, 122, 0.22);
+  text-shadow: 0 0 6px rgba(232, 99, 122, 0.25);
+  transform: translateY(0);
+}
+.tab.active[data-module="CFG"] {
+  background: var(--bg-deep);
+  color: var(--cfg-accent);
+  border-color: var(--cfg-accent);
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(124, 135, 152, 0.22);
   transform: translateY(0);
 }
 
