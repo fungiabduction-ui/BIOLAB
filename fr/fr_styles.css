@@ -103,16 +103,18 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .fr-header .fr-header-title {
-    font-size: 16px;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--fr-main);
-    letter-spacing: .3px;
+    letter-spacing: .2px;
     display: block;
 }
 .fr-header .fr-header-sub {
     font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: .2px;
+    font-weight: 500;
+    color: var(--text-dim, #606880);
+    letter-spacing: .8px;
+    text-transform: uppercase;
     display: block;
     margin-top: 2px;
 }

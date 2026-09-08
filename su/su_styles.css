@@ -81,16 +81,18 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .su-header .su-header-title {
-    font-size: 16px;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #A8673F;
-    letter-spacing: .3px;
+    letter-spacing: .2px;
     display: block;
 }
 .su-header .su-header-sub {
     font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: .2px;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: .8px;
+    text-transform: uppercase;
     display: block;
     margin-top: 2px;
 }

@@ -67,16 +67,18 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .gr-header .gr-header-title {
-    font-size: 16px;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #E8A83D;
-    letter-spacing: .3px;
+    letter-spacing: .2px;
     display: block;
 }
 .gr-header .gr-header-sub {
     font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: .2px;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: .8px;
+    text-transform: uppercase;
     display: block;
     margin-top: 2px;
 }
