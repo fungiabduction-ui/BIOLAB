@@ -25,7 +25,14 @@
 
   --ac:  #70AD47;
   /* --ac2 es la identidad de módulo de CILAB — ya era violeta,
-     ahora repunta al token compartido (mismo tono, SSoT única) */
+     ahora repunta al token compartido (mismo tono, SSoT única).
+     DEUDA CONOCIDA (2026-09-08, ver plan
+     docs/superpowers/plans/2026-09-08-sistema-diseno-visual-unificado.md,
+     nota antes de "Task 12"): quedan ~70 rgba(124,111,255,X) hardcodeados
+     en este archivo (violeta VIEJO, #7C6FFF) sin migrar a rgba(139,124,246,X)
+     (violeta nuevo, #8B7CF6) — diferencia de matiz mínima e imperceptible,
+     deferred a propósito, no un descuido. Si se agrega un violeta nuevo,
+     usar 139,124,246, no 124,111,255. */
   --ac2: var(--cilab-accent);
   --ac3: #FF6B35;
   --ac4: #44AAFF;
@@ -233,7 +240,7 @@ header {
 }
 .clab-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 .clab-btn-p { background: var(--ac2); color: #1D1D1D; }
-.clab-btn-p:hover { background: #6B5FFF; }
+.clab-btn-p:hover { background: #7A6CF6; }
 .clab-btn-s { background: #525252; color: var(--tx); border: 1px solid #666; }
 .clab-btn-s:hover { background: #616161; border-color: #777; }
 .clab-btn-d { background: transparent; color: var(--er); border: 1px solid rgba(192,0,0,0.4); }
