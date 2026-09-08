@@ -3547,8 +3547,8 @@ function grRenderNotas() {
         return;
     }
     cont.innerHTML = GR.protoNotas.map((n, i) =>
-        `<div class="gr-nota-entry" style="padding:10px 12px;margin-bottom:8px;background:var(--bg,#1D1D1D);border-left:3px solid #FFA000;border-radius:6px;color:var(--tx,#F5F5F5);position:relative;">
-            <div class="nota-time" style="font-size:0.78rem;color:#FFA000;font-weight:600;margin-bottom:4px">${n.ts}</div>
+        `<div class="gr-nota-entry" style="padding:10px 12px;margin-bottom:8px;background:var(--bg,#1D1D1D);border-left:3px solid #E8A83D;border-radius:6px;color:var(--tx,#F5F5F5);position:relative;">
+            <div class="nota-time" style="font-size:0.78rem;color:#E8A83D;font-weight:600;margin-bottom:4px">${n.ts}</div>
             <div class="nota-text" style="font-size:0.92rem;color:var(--tx,#F5F5F5)">${n.texto}</div>
             <button onclick="grEliminarProtocoloNota(${i})" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:var(--tx2);cursor:pointer;font-size:0.9rem;padding:2px 6px;" title="Eliminar nota">✕</button>
         </div>`
