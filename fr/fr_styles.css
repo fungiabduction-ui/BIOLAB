@@ -10,11 +10,17 @@
 :root {
     --accent: #5B9BD5;
 
-    --dark-bg: #0F1115;
-    --dark-primary: #181B22;
-    --dark-secondary: #232733;
+    /* Superficies — repuntadas a shared/design_tokens.css. FR ya tenía
+       la paleta fría que ahora es la base compartida — estos 3 valores
+       eran prácticamente idénticos a --surface-1/2/3, solo se formaliza
+       la fuente de verdad. */
+    --dark-bg: var(--surface-1);
+    --dark-primary: var(--surface-2);
+    --dark-secondary: var(--surface-3);
 
-    /* Aliases para compatibilidad con clases frt-* */
+    /* Aliases para compatibilidad con clases frt-* (legacy, no tocar
+       su uso interno — .frt-* consume estos nombres, ver fr_styles.css
+       líneas 1460-1642) */
     --ac:          var(--fr-accent);
     --ac2:         #7c6fff;
     --ac4:         #44aaff;
@@ -23,20 +29,31 @@
     --tx3:         #606880;
     --bg-deep:     var(--dark-bg);
     --bg-secondary:var(--dark-secondary);
-    --bg-tertiary: #1a1d24;
+    --bg-tertiary: var(--surface-3);
     --er:          var(--fr-bad);
     --wn:          var(--fr-warn);
 
+    /* --text-light/--text-muted quedan con sus valores hex literales
+       tal cual estaban — NO indireccionar a var(--text)/var(--text-muted)
+       del shared: son nombres iguales a los del shared, y el shared ya
+       se cargó antes con un :root propio, así que apuntar "hacia afuera"
+       con el mismo nombre crea una auto-referencia cíclica en el mismo
+       elemento (:root) que CSS invalida. Como los valores ya son
+       visualmente equivalentes a los del shared (#F5F5F5 ≈ #F2F4F8), no
+       hay beneficio real en indireccionar — se dejan literales. */
     --text-light: #F5F5F5;
     --text-muted: #A0A0A0;
-    --border: #2E3340;
-    --border-light: #3D4350;
+    --border: var(--line);
+    --border-light: var(--line-strong);
 
-    /* Acento principal del módulo FR (ámbar/dorado) */
-    --fr-main: #D4A017;
-    --fr-main-soft: #E5B73B;
+    /* Acento principal del módulo FR — identidad de marca (coral,
+       fructificación). Antes ámbar #D4A017; el ámbar ahora es de GR. */
+    --fr-main: var(--fr-accent-brand);
+    --fr-main-soft: #EC8494;
 
-    /* Acento matrix sutil (focus, datos, árbol, hover) */
+    /* Acento matrix sutil (focus, datos, árbol, hover) — SIN CAMBIOS,
+       no es identidad de módulo, es un acento de interacción aparte
+       ya documentado como decisión deliberada. */
     --fr-accent: #00FF9C;
     --fr-accent-soft: #36FFB3;
     --fr-accent-glow: rgba(0,255,156,0.18);
