@@ -31,12 +31,12 @@
 
 ---
 
-## Task 1: Crear `shared/design_tokens.css`
+## Task 1: Crear `shared/design_tokens.css` ✅ COMPLETADA (commit 4b9e1d2)
 
 **Files:**
 - Create: `shared/design_tokens.css`
 
-- [ ] **Step 1: Crear el archivo con el contenido completo**
+- [x] **Step 1: Crear el archivo con el contenido completo**
 
 ```css
 /* ============================================================
@@ -147,7 +147,7 @@ EOF
 
 ---
 
-## Task 2: Linkear `shared/design_tokens.css` en `index.html`
+## Task 2: Linkear `shared/design_tokens.css` en `index.html` ✅ COMPLETADA (commit 9a83d0e)
 
 **Files:**
 - Modify: `index.html:13-14`
@@ -198,7 +198,7 @@ EOF
 
 ---
 
-## Task 3: Capturar screenshots "antes" de referencia (si no se conservan de la sesión de brainstorming)
+## Task 3: Capturar screenshots "antes" de referencia (si no se conservan de la sesión de brainstorming) ✅ COMPLETADA (los 7 screenshots de la sesión de brainstorming siguen en `.superpowers/brainstorm/559-1788834840/content/`, no hizo falta recapturar)
 
 **Files:** ninguno (solo verificación)
 
@@ -212,7 +212,7 @@ No commitear las imágenes (son solo para comparación visual durante la ejecuci
 
 ---
 
-## Task 4: Actualizar `main.css` — tokens base + nav activo por módulo
+## Task 4: Actualizar `main.css` — tokens base + nav activo por módulo ✅ COMPLETADA (commit aa5580b)
 
 **Files:**
 - Modify: `main.css:8-44` (bloque `:root`)
@@ -410,7 +410,7 @@ por:
 
 Nota: no hace falta tocar `main.js` — `data-module="XX"` ya existe en cada `<button class="tab" data-module="XX" ...>` de `index.html:52-106`. Los selectores de atributo son puro CSS.
 
-- [ ] **Step 2: Verificación visual — los 7 tabs, uno por uno**
+- [ ] **Step 3: Verificación visual — los 7 tabs, uno por uno**
 
 ```javascript
 // mcp__chrome-devtools__evaluate_script, pageId de una página abierta en localhost:8734
@@ -419,7 +419,7 @@ Nota: no hace falta tocar `main.js` — `data-module="XX"` ya existe en cada `<b
 
 Tomar screenshot (`mcp__chrome-devtools__take_screenshot`) después de cargar cada uno de los 7 módulos (GE/CI/CILAB/GR/SU/FR/CFG) y confirmar visualmente que el tab activo en el nav superior toma el color correspondiente de la tabla de la spec (blanco/teal/violeta/dorado/terracota/coral/gris). Confirmar también que los otros 6 tabs (inactivos) se ven neutros — no deberían tener color propio en este punto (eso lo define cada módulo más adelante, ver Tarea siguiente sobre si hace falta un estado "inactivo coloreado" — **no está en el alcance de esta spec, los tabs inactivos quedan neutros como hoy**).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add main.css
@@ -438,7 +438,7 @@ EOF
 
 ---
 
-## Task 5: FR — repuntar tokens base + valor de `--fr-main` a coral
+## Task 5: FR — repuntar tokens base + valor de `--fr-main` a coral ✅ COMPLETADA (commits e8abf5c, 8e62e52, 1d5bcc5 — el Step 1 original más 2 rondas de fix por literales rgba() hardcodeados fuera del :root que el grep inicial no capturó: 21 del amber principal `212,160,23`→`232,99,122`, y 2 del amber suave `229,183,59`→`236,132,148`. Lección para las tareas siguientes: hacer un grep exhaustivo de TODOS los formatos de color viejo del módulo ANTES de escribir el paso de :root, no confiar en que la lista de selectores identificados en la auditoría original sea completa — GR y CI probablemente tengan el mismo patrón, peor, según flagged por code review.)
 
 **Files:**
 - Modify: `fr/fr_styles.css:10-51` (bloque `:root`)
@@ -582,9 +582,39 @@ EOF
 )"
 ```
 
+- [ ] **Step 4 (hallazgo agregado durante la ejecución, 2026-09-08): reemplazar literales `rgba(212,160,23,X)` hardcodeados**
+
+Al ejecutar esta tarea se encontró que `fr_styles.css` tiene **21 ocurrencias** de `rgba(212,160,23,ALPHA)` (el ámbar viejo, en formato rgba en vez de variable) esparcidas por selectores que representan la identidad de marca de FR pero que nunca referenciaron `--fr-main` como variable — quedaron con el valor hardcodeado. El Step 1 de esta tarea (cambiar `--fr-main`/`--fr-main-soft` en el `:root`) NO alcanza a estos 21 casos, porque no usan `var()`. Confirmado por grep que las 21 ocurrencias están genuinamente ligadas a la identidad de FR (todas conviven con `var(--fr-main-soft)` como color de texto, o son fondos de secciones/chips ya documentadas como "acento ámbar (--fr-main)" en comentarios del propio archivo — ninguna es un color semántico universal tipo `--fr-warn`/`--fr-bad`).
+
+Selectores afectados (línea aproximada, confirmar contra el archivo real antes de reemplazar): `.metric-card.highlight` (317), `.fr-traza` (509, 512), `.btn-mini.btn-flush`/`:hover` (573, 577), `.fr-dash-header .section-header` (669), `.fr-btn-cerrar.is-reabrir:hover` (900), `.fr-dash-locked` (1008-1009), `p.fr-hint` (1232), `.fr-chip-pendiente` (1260, 1262), `.fr-row-pendiente`/`:hover` (1312, 1315), `.fr-fecha-armado-input` y sus estados (1364-1379), `.fr-pendientes-badge` (1392-1393), `.fr-ov-badge-pend` (1470).
+
+Reemplazar CADA ocurrencia de `rgba(212,160,23,` por `rgba(232,99,122,` (el equivalente RGB de `#E8637A`, coral) — **sin tocar el valor de alpha de cada una** (ej. `rgba(212,160,23,0.12)` → `rgba(232,99,122,0.12)`, `rgba(212,160,23,0.5)` → `rgba(232,99,122,0.5)`, etc., cada línea con su propio alpha original intacto). Es un find-and-replace mecánico del triplete RGB únicamente.
+
+Verificación: `grep -n "212,160,23" fr/fr_styles.css` debe devolver CERO resultados al terminar. `grep -n "232,99,122" fr/fr_styles.css` debe devolver exactamente 21 resultados (o el número real encontrado al momento de ejecutar, si difiere confirmar por qué).
+
+Verificación visual adicional: cargar FR → Pendientes (si hay bolsas pendientes en el dataset) o inspeccionar `.fr-chip-pendiente`/`.fr-dash-locked` en el DOM — deben verse coral, no ámbar.
+
+Commit separado:
+
+```bash
+git add fr/fr_styles.css
+git commit -m "$(cat <<'EOF'
+fix(fr): reemplaza 21 literales rgba(212,160,23) hardcodeados a coral
+
+--fr-main ya cambió a coral en el :root (commit anterior), pero 21
+selectores usaban el ámbar viejo como rgba() literal en vez de
+referenciar la variable — quedaban ámbar aunque --fr-main ya no lo
+fuera. Hallazgo encontrado al verificar visualmente la tarea anterior,
+no estaba contemplado en el plan original.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
 ---
 
-## Task 6: FR — elevación real en tarjetas (degradé + sombra)
+## Task 6: FR — elevación real en tarjetas (degradé + sombra) ✅ COMPLETADA (commit 59ec0f1)
 
 **Files:**
 - Modify: `fr/fr_styles.css` — `.metrics-panel` (líneas 263-269), `.metric-card` (líneas 284-293), `.section-card` (líneas 347-353)
@@ -700,7 +730,7 @@ EOF
 
 ---
 
-## Task 7: GE — repuntar tokens base + identidad blanca en 3 selectores
+## Task 7: GE — repuntar tokens base + identidad blanca en 3 selectores ✅ COMPLETADA (commit 15e6db0, incluye Step 4b: `.logo h1` propio de GE, mismo patrón encontrado en CI)
 
 **Files:**
 - Modify: `ge/ge_styles.css:6-38` (bloque `:root`)
@@ -873,6 +903,31 @@ por:
 }
 ```
 
+- [ ] **Step 4b (hallazgo agregado durante la ejecución, 2026-09-08): título propio de GE**
+
+Mismo patrón que se encontró en CI (Tarea 8) — GE también tiene su propio título de dashboard interno, `.logo h1` (confirmado en uso real vía `ge_index.html:14-15`, `<div class="logo-wrap"><div class="logo">` propio de GE, no el logo del shell de la app). No apareció en la auditoría original de componentes porque no encajaba en ninguna categoría (botón/card/tab/tabla/input/badge) — hallado por grep directo antes de ejecutar esta tarea.
+
+Reemplazar (línea ~73-78):
+```css
+.logo h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: .2px;
+}
+```
+por:
+```css
+.logo h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ge-accent);
+  letter-spacing: .2px;
+}
+```
+
+(`.ge-header .logo-sub` no cambia — usa `var(--tx3)`, ya es un gris neutro, no verde.)
+
 - [ ] **Step 5: Elevación — `.card`, `.split-tree`, `.split-panel`**
 
 Reemplazar (líneas 211-217):
@@ -953,7 +1008,7 @@ EOF
 
 ---
 
-## Task 8: CI — repuntar tokens base + identidad teal + fix botón rojo no-destructivo
+## Task 8: CI — repuntar tokens base + identidad teal + fix botón rojo no-destructivo ✅ COMPLETADA (commit 2866260 — Steps 1-9, incluye el hallazgo del Step 7 de foco global+título propio; ~54 usos de verde que quedan como convención interna en realidad son 44, no 54, error de conteo en el propio commit, no afecta el código)
 
 **Files:**
 - Modify: `ci/ci_styles.css:9-38` (bloque `:root`)
@@ -1211,25 +1266,75 @@ por:
 }
 ```
 
-- [ ] **Step 7: Verificación visual del CSS**
+- [ ] **Step 7 (hallazgo agregado durante la ejecución, 2026-09-08): título propio de CI + foco global de inputs**
+
+Auditoría posterior a escribir este plan encontró que `#00CC33`/`rgba(0,204,51,X)` aparece en **58 lugares** de `ci_styles.css` — la mayoría son la convención interna de CI de "verde = interactivo/éxito" (hover de filas, drag&drop, modo edición, botones de promoción, dropdown seleccionado) que **NO es identidad de módulo y NO se toca** (cambiar los 58 sería un rediseño mucho más grande que "darle identidad a CI", no lo que se aprobó). Pero 2 categorías adicionales SÍ son identidad genuina y quedaron afuera de los Steps 1-6:
+
+**a) `.logo h1` — título propio del dashboard de CI** (línea ~88-89, confirmado en uso real vía `ci_index.html:17`, es el `<div class="logo-wrap">` interno de CI, no el logo del shell):
+
+Reemplazar:
+```css
+.logo h1 {
+  font-size: 1.5rem; font-weight: 700;
+  color: #00CC33; font-family: 'Inter', sans-serif;
+}
+```
+por:
+```css
+.logo h1 {
+  font-size: 1.5rem; font-weight: 700;
+  color: var(--ci-accent); font-family: 'Inter', sans-serif;
+}
+```
+
+(`.module-header.ci`, línea ~156-157, con un gradiente verde — confirmado por grep que NUNCA se usa en `ci_index.html`/`ci_app.js`, es CSS muerto. No tocar, no produce ningún cambio visible.)
+
+**b) Foco de inputs — la spec de este plan dice explícitamente "anillo de foco con el acento del módulo", y el foco de CI hoy es 100% verde, en 5 lugares (2 de ellos duplicados literalmente en el archivo):**
+
+- Línea ~226-228 (regla global):
+```css
+input:focus, select:focus, textarea:focus {
+  border-color: #00CC33;
+  box-shadow: 0 0 0 3px rgba(0,204,51,0.2);
+}
+```
+por:
+```css
+input:focus, select:focus, textarea:focus {
+  border-color: var(--ci-accent);
+  box-shadow: 0 0 0 3px rgba(45,212,191,0.2);
+}
+```
+- Línea ~751: `.col-proy input:focus { border-color: #00CC33; outline: none; }` → `border-color: var(--ci-accent);`
+- Línea ~802: `.floating-dropdown-search input:focus { outline: none; border-color: #00CC33; }` → `border-color: var(--ci-accent);`
+- Línea ~885-886 Y línea ~2540-2541 (la MISMA regla aparece duplicada dos veces en el archivo, corregir AMBAS apariciones): `.seg-section-table tbody tr.seg-row td input:focus, .seg-section-table tbody tr.seg-row td select:focus { outline: none; border-color: #00CC33; }` → `border-color: var(--ci-accent);`
+
+(Las líneas 751/802/885-886/2540-2541 quedan MÁS específicas que la regla global y hoy repiten el mismo verde — hay que cambiar las 4 igual que la global, si no la global cambia pero estas 4 la pisan con el verde viejo y el foco seguiría viéndose verde en esos inputs puntuales.)
+
+**No confundir con la Tarea 9** (que corrige `.seg-tc-estado-sel`/`.seg-tc-textarea`, un foco AZUL distinto — selectores distintos, mismo objetivo final: todo el foco de CI debe ser teal).
+
+- [ ] **Step 8: Verificación visual del CSS**
 
 ```javascript
 () => { window.loadModule('CI'); return true; }
 ```
 
-Screenshot del Dashboard de CI. Confirmar: (a) tiles de fórmula (RESET38, AGO38, etc.) con degradé+sombra, hover ahora teal en vez de verde oliva, (b) el tab activo del sub-nav ("Dashboard") es teal, (c) botones primarios (si hay alguno visible en esta vista) son teal. El botón rojo "Backup de CI" NO cambia en esta tarea — se corrige en la Tarea 10 (requiere tocar `ci_index.html`, no `ci_styles.css`).
+Screenshot del Dashboard de CI. Confirmar: (a) tiles de fórmula (RESET38, AGO38, etc.) con degradé+sombra, hover ahora teal en vez de verde oliva, (b) el tab activo del sub-nav ("Dashboard") es teal, (c) botones primarios (si hay alguno visible en esta vista) son teal, (d) el título "CI · Cultivo In Vitro" (o como se muestre) del `.logo h1` propio de CI es teal, (e) hacer foco en cualquier input/select del dashboard y confirmar anillo teal, no verde. El botón rojo "Backup de CI" NO cambia en esta tarea — se corrige en la Tarea 10 (requiere tocar `ci_index.html`, no `ci_styles.css`). Los 54 usos restantes de verde (hover de filas, drag&drop, promoción, modo edición) DEBEN seguir verdes — confirmar que NO se tocaron.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add ci/ci_styles.css
 git commit -m "$(cat <<'EOF'
 feat(ci): repunta superficies a tokens compartidos, identidad teal
 
-.btn-p, .btn-primary, .gbtn.ci y .ci-subtab.active pasan de verde a
-teal (identidad de CI, cultivo in-vitro). El verde semántico interno
-(.btn-add, .btn-wn, chips de score) no se toca. .card y .ci-dash-tile
-ganan elevación (degradé+sombra).
+.btn-p, .btn-primary, .gbtn.ci, .ci-subtab.active, .logo h1 y el foco
+de inputs (global + 4 overrides específicos) pasan de verde a teal
+(identidad de CI, cultivo in-vitro). El resto de los ~54 usos de verde
+en el archivo (hover de filas, drag&drop, modo edición, promoción) es
+la convención interna de "verde=interactivo/éxito" de CI, NO identidad
+de módulo — queda intacto a propósito, no es un descuido. .card y
+.ci-dash-tile ganan elevación (degradé+sombra).
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
@@ -1342,7 +1447,7 @@ EOF
 
 ---
 
-## Task 11: CILAB — repuntar tokens base + valor de `--ac2` a violeta del sistema nuevo
+## Task 11: CILAB — repuntar tokens base + valor de `--ac2` a violeta del sistema nuevo ✅ COMPLETADA (commits 1159e9a, 7159b3c, 36f84c9 — incluye título propio hardcodeado en HTML y 2 literales huérfanos de `.clab-btn-opt`/`.clab-btn-p:hover`; ~70 rgba(124,111,255) restantes quedan como deuda documentada, ver nota abajo)
 
 **Files:**
 - Modify: `cilab/cilab_styles.css:9-45` (bloque `:root`)
@@ -1471,18 +1576,40 @@ por:
 .clab-card:hover { border-color: var(--border-light); }
 ```
 
+- [ ] **Step 2b (hallazgo agregado durante la ejecución, 2026-09-08): título propio de CILAB — hardcodeado INLINE en el HTML, no en el CSS**
+
+A diferencia de GE/CI (donde el título propio del módulo vivía en un selector `.logo h1` del `.css`), el título de CILAB está en `cilab/cilab_index.html` como `style=` inline con un hex literal `#7C6FFF` — MUY cerca pero NO IGUAL al violeta nuevo `--cilab-accent: #8B7CF6` (son dos tonos de violeta distintos, diferencia sutil pero real). No aparece en ningún grep de `cilab_styles.css` porque no está en ese archivo.
+
+**Excepción de alcance, mismo criterio que la Tarea 10 (botón de CI):** esta es la única edición de HTML de esta tarea — un atributo `style=` inline, cero lógica/JS, cero riesgo sobre `main.js` o handlers.
+
+Reemplazar en `cilab/cilab_index.html:19`:
+
+```html
+      <span style="font-size:16px;font-weight:700;color:#7C6FFF;letter-spacing:2px">
+```
+
+por:
+
+```html
+      <span style="font-size:16px;font-weight:700;color:#8B7CF6;letter-spacing:2px">
+```
+
+(Solo cambia el valor hex de `color:`, nada más del atributo `style=` ni del resto de la línea/spans hermanos con `BIOLAB`/`ENGINE`/`v3`/`CILAB · Lab analítico`.)
+
+**Nota de investigación (2026-09-08):** se revisó si GR y SU tienen el mismo problema (`.app-header` en sus respectivos `.css` usa `var(--primary)`/hardcodea un color) — confirmado por grep que `.app-header` **no se usa en ningún lado de `gr_index.html` ni `su_index.html`** (CSS muerto, mismo patrón que `.module-header.ci` en CI) — no hace falta tocarlo, no produce ningún cambio visible. El de CFG (`.module-header.cfg`) SÍ está vivo pero ya está cubierto por el Step 2 de la Tarea 14 más abajo — no es un gap nuevo.
+
 - [ ] **Step 3: Verificación visual**
 
 ```javascript
 () => { window.loadModule('CILAB'); return true; }
 ```
 
-Screenshot del Analizador metabólico. Confirmar: (a) `.clab-card` (panel "INGREDIENTES") con degradé+sombra, (b) el botón "⚡ Optimizar" (`.clab-btn-opt`, gradiente violeta) sin cambios visuales apreciables (ya era ese tono), (c) las 6 pestañas de primer nivel (Analizador metabólico/Optimizador/Biblioteca biológica/Genética x Medio/Registro de ensayos/Conocimiento/Inteligencia) mantienen el violeta en su estado activo, (d) el gráfico de rutas metabólicas (el canvas oscuro con nodos) no se ve afectado — su fondo es propio, no usa `.clab-card`.
+Screenshot del Analizador metabólico. Confirmar: (a) `.clab-card` (panel "INGREDIENTES") con degradé+sombra, (b) el botón "⚡ Optimizar" (`.clab-btn-opt`, gradiente violeta) sin cambios visuales apreciables (ya era ese tono), (c) las 6 pestañas de primer nivel (Analizador metabólico/Optimizador/Biblioteca biológica/Genética x Medio/Registro de ensayos/Conocimiento/Inteligencia) mantienen el violeta en su estado activo, (d) el gráfico de rutas metabólicas (el canvas oscuro con nodos) no se ve afectado — su fondo es propio, no usa `.clab-card`, (e) el título propio "🔬 CILAB · Lab analítico" del header interno usa el violeta nuevo `#8B7CF6` (sutilmente distinto del `#7C6FFF` viejo, comparar con cuidado).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add cilab/cilab_styles.css
+git add cilab/cilab_styles.css cilab/cilab_index.html
 git commit -m "$(cat <<'EOF'
 feat(cilab): repunta superficies a tokens compartidos y --ac2 a shared
 
@@ -1490,7 +1617,9 @@ CILAB ya tenía una arquitectura limpia de "una sola variable de marca"
 (--ac2, violeta) consumida por .clab-btn-p/.clab-ct/.clab-subtab.active/
 .clab-btn-opt — repuntar esa única variable al token compartido
 (--cilab-accent) alinea los 4 selectores sin tocarlos individualmente.
-.clab-card gana elevación (degradé+sombra).
+.clab-card gana elevación (degradé+sombra). El título propio del
+módulo (hardcodeado inline en cilab_index.html, no en el CSS) pasa de
+#7C6FFF a #8B7CF6 para coincidir exactamente con --cilab-accent.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
@@ -1499,7 +1628,9 @@ EOF
 
 ---
 
-## Task 12: GR — repuntar tokens base + consolidar identidad dorada (fix 2 inconsistencias reales)
+**Nota de deuda conocida, deliberadamente no corregida (2026-09-08):** además de `.clab-btn-opt` (ya corregido, commit 7159b3c), quedan ~70 ocurrencias más de `rgba(124,111,255,X)` esparcidas por `cilab_styles.css` (mayormente clases `.cre-*` del sub-módulo Conocimiento). A diferencia del caso de FR (ámbar→coral, cambio de tono real y notorio) o CI (verde=convención interna completamente distinta a la identidad), acá `#7C6FFF`(124,111,255) viejo vs `#8B7CF6`(139,124,246) nuevo son el MISMO violeta medio — diferencia de matiz mínima (R+15,G+13,B-9), imperceptible a simple vista, y muchas de esas ocurrencias YA conviven en la misma regla con `var(--ac2)` (ej. `.clab-badge-origin.mixto`), confirmando que representan el mismo concepto, solo expresado en decimal porque CSS no permite `rgba(var(--ac2), X)` directo. Barrer las ~70 ocurrencias sería un cambio grande y de bajo beneficio visual en el archivo más grande y sensible del proyecto (el motor Conocimiento) — desproporcionado para una diferencia de color casi invisible. Se deja como deuda documentada, no como descuido.
+
+## Task 12: GR — repuntar tokens base + consolidar identidad dorada (fix 2 inconsistencias reales) ✅ COMPLETADA (commits 8580f0f, c38913d, b9cd124 — la "zona protegida" del plan original (líneas 1382-1727) era demasiado amplia: protegía correctamente `.gr-reg-card` pero dejaba sin convertir ~30 literales de identidad estática en el mismo rango; se corrigió con un barrido línea-por-línea categorizado en protegido/muerto/vivo, con un near-miss real sobre 2 líneas protegidas detectado y revertido antes de commitear — ver commits para el detalle completo)
 
 **Files:**
 - Modify: `gr/gr_styles.css:5-20` (bloque `:root`)
@@ -1627,7 +1758,7 @@ EOF
 
 ---
 
-## Task 13: SU — repuntar tokens base + fix bug real (`--su-primary` indefinida) + consolidar identidad terracota
+## Task 13: SU — repuntar tokens base + fix bug real (`--su-primary` indefinida) + consolidar identidad terracota ✅ COMPLETADA (commits f1dea52, 2ea3d4a, 124c482 — la auditoría exhaustiva encontró 47 ocurrencias del bug violeta, no las 6 catalogadas originalmente; mismo patrón de "zona protegida más angosta de lo que parece" que GR, verificado con la misma disciplina línea-por-línea)
 
 **Files:**
 - Modify: `su/su_styles.css:6-27` (bloque `:root`)
@@ -2033,7 +2164,7 @@ EOF
 
 ---
 
-## Task 14: CFG — crear su primer `:root` propio (fix bug real: variables indefinidas)
+## Task 14: CFG — crear su primer `:root` propio (fix bug real: variables indefinidas) ✅ COMPLETADA (commits bbce56c, dcf62ed)
 
 **Files:**
 - Modify: `cfg/cfg_styles.css:1-10` (agregar bloque `:root` nuevo, no existía)
@@ -2179,7 +2310,7 @@ EOF
 
 ---
 
-## Task 15: Verificación final cruzada — los 7 módulos en una sola pasada
+## Task 15: Verificación final cruzada — los 7 módulos en una sola pasada ✅ COMPLETADA (screenshots de los 7 módulos tomados y revisados, sin errores de consola; encontró y corrigió 2 gaps más: título/headers de CI hardcodeados inline en ci_index.html — commit 64b98b2 — y 3 literales de identidad en gr_index.html/gr_app.js — commit 8369e19. Sistema de color por protocolo de GR/SU confirmado intacto en todas las pasadas.)
 
 **Files:** ninguno (solo verificación)
 
