@@ -314,7 +314,7 @@ body {
 .metric-card.fr-color-warn  { border-left-color: var(--fr-warn); }
 
 .metric-card.highlight {
-    background: linear-gradient(135deg, var(--dark-secondary), rgba(212,160,23,0.12));
+    background: linear-gradient(135deg, var(--dark-secondary), rgba(232,99,122,0.12));
     border-left-color: var(--fr-main-soft);
 }
 
@@ -506,10 +506,10 @@ body {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 0.78rem;
     color: var(--fr-main-soft);
-    background: rgba(212,160,23,0.08);
+    background: rgba(232,99,122,0.08);
     padding: 2px 8px;
     border-radius: 6px;
-    border: 1px solid rgba(212,160,23,0.25);
+    border: 1px solid rgba(232,99,122,0.25);
     white-space: nowrap;
 }
 
@@ -570,11 +570,11 @@ body {
     border-color: var(--fr-main);
 }
 .btn-mini.btn-flush {
-    border-color: rgba(212,160,23,0.4);
+    border-color: rgba(232,99,122,0.4);
     color: var(--fr-main-soft);
 }
 .btn-mini.btn-flush:hover {
-    background: rgba(212,160,23,0.15);
+    background: rgba(232,99,122,0.15);
 }
 .btn-mini.btn-eliminar:hover {
     border-color: var(--fr-bad);
@@ -666,7 +666,7 @@ body {
 /* DASHBOARD */
 /* ============================================ */
 .fr-dash-header .section-header {
-    background: linear-gradient(135deg, var(--dark-secondary), rgba(212,160,23,0.10));
+    background: linear-gradient(135deg, var(--dark-secondary), rgba(232,99,122,0.10));
     border-bottom: 1px solid var(--border);
 }
 
@@ -897,7 +897,7 @@ body {
     background: rgba(229,183,59,0.10);
     color: var(--fr-main-soft);
     border-color: var(--fr-main-soft);
-    box-shadow: 0 0 0 2px rgba(212,160,23,0.18);
+    box-shadow: 0 0 0 2px rgba(232,99,122,0.18);
 }
 .fr-btn-cerrar:disabled {
     color: var(--text-muted);
@@ -1005,8 +1005,8 @@ body {
     background: rgba(255,255,255,0.02);
 }
 .fr-dash-locked {
-    background: rgba(212,160,23,0.08) !important;
-    border-color: rgba(212,160,23,0.3) !important;
+    background: rgba(232,99,122,0.08) !important;
+    border-color: rgba(232,99,122,0.3) !important;
     color: var(--fr-main-soft) !important;
     opacity: 1 !important;
 }
@@ -1229,7 +1229,7 @@ p.fr-hint {
     line-height: 1.45;
     padding: 8px 12px;
     border-left: 3px solid var(--fr-main);
-    background: rgba(212,160,23,0.06);
+    background: rgba(232,99,122,0.06);
     border-radius: 4px;
 }
 
@@ -1257,9 +1257,9 @@ p.fr-hint {
  */
 
 .fr-chip-pendiente {
-    background: rgba(212,160,23,0.18);
+    background: rgba(232,99,122,0.18);
     color: var(--fr-main-soft);
-    border-color: rgba(212,160,23,0.5);
+    border-color: rgba(232,99,122,0.5);
 }
 
 .fr-chip-cancelada {
@@ -1309,10 +1309,10 @@ p.fr-hint {
 
 /* Fila de pendiente en tabla: sin cursor pointer (no es seleccionable como bolsa activa) */
 .fr-row-pendiente td {
-    background: rgba(212,160,23,0.04);
+    background: rgba(232,99,122,0.04);
 }
 .fr-row-pendiente:hover td {
-    background: rgba(212,160,23,0.09);
+    background: rgba(232,99,122,0.09);
 }
 
 /* Botones de acción inline en tabla de pendientes */
@@ -1361,8 +1361,8 @@ p.fr-hint {
     color-scheme: dark;
     padding: 5px 8px;
     border-radius: 6px;
-    border: 1px solid rgba(212,160,23,0.4);
-    background: rgba(212,160,23,0.08);
+    border: 1px solid rgba(232,99,122,0.4);
+    background: rgba(232,99,122,0.08);
     color: var(--fr-main-soft);
     font-family: inherit;
     font-size: 0.82rem;
@@ -1371,12 +1371,12 @@ p.fr-hint {
     transition: background .12s, border-color .12s;
 }
 .fr-fecha-armado-input:hover {
-    background: rgba(212,160,23,0.16);
+    background: rgba(232,99,122,0.16);
     border-color: var(--fr-main-soft);
 }
 .fr-fecha-armado-input:focus {
     outline: none;
-    background: rgba(212,160,23,0.18);
+    background: rgba(232,99,122,0.18);
     border-color: var(--fr-main);
 }
 .fr-fecha-armado-input::-webkit-calendar-picker-indicator {
@@ -1389,8 +1389,8 @@ p.fr-hint {
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--fr-main-soft);
-    background: rgba(212,160,23,0.15);
-    border: 1px solid rgba(212,160,23,0.35);
+    background: rgba(232,99,122,0.15);
+    border: 1px solid rgba(232,99,122,0.35);
     border-radius: 999px;
     padding: 1px 8px;
     font-family: var(--fr-font-mono);
@@ -1467,7 +1467,7 @@ p.fr-hint {
 .fr-ov-badge-ok   { background: rgba(112,173,71,0.18); color: var(--fr-ok); }
 .fr-ov-badge-wave { background: rgba(237,125,49,0.18); color: var(--fr-warn); }
 .fr-ov-badge-bad  { background: rgba(192,0,0,0.18);   color: #FF6B6B; }
-.fr-ov-badge-pend { background: rgba(212,160,23,0.18); color: var(--fr-main-soft); }
+.fr-ov-badge-pend { background: rgba(232,99,122,0.18); color: var(--fr-main-soft); }
 
 /* ============================================================
    IDENTIDAD — VISTA DUAL (Árbol ASCII + Grafo Visual)
