@@ -700,6 +700,23 @@
     return JSON.parse(decoded);
   }
 
+  // El backup es {key: valorCrudoDeLocalStorage} — cada valor sigue siendo el
+  // STRING tal cual estaba en localStorage (casi siempre JSON-stringificado
+  // por el propio módulo dueño, ej. bl2_forms/su_lotes son arrays serializados).
+  // _bkDecodeBlob solo parsea el nivel exterior — sin este segundo parseo por
+  // key, _bkDiffValue recibe strings en vez de arrays/objetos y todo cae al
+  // caso 'block' (diff ilegible, JSON crudo con escapes). Bug real detectado
+  // por el usuario 2026-09-18: el panel mostraba el JSON entero como texto.
+  function _bkParseAll(raw) {
+    const out = {};
+    Object.keys(raw).forEach(function (k) {
+      const v = raw[k];
+      if (typeof v !== 'string') { out[k] = v; return; }
+      try { out[k] = JSON.parse(v); } catch (e) { out[k] = v; }
+    });
+    return out;
+  }
+
   // ════════════════════════════════════════════════════════════
   // DIFF ENGINE — genérico, sin dependencias de DOM (testeable en Node
   // extrayendo el bloque entre los marcadores BK_DIFF_ENGINE_START/END).
@@ -894,9 +911,11 @@
     try {
       let cached = _bkDiffCache[idx];
       if (!cached) {
-        const [dataActual, dataAnterior] = await Promise.all([
+        const [rawActual, rawAnterior] = await Promise.all([
           _bkDecodeBlob(actual.sha), _bkDecodeBlob(anterior.sha)
         ]);
+        const dataActual = _bkParseAll(rawActual);
+        const dataAnterior = _bkParseAll(rawAnterior);
         const keysActual = new Set(Object.keys(dataActual).filter(k => !k.startsWith('_')));
         const keysAnterior = new Set(Object.keys(dataAnterior).filter(k => !k.startsWith('_')));
         const cambiadas = new Set();
