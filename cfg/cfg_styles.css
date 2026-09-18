@@ -548,3 +548,20 @@ td.pur { color: var(--ac2); }
   display: flex;
   gap: 10px;
 }
+
+/* ── Panel de diff detallado de backups (¿Qué cambió?) ── */
+.cfg-diff-row { background: var(--bg-secondary); padding: 10px 14px; }
+.cfg-diff-mod { margin-bottom: 10px; }
+.cfg-diff-mod:last-child { margin-bottom: 0; }
+.cfg-diff-mod-title { font-weight: 600; font-size: 12px; color: var(--text-light); margin-bottom: 4px; }
+.cfg-diff-key { font-size: 11px; color: var(--text-muted); margin: 4px 0 4px 10px; }
+.cfg-diff-key code { color: var(--text-light); }
+.cfg-diff-fields { margin: 2px 0 2px 16px; padding: 0; list-style: none; font-size: 11px; }
+.cfg-diff-fields li { margin: 2px 0; }
+.cfg-diff-added { color: var(--wn); }
+.cfg-diff-removed { color: var(--er); }
+.cfg-diff-old { color: var(--er); text-decoration: line-through; }
+.cfg-diff-new { color: var(--wn); }
+.cfg-diff-group summary { cursor: pointer; font-size: 11px; color: var(--text-muted); margin: 4px 0; }
+.cfg-diff-group summary:hover { color: var(--text-light); }
+.cfg-diff-mod-item { margin: 4px 0 4px 14px; font-size: 11px; }
