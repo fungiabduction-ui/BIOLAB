@@ -2453,6 +2453,30 @@ function _creFormulaCards(records, model) {
         }
         if (isExcluded) cardCls += ' cre-fc-card--excluded';
 
+        // Chip de puntaje + color semáforo de la card (2026-09-18/19). _creCardHeadlineScore
+        // unifica los dos casos que antes vivían separados (con frascos → ganador entre
+        // variantes; sin frascos → score compuesto liso) en un solo "puntaje titular" de la
+        // card — así toda fórmula calibrada tiene chip, no solo las que tienen experimentos
+        // (bug real reportado: fórmulas calibradas sin frascos se quedaban sin chip).
+        var headline = _creCardHeadlineScore(fRecs, frascos);
+        var winnerChip = '';
+        if (headline.score != null) {
+          winnerChip = headline.label
+            ? ('<span class="cre-fc-chip-winner" style="' + _creScoreChipStyle(headline.score) + '" title="Mejor score hasta ahora entre los frascos de este experimento">🏆 '
+                + esc(headline.label) + ' · ' + headline.score.toFixed(1) + '</span>')
+            : ('<span class="cre-fc-chip-winner" style="' + _creScoreChipStyle(headline.score) + '" title="Score compuesto de esta fórmula">✓ Score '
+                + headline.score.toFixed(1) + '</span>');
+        }
+        // Semáforo en el borde/fondo — mismos 5 tramos y colores que la guía de puntuación
+        // del panel de scoring (1–2/3–4/5–6/7–8/9–10, ver _creScoreCardStyle) — no se inventa
+        // paleta nueva. Solo aplica una vez "Calibrada" (statusLabel), no en Parcial/Pendiente:
+        // con el experimento a medias el chip ya muestra el líder provisorio, pero el color de
+        // la card entera queda para cuando el veredicto está completo (pedido explícito: antes
+        // el borde verde de "Calibrada" era puramente estético y no decía nada del resultado).
+        var cardStyleAttr = (statusLabel === 'Calibrada' && headline.score != null)
+          ? (' style="' + _creScoreCardStyle(headline.score) + '"')
+          : '';
+
         var cepaRowsHTML = cepas.slice(0, 4).map(function(c) {
           var rec = fRecs.find(function(r) { return r.geneticaId === c.id; });
           var nameCls, badgeHTML;
@@ -2521,7 +2545,7 @@ function _creFormulaCards(records, model) {
               : doneCount + ' de ' + totalCepas + ' cepas puntuadas';
 
         var fIdE = esc(f.id);
-        return '<div class="' + cardCls + '" data-cre-formula="' + fIdE + '" onclick="creOpenScoringPanel(\'' + fIdE + '\')">'
+        return '<div class="' + cardCls + '" data-cre-formula="' + fIdE + '"' + cardStyleAttr + ' onclick="creOpenScoringPanel(\'' + fIdE + '\')">'
           + '<button class="cre-fc-exclude-btn" onclick="event.stopPropagation();creToggleFormulaMotor(\'' + fIdE + '\')" title="' + (isExcluded ? 'Reactivar para calibracion' : 'Desacoplar del motor') + '">'
           + (isExcluded ? '+' : '×')
           + '</button>'
@@ -2536,6 +2560,7 @@ function _creFormulaCards(records, model) {
           +   '<span>' + snapshot.ings.length + ' ingredientes</span>'
           +   '<span>' + totalCepas + ' cepas</span>'
           +   frascoChip
+          +   winnerChip
           +   '<span>' + esc(dateLabel) + '</span>'
           + '</div>'
           + '<div class="cre-fc-cepas">' + cepaRowsHTML + '</div>'
@@ -2592,17 +2617,101 @@ function _creCompoundAvgByFrasco(fRecs, frascos) {
     }
   });
 
+  // Nota (2026-09-19): sin esc() acá — el único caller (progressLabel, más abajo en
+  // _creFormulaCards) ya envuelve el resultado completo en esc() una sola vez antes de
+  // insertarlo en el DOM. Escaparlo acá también producía doble-escapado invisible con
+  // labels comunes (ninguno de esc() toca paréntesis) pero rompía visualmente cualquier
+  // frasco con apóstrofo: el HTML literal "A&#39; Ca restaurado" se mostraba como texto
+  // en vez de "A' Ca restaurado" — bug real encontrado en AGO1808/EXP-0009 al verificar
+  // el fix de las tabs de frasco (mismo bug de fondo, tercera aparición en este archivo).
   var parts = [];
   frascos.forEach(function(fr) {
     var recs = groups[fr.expId + '|' + fr.frascoLabel];
     if (recs && recs.length) {
-      parts.push('🔬 ' + esc(fr.frascoLabel) + ': ' + _creCompoundAvg(recs));
+      parts.push('🔬 ' + fr.frascoLabel + ': ' + _creCompoundAvg(recs));
     }
   });
   if (unidentified.length) {
     parts.push('⚠ sin identificar (' + unidentified.length + '): ' + _creCompoundAvg(unidentified));
   }
   return parts.length ? parts.join(' · ') : '—';
+}
+
+// Cuál frasco de un experimento lleva el mejor score promedio hasta ahora (2026-09-18).
+// Mismo agrupado que _creCompoundAvgByFrasco (por expId+frascoLabel, mismos fRecs) — no
+// se inventa una fuente de datos nueva, solo se agrega el paso de tomar el máximo.
+// Requiere ≥2 frascos (con 1 solo no hay "ganador", ya está el Score compuesto normal) y
+// al menos un frasco con records cerrados. Empate → gana el primero en el orden de
+// `frascos` (orden de creación del experimento — no hay otro criterio de desempate
+// documentado, y no vale la pena inventar uno para un caso borde no reportado).
+function _creWinningFrasco(fRecs, frascos) {
+  if (!frascos || frascos.length < 2) return null;
+  var groups = {};
+  fRecs.forEach(function(r) {
+    if (!r.experimentoId || !r.frascoId) return;
+    var key = r.experimentoId + '|' + r.frascoId;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  var best = null;
+  frascos.forEach(function(fr) {
+    var recs = groups[fr.expId + '|' + fr.frascoLabel];
+    if (!recs || !recs.length) return;
+    var avg = parseFloat(_creCompoundAvg(recs));
+    if (isNaN(avg)) return;
+    if (best === null || avg > best.avg) best = { label: fr.frascoLabel, avg: avg };
+  });
+  return best;
+}
+
+// Puntaje titular de una card (2026-09-19): unifica los dos casos que antes vivían
+// separados y dejaban a las fórmulas sin frascos sin chip. Con ≥2 frascos → gana el mejor
+// promedio entre variantes (_creWinningFrasco). Sin frascos (o 1 solo) → el score
+// compuesto liso de la fórmula (_creCompoundAvg), la misma fuente que ya usa
+// progressLabel para "Score compuesto: X" — ningún cálculo nuevo. `label` viene null en
+// el caso sin frascos: no hay a quién nombrar "ganador", el chip muestra el score solo.
+function _creCardHeadlineScore(fRecs, frascos) {
+  if (frascos && frascos.length >= 2) {
+    var winner = _creWinningFrasco(fRecs, frascos);
+    return winner ? { score: winner.avg, label: winner.label } : { score: null, label: null };
+  }
+  var avg = parseFloat(_creCompoundAvg(fRecs));
+  return { score: isNaN(avg) ? null : avg, label: null };
+}
+
+// Paleta semáforo (2026-09-19) — los mismos 5 tramos y colores que la guía de puntuación
+// ya visible en el panel de scoring (_creScoringPanelHTML, <details class="cre-sp-guide">):
+// 1–2 Inhibición/lento, 3–4 Tomentoso, 5–6 Normal difuso, 7–8 Rizo activo, 9–10 Rizo
+// extremo. No es una paleta nueva — pedido explícito del usuario de reusar exactamente
+// esa, no inventar otra (ni el degradé de 10 pasos de _SCORE_META, ni un semáforo de 3).
+var _CRE_SCORE_BANDS = [
+  { max: 2,  rgb: '192,57,43',   text: '#FF7A68' },
+  { max: 4,  rgb: '230,126,34',  text: '#FFAB5C' },
+  { max: 6,  rgb: '241,196,15',  text: '#FFD84D' },
+  { max: 8,  rgb: '46,204,113',  text: '#4ADE94' },
+  { max: 10, rgb: '124,111,255', text: '#A79BFF' },
+];
+function _creScoreBand(score) {
+  for (var i = 0; i < _CRE_SCORE_BANDS.length; i++) {
+    if (score <= _CRE_SCORE_BANDS[i].max) return _CRE_SCORE_BANDS[i];
+  }
+  return _CRE_SCORE_BANDS[_CRE_SCORE_BANDS.length - 1];
+}
+// Borde + wash de fondo de la card completa (estructura "B" del companion visual —
+// borde completo + fondo tintado, no una franja lateral — la más legible a distancia,
+// coherente con el pedido de "modalidad semáforo"; el usuario no confirmó la letra
+// explícitamente pero tampoco objetó, y pasó directo a pedir la paleta). Solo se aplica a
+// cards con statusLabel 'Calibrada' — con el experimento a medias el chip ya muestra el
+// líder provisorio, pero el veredicto de color en la card entera queda para cuando está
+// completo (antes: el borde verde de "Calibrada" era puramente estético, pedido explícito
+// del usuario de que refleje el puntaje real en vez de eso).
+function _creScoreCardStyle(score) {
+  var b = _creScoreBand(score);
+  return 'border-color:rgba(' + b.rgb + ',0.5);background:linear-gradient(180deg,rgba(' + b.rgb + ',0.10),rgba(255,255,255,0.015)),var(--s2)';
+}
+function _creScoreChipStyle(score) {
+  var b = _creScoreBand(score);
+  return 'background:rgba(' + b.rgb + ',0.18);border-color:rgba(' + b.rgb + ',0.5);color:' + b.text;
 }
 
 function _creRenderGrid() {
@@ -4174,7 +4283,17 @@ function _creFrascoTabsHTML(formulaId, frascos) {
   var _activeFrascoLabel = _sp.frasco ? _sp.frasco.frascoLabel : null;
   var _activeExpId       = _sp.frasco ? _sp.frasco.expId       : null;
 
-  var html = '<div class="cre-sp-frasco-tabs" id="cre-sp-ftabs-' + fIdE + '">';
+  // Bug real (2026-09-18): el label de frasco es texto libre del usuario (ej. "A' Ca
+  // restaurado", con apóstrofo) — insertarlo en un onclick="..." armado por concatenación
+  // de string, aunque pase por esc(), rompe el JS generado apenas el navegador decodifica
+  // el atributo HTML (esc() escapa ' a &#39;, que el parser HTML vuelve a decodificar a '
+  // ANTES de que el motor JS del onclick lo lea — el string JS queda con una comilla suelta
+  // sin escapar). Backslash-escaping manual (intento anterior) tapaba el apóstrofo pero
+  // seguía roto ante una comilla doble literal en el label. Fix real: nada de texto libre
+  // dentro de un atributo ejecutable — el key va SOLO en data-frasco-key (esc() alcanza,
+  // es un atributo, no JS) y se lee vía delegación de eventos (_creBindFrascoTabsDelegate),
+  // sin reconstruir ningún string JS a partir de datos del usuario.
+  var html = '<div class="cre-sp-frasco-tabs" id="cre-sp-ftabs-' + fIdE + '" data-formula-id="' + fIdE + '">';
   frascos.forEach(function(fr) {
     var extrasLabel = fr.extras.length
       ? fr.extras.map(function(ex) {
@@ -4184,14 +4303,31 @@ function _creFrascoTabsHTML(formulaId, frascos) {
       : 'Control';
     var key = esc(fr.expId + '|' + fr.frascoLabel);
     var isFrascoActive = _activeExpId === fr.expId && _activeFrascoLabel === fr.frascoLabel;
-    html += '<div class="cre-sp-ftab' + (isFrascoActive ? ' cre-sp-ftab--active' : '') + '" data-frasco-key="' + key + '"'
-      + ' onclick="creSetScoringFrasco(\'' + fIdE + '\', \'' + key + '\')">'
+    html += '<div class="cre-sp-ftab' + (isFrascoActive ? ' cre-sp-ftab--active' : '') + '" data-frasco-key="' + key + '">'
       + '🔬 ' + esc(fr.frascoLabel) + ' · ' + esc(extrasLabel)
       + '</div>';
   });
   html += '</div>';
   return html;
 }
+
+// Delegación global (no re-atado por render): esta única llamada, guardada en window para
+// sobrevivir a que loadModule() reinyecte este script (sin IIFE, sin onModuleUnload — ver
+// convención documentada del archivo), evita duplicar el listener en cada remount del módulo.
+function _creBindFrascoTabsDelegate() {
+  if (window._creFrascoTabsDelegateBound) return;
+  window._creFrascoTabsDelegateBound = true;
+  document.addEventListener('click', function(e) {
+    var tab = e.target.closest ? e.target.closest('.cre-sp-ftab') : null;
+    if (!tab) return;
+    var wrap = tab.closest('.cre-sp-frasco-tabs');
+    if (!wrap) return;
+    var formulaId = wrap.getAttribute('data-formula-id');
+    if (!formulaId) return;
+    creSetScoringFrasco(formulaId, tab.getAttribute('data-frasco-key') || '');
+  });
+}
+_creBindFrascoTabsDelegate();
 
 function creSetScoringFrasco(formulaId, frascoKey) {
   if (!frascoKey) {

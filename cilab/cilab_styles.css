@@ -4583,6 +4583,19 @@ tr.seg-note-drawer:hover {
   letter-spacing: 0.3px;
 }
 
+.cre-fc-chip-winner {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  color: #ffc107;
+  letter-spacing: 0.3px;
+}
+
 /* ── Frasco tabs (capa exterior del scoring panel) ── */
 .cre-sp-frasco-tabs {
   display: flex;
