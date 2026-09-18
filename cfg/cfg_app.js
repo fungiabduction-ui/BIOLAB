@@ -700,30 +700,224 @@
     return JSON.parse(decoded);
   }
 
+  // ════════════════════════════════════════════════════════════
+  // DIFF ENGINE — genérico, sin dependencias de DOM (testeable en Node
+  // extrayendo el bloque entre los marcadores BK_DIFF_ENGINE_START/END).
+  // Detecta arrays-de-registros por su campo id/rowId y compara
+  // recursivamente — no hay tabla de config por key, cualquier key
+  // nueva con esa forma queda cubierta sin tocar este código.
+  // Ver docs/superpowers/specs/2026-09-18-cfg-backup-diff-detallado-design.md
+  // ════════════════════════════════════════════════════════════
+  // === BK_DIFF_ENGINE_START ===
+  function _bkIdField(val) {
+    if (!Array.isArray(val) || !val.length) return null;
+    if (val.every(function (x) { return x && typeof x === 'object' && x.id != null; })) return 'id';
+    if (val.every(function (x) { return x && typeof x === 'object' && x.rowId != null; })) return 'rowId';
+    return null;
+  }
+
+  function _bkTrunc(v) {
+    const s = v === undefined ? '(vacío)' : JSON.stringify(v);
+    return s.length > 200 ? s.slice(0, 200) + '…' : s;
+  }
+
+  // Compara dos valores arbitrarios. depth = profundidad de recursión actual.
+  // Devuelve null si son iguales, o uno de:
+  //   { kind:'idArray', idField, added:[ids], removed:[ids], modified:[{id, fields:[{name,changeType,sub}]}] }
+  //   { kind:'fields', fields:[{name,changeType,sub}] }
+  //   { kind:'block', oldText, newText }
+  function _bkDiffValue(oldVal, newVal, depth) {
+    if (JSON.stringify(oldVal) === JSON.stringify(newVal)) return null;
+    if (depth > 4) return { kind: 'block', oldText: _bkTrunc(oldVal), newText: _bkTrunc(newVal) };
+
+    const oldIsArrLike = Array.isArray(oldVal) || oldVal == null;
+    const newIsArrLike = Array.isArray(newVal) || newVal == null;
+    const idField = _bkIdField(newVal) || _bkIdField(oldVal);
+    if (idField && oldIsArrLike && newIsArrLike) {
+      const oldArr = oldVal || [], newArr = newVal || [];
+      const oldMap = {}; oldArr.forEach(function (x) { oldMap[String(x[idField])] = x; });
+      const newMap = {}; newArr.forEach(function (x) { newMap[String(x[idField])] = x; });
+      const added = Object.keys(newMap).filter(function (id) { return !(id in oldMap); });
+      const removed = Object.keys(oldMap).filter(function (id) { return !(id in newMap); });
+      const modified = [];
+      Object.keys(newMap).forEach(function (id) {
+        if (!(id in oldMap)) return;
+        const fields = _bkDiffFields(oldMap[id], newMap[id], depth + 1);
+        if (fields.length) modified.push({ id: id, fields: fields });
+      });
+      return { kind: 'idArray', idField: idField, added: added, removed: removed, modified: modified };
+    }
+
+    const oldIsObj = oldVal && typeof oldVal === 'object' && !Array.isArray(oldVal);
+    const newIsObj = newVal && typeof newVal === 'object' && !Array.isArray(newVal);
+    if (oldIsObj && newIsObj) {
+      return { kind: 'fields', fields: _bkDiffFields(oldVal, newVal, depth + 1) };
+    }
+
+    return { kind: 'block', oldText: _bkTrunc(oldVal), newText: _bkTrunc(newVal) };
+  }
+
+  function _bkDiffFields(oldObj, newObj, depth) {
+    oldObj = oldObj || {}; newObj = newObj || {};
+    const seen = {};
+    const keys = [];
+    Object.keys(oldObj).concat(Object.keys(newObj)).forEach(function (k) {
+      if (!seen[k]) { seen[k] = true; keys.push(k); }
+    });
+    const out = [];
+    keys.forEach(function (k) {
+      const hadOld = Object.prototype.hasOwnProperty.call(oldObj, k);
+      const hasNew = Object.prototype.hasOwnProperty.call(newObj, k);
+      const sub = _bkDiffValue(oldObj[k], newObj[k], depth);
+      if (!sub) return;
+      out.push({ name: k, changeType: !hadOld ? 'added' : (!hasNew ? 'removed' : 'changed'), sub: sub });
+    });
+    return out;
+  }
+
+  // Agrupa entradas `modified` de un idArray por firma estructural (campos +
+  // tipo de cambio, SIN el valor) — así 36 registros con +campo color
+  // (valores distintos entre sí) quedan en un solo grupo, no 36 líneas.
+  function _bkGroupModified(modified) {
+    const groups = {}; const order = [];
+    modified.forEach(function (m) {
+      const sig = m.fields.map(function (f) { return f.name + ':' + f.changeType; }).sort().join('|');
+      if (!groups[sig]) { groups[sig] = []; order.push(sig); }
+      groups[sig].push(m);
+    });
+    return order.map(function (sig) { return { sig: sig, items: groups[sig] }; });
+  }
+
+  // Entry point por key de nivel superior — created/deleted no tienen "antes"
+  // real para diffear campo a campo.
+  function _bkDiffKey(oldVal, newVal) {
+    if (oldVal === undefined) return { kind: 'created' };
+    if (newVal === undefined) return { kind: 'deleted' };
+    return _bkDiffValue(oldVal, newVal, 0);
+  }
+  // === BK_DIFF_ENGINE_END ===
+
+  // ── Render del panel de diff (HTML), separado del motor de arriba —
+  // el motor no sabe nada de HTML/DOM, esto sí.
+  function _bkRenderFieldsList(fields) {
+    return '<ul class="cfg-diff-fields">' + fields.map(function (f) {
+      return '<li><b>' + esc(f.name) + '</b>: ' + _bkRenderSub(f.sub) + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function _bkRenderSub(sub) {
+    if (sub.kind === 'block') return esc(sub.oldText) + ' → ' + esc(sub.newText);
+    if (sub.kind === 'fields') return _bkRenderFieldsList(sub.fields);
+    const bits = [];
+    if (sub.added.length) bits.push('+' + sub.added.length + ': ' + esc(sub.added.join(', ')));
+    if (sub.removed.length) bits.push('−' + sub.removed.length + ': ' + esc(sub.removed.join(', ')));
+    if (sub.modified.length) bits.push(_bkGroupModified(sub.modified).map(_bkRenderGroup).join(''));
+    return bits.join(' ');
+  }
+
+  function _bkRenderGroup(g) {
+    const n = g.items.length;
+    const label = g.sig.split('|').map(function (part) {
+      const bits = part.split(':'); const name = bits[0], type = bits[1];
+      const verbo = type === 'added' ? '+campo' : (type === 'removed' ? '−campo' : 'cambió campo');
+      return verbo + ' `' + name + '`';
+    }).join(', ');
+    if (n === 1) {
+      const m = g.items[0];
+      return '<div class="cfg-diff-mod-item"><b>' + esc(m.id) + '</b>' + _bkRenderFieldsList(m.fields) + '</div>';
+    }
+    // Si TODOS los registros del grupo comparten el mismo valor para un campo
+    // (ej. un flag booleano seteado igual en los N), se muestra inline en vez
+    // de forzar a expandir para verlo.
+    const fieldNames = g.items[0].fields.map(function (f) { return f.name; });
+    const allSameByField = {};
+    fieldNames.forEach(function (name) {
+      const first = g.items[0].fields.find(function (f) { return f.name === name; });
+      const same = g.items.every(function (m) {
+        const f = m.fields.find(function (f) { return f.name === name; });
+        return f && JSON.stringify(f.sub) === JSON.stringify(first.sub);
+      });
+      if (same) allSameByField[name] = first.sub;
+    });
+    const inlineBits = Object.keys(allSameByField).map(function (name) {
+      return esc(name) + ': ' + _bkRenderSub(allSameByField[name]);
+    }).join(', ');
+    const itemsHtml = g.items.map(function (m) {
+      return '<div class="cfg-diff-mod-item"><b>' + esc(m.id) + '</b>' + _bkRenderFieldsList(m.fields) + '</div>';
+    }).join('');
+    return '<details class="cfg-diff-group"><summary>' + n + ' registros: ' + esc(label) +
+      (inlineBits ? ' (' + inlineBits + ')' : '') + '</summary>' + itemsHtml + '</details>';
+  }
+
+  function _bkRenderKeyDiff(key, d) {
+    if (d.kind === 'created') return '<div class="cfg-diff-key"><code>' + esc(key) + '</code> — <span class="cfg-diff-added">creado</span></div>';
+    if (d.kind === 'deleted') return '<div class="cfg-diff-key"><code>' + esc(key) + '</code> — <span class="cfg-diff-removed">eliminado</span></div>';
+    if (d.kind === 'block') return '<div class="cfg-diff-key"><code>' + esc(key) + '</code> — cambió: <span class="cfg-diff-old">' + esc(d.oldText) + '</span> → <span class="cfg-diff-new">' + esc(d.newText) + '</span></div>';
+    if (d.kind === 'fields') return '<div class="cfg-diff-key"><code>' + esc(key) + '</code>' + _bkRenderFieldsList(d.fields) + '</div>';
+    // idArray
+    const parts = [];
+    if (d.added.length) parts.push('<div class="cfg-diff-added">+' + d.added.length + ' agregado(s): ' + esc(d.added.join(', ')) + '</div>');
+    if (d.removed.length) parts.push('<div class="cfg-diff-removed">−' + d.removed.length + ' eliminado(s): ' + esc(d.removed.join(', ')) + '</div>');
+    if (d.modified.length) _bkGroupModified(d.modified).forEach(function (g) { parts.push(_bkRenderGroup(g)); });
+    return '<div class="cfg-diff-key"><code>' + esc(key) + '</code>' + parts.join('') + '</div>';
+  }
+
+  function _bkRenderDiffPanel(cambiadas, dataAnterior, dataActual) {
+    const porModulo = {};
+    Array.from(cambiadas).sort().forEach(function (k) {
+      const mod = _bkKeyToModulo(k);
+      (porModulo[mod] = porModulo[mod] || []).push(k);
+    });
+    return Object.keys(porModulo).sort().map(function (mod) {
+      const keysHtml = porModulo[mod].map(function (k) {
+        return _bkRenderKeyDiff(k, _bkDiffKey(dataAnterior[k], dataActual[k]));
+      }).join('');
+      return '<div class="cfg-diff-mod"><div class="cfg-diff-mod-title">' + esc(mod) + '</div>' + keysHtml + '</div>';
+    }).join('');
+  }
+
   var _bkListaOrdenada = []; // cache en memoria de la última lista renderizada, para el diff on-demand
+  var _bkDiffCache = {}; // idx -> {cambiadas, dataAnterior, dataActual}, evita re-descargar al togglear
 
   async function ghDiffBackupModulos(idx, btnEl) {
+    const existing = document.getElementById('gh-bk-diffrow-' + idx);
+    if (existing) {
+      const oculto = existing.style.display === 'none';
+      existing.style.display = oculto ? '' : 'none';
+      btnEl.textContent = oculto ? '▼ Ocultar cambios' : '▶ Ver cambios';
+      return;
+    }
     const actual = _bkListaOrdenada[idx];
     const anterior = _bkListaOrdenada[idx + 1]; // el array está ordenado más-nuevo-primero
     if (!anterior) { btnEl.outerHTML = '<span style="font-size:11px;color:var(--tx3)">es el más viejo — sin backup anterior para comparar</span>'; return; }
     btnEl.disabled = true; btnEl.textContent = '🔄...';
     try {
-      const [dataActual, dataAnterior] = await Promise.all([
-        _bkDecodeBlob(actual.sha), _bkDecodeBlob(anterior.sha)
-      ]);
-      const keysActual = new Set(Object.keys(dataActual).filter(k => !k.startsWith('_')));
-      const keysAnterior = new Set(Object.keys(dataAnterior).filter(k => !k.startsWith('_')));
-      const cambiadas = new Set();
-      keysActual.forEach(k => {
-        if (!keysAnterior.has(k) || JSON.stringify(dataActual[k]) !== JSON.stringify(dataAnterior[k])) cambiadas.add(k);
-      });
-      keysAnterior.forEach(k => { if (!keysActual.has(k)) cambiadas.add(k); });
-      if (!cambiadas.size) {
+      let cached = _bkDiffCache[idx];
+      if (!cached) {
+        const [dataActual, dataAnterior] = await Promise.all([
+          _bkDecodeBlob(actual.sha), _bkDecodeBlob(anterior.sha)
+        ]);
+        const keysActual = new Set(Object.keys(dataActual).filter(k => !k.startsWith('_')));
+        const keysAnterior = new Set(Object.keys(dataAnterior).filter(k => !k.startsWith('_')));
+        const cambiadas = new Set();
+        keysActual.forEach(k => {
+          if (!keysAnterior.has(k) || JSON.stringify(dataActual[k]) !== JSON.stringify(dataAnterior[k])) cambiadas.add(k);
+        });
+        keysAnterior.forEach(k => { if (!keysActual.has(k)) cambiadas.add(k); });
+        cached = { cambiadas, dataAnterior, dataActual };
+        _bkDiffCache[idx] = cached;
+      }
+      if (!cached.cambiadas.size) {
         btnEl.outerHTML = '<span style="font-size:11px;color:var(--tx3)">sin cambios vs. el anterior</span>';
         return;
       }
-      const modulos = [...new Set([...cambiadas].map(_bkKeyToModulo))].sort();
-      btnEl.outerHTML = `<span style="font-size:11px;color:var(--tx2)" title="${esc([...cambiadas].sort().join(', '))}">${esc(modulos.join(', '))}</span>`;
+      const html = _bkRenderDiffPanel(cached.cambiadas, cached.dataAnterior, cached.dataActual);
+      const fila = document.getElementById('gh-bk-row-' + idx);
+      const tr = document.createElement('tr');
+      tr.id = 'gh-bk-diffrow-' + idx;
+      tr.innerHTML = '<td colspan="5" class="cfg-diff-row">' + html + '</td>';
+      fila.parentNode.insertBefore(tr, fila.nextSibling);
+      btnEl.disabled = false; btnEl.textContent = '▼ Ocultar cambios';
     } catch (e) {
       btnEl.disabled = false; btnEl.textContent = '✕ error, reintentar';
     }
@@ -746,6 +940,7 @@
       if (!files.length) { el.innerHTML = '<div class="empty">Sin backups todavía</div>'; return; }
       files.sort((a, b) => _bkParseFileTs(b.name).localeCompare(_bkParseFileTs(a.name))); // más nuevo primero
       _bkListaOrdenada = files;
+      _bkDiffCache = {};
       // size y sha ya vienen en la respuesta de listado — sin llamadas extra a la API.
       // sha corto = huella exacta del contenido: dos filas con el mismo sha son
       // byte-a-byte idénticas (confirma o descarta "¿son realmente distintos?").
@@ -761,7 +956,7 @@
             kbColor = f.size > anterior.size ? 'var(--wn)' : (f.size === anterior.size ? 'var(--warning)' : 'var(--er)');
           }
           const shaCorta = f.sha ? f.sha.slice(0, 7) : '—';
-          return `<tr>
+          return `<tr id="gh-bk-row-${idx}">
             <td style="font-size:12px;color:var(--tx2)" title="${esc(f.name)}">${esc(fecha)}</td>
             <td style="font-size:12px;color:${kbColor}">${kb}</td>
             <td style="font-size:11px;color:var(--tx3);font-family:monospace">${shaCorta}</td>
