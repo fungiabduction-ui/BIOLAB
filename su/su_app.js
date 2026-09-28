@@ -482,6 +482,10 @@ var SU_MAT_A_ING_MAP = {
 
 var SU_MIG_BIBLIOTECA_DEDUP_V2_KEY = 'biolab_migracion_su_biblioteca_dedup_v2';
 var SU_MIG_ADITIVOS_ID_V2_KEY = 'biolab_migracion_su_aditivos_id_v2';
+// MEJ-0058: limpieza one-shot de notas 'frascos-gr' falsas/ruido del logger viejo por tecla.
+// Las notas eliminadas se guardan completas en _REMOVIDAS (restaurables) ANTES de mutar.
+var SU_MIG_LOG_FRASCOS_KEY = 'biolab_migracion_su_log_frascos_limpieza_v1';
+var SU_MIG_LOG_FRASCOS_REMOVIDAS_KEY = 'biolab_migracion_su_log_frascos_removidas_v1';
 
 function _suMigrarBibliotecaDedup(bib) {
     try {
@@ -681,6 +685,71 @@ function _suMigrarAditivosId(arr) {
 // Sin flag-read propio ni try/catch alrededor de la mutación (mismo patrón que
 // _suMigrarBibliotecaDedupV2 / la versión final ya corregida de _suMigrarAditivosId):
 // el caller es el único responsable del gating y decide qué significa "falló".
+// MEJ-0058 — ids de notas a eliminar de UN lote. Solo considera notas del logger viejo
+// por tecla (auto:true, tipo 'frascos-gr', formato "(acumulado en fuente/fila" o "(nuevo
+// total fuente"), nunca editadas por el usuario — manuales y notas nuevas (MEJ-0057,
+// "total en la sub-tanda") quedan fuera. Por clave sub-tanda|tanda GR:
+//  1) un "se liberaron d" se cancela, junto con él, contra los "se usaron" inmediatamente
+//     anteriores que sumen exacto d (el número de frascos de una inoculación es un hecho
+//     único: la corrección indica que el valor previo fue un error, no un estado real);
+//  2) si lo que queda sigue sin coincidir con los grUsados finales y el final es 0 (la
+//     fuente se cambió/quitó sin registrarse), todas las notas de esa clave son falsas.
+// Si no coincide y el final es >0, no se toca nada (ambiguo).
+function _suPlanLimpiezaLogFrascos(l) {
+    var RE_USO = /^(\S+) · Se usaron (\d+) frascos? de (?:GR )?(\S+) \/ tanda (\S+) \((?:acumulado en (?:fuente|fila)):/;
+    var RE_LIB = /^(\S+) · Corrección: se liberaron (\d+) frascos? de (?:GR )?(\S+) \/ tanda (\S+) \(nuevo total (?:fuente|fila)/;
+    var borrar = {};
+    var porClave = {};
+    (l.dbSeguimiento || []).forEach(function(n) {
+        if (!n || n.auto !== true || n.tipo !== 'frascos-gr' || n.editedAt) return;
+        var m = String(n.texto || '').match(RE_USO), sign = 1;
+        if (!m) { m = String(n.texto || '').match(RE_LIB); sign = -1; }
+        if (!m) return;
+        var k = m[1] + '|' + m[4];
+        (porClave[k] = porClave[k] || []).push({ id: n.id, d: sign * parseInt(m[2], 10) });
+    });
+    var real = {}, tandasVivas = {};
+    (l.db || []).forEach(function(r) {
+        if (r.tanda) tandasVivas[r.tanda] = true;
+        suDbNormSources(r, l.grProtocolo || '').forEach(function(s) {
+            var k = (r.tanda || '') + '|' + s.grTandaId;
+            real[k] = (real[k] || 0) + (parseInt(s.grUsados, 10) || 0);
+        });
+    });
+    Object.keys(porClave).forEach(function(k) {
+        var vivos = [];
+        porClave[k].forEach(function(e) {
+            if (e.d > 0) { vivos.push(e); return; }
+            var falta = -e.d, cons = [];
+            for (var i = vivos.length - 1; i >= 0 && falta > 0; i--) {
+                if (vivos[i].d <= falta) { falta -= vivos[i].d; cons.push(i); } else break;
+            }
+            if (falta === 0) {
+                cons.forEach(function(i) { borrar[vivos[i].id] = true; vivos.splice(i, 1); });
+                borrar[e.id] = true;
+            } else vivos.push(e);
+        });
+        var neto = vivos.reduce(function(a, e) { return a + e.d; }, 0);
+        // Solo si la sub-tanda sigue existiendo con ese nombre: una sub-tanda renombrada
+        // después daría real=0 sin que el log sea falso.
+        if (neto !== (real[k] || 0) && !(real[k] > 0) && tandasVivas[k.split('|')[0]]) {
+            vivos.forEach(function(e) { borrar[e.id] = true; });
+        }
+    });
+    return borrar;
+}
+
+// Devuelve [{loteId, _uuid, notas:[...eliminadas]}] SIN mutar (para respaldar primero).
+function _suRespaldoLimpiezaLogFrascos(arr) {
+    var out = [];
+    (arr || []).forEach(function(l) {
+        var borrar = _suPlanLimpiezaLogFrascos(l);
+        var notas = (l.dbSeguimiento || []).filter(function(n) { return n && borrar[n.id]; });
+        if (notas.length) out.push({ loteId: l.id, _uuid: l._uuid || null, notas: notas });
+    });
+    return out;
+}
+
 function _suMigrarAditivosIdV2(arr) {
     var porNombreNorm = {};
     (biblioteca.materiales || []).forEach(function(m) {
@@ -765,8 +834,36 @@ function cargarLotesDesdeStorage() {
         }
     }
 
-    if (uuidsCambiaron || aditivosCambiaron || aditivosCambiaronV2) {
+    // MEJ-0058: respaldo de las notas a eliminar → recién entonces mutar. Si el respaldo no
+    // se puede escribir, no se toca nada y se reintenta en la próxima carga.
+    var logFrascosCambio = false;
+    var logFrascosOk = false;
+    var seEjecutaLogFrascos = false;
+    try { seEjecutaLogFrascos = localStorage.getItem(SU_MIG_LOG_FRASCOS_KEY) !== '1'; } catch (e) {}
+    if (seEjecutaLogFrascos) {
+        try {
+            var _removidas = _suRespaldoLimpiezaLogFrascos(lotesData);
+            if (_removidas.length) {
+                localStorage.setItem(SU_MIG_LOG_FRASCOS_REMOVIDAS_KEY,
+                    JSON.stringify({ fecha: new Date().toISOString(), lotes: _removidas }));
+                var _ids = {};
+                _removidas.forEach(function(r) { r.notas.forEach(function(n) { _ids[n.id] = true; }); });
+                lotesData.forEach(function(l) {
+                    if (Array.isArray(l.dbSeguimiento)) l.dbSeguimiento = l.dbSeguimiento.filter(function(n) { return !(n && _ids[n.id]); });
+                });
+                logFrascosCambio = true;
+            }
+            logFrascosOk = true;
+        } catch (e) {
+            if (window.BioLog) window.BioLog.logError('SU', 'migracion MEJ-0058 limpieza log frascos', e);
+        }
+    }
+
+    if (uuidsCambiaron || aditivosCambiaron || aditivosCambiaronV2 || logFrascosCambio) {
         localStorage.setItem(SU_STORAGE_KEY, JSON.stringify(lotesData));
+    }
+    if (logFrascosOk) {
+        try { localStorage.setItem(SU_MIG_LOG_FRASCOS_KEY, '1'); } catch (e) {}
     }
 
     if (aditivosMigroOk) {
