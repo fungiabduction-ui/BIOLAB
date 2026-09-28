@@ -2061,6 +2061,8 @@
             titleEl.innerHTML =
                 '<span id="frIdDisplay" class="fr-id-display">' + esc(b.id) + '</span>'
                 + huerfanaBadge
+                + ' ' + _frStarHtml(b)
+                + (b.favorita && b.favorita.motivo ? '<span class="fr-star-motivo">' + esc(b.favorita.motivo) + '</span>' : '')
                 + ' <button id="frIdEditBtn" class="btn-small fr-id-edit-btn"'
                 +   ' onclick="FR.activarEdicionId()" title="Renombrar ID de bolsa">&#9998;</button>'
                 + '<input id="frIdInput" class="fr-id-input" type="text"'
@@ -2846,7 +2848,7 @@
 
     // ======================================================
     // RENDER: VISTA GENERAL (landing del Dashboard sin bolsa seleccionada)
-    // Muestra todas las bolsas agrupadas por estado. Se renderiza en el
+    // Tabla única filtrable/ordenable de todas las bolsas. Se renderiza en el
     // contenedor #frDashEmpty cuando no hay bolsa seleccionada.
     // No crea nueva pestaña ni modifica la estructura de navegación.
     // ======================================================
@@ -2865,64 +2867,99 @@
         return 'fr-chip-neutral';
     }
 
-    function _ovFilas(lista) {
-        return lista.map(function(b) {
-            var estado    = computeEstado(b);
-            var label     = _OV_LABELS[estado] || estado;
-            var chipClass = _ovChipClass(estado);
-            var dias      = b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
-                : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico)
-                : diasEntre(b.fechaInicio, hoyISO());
-            var be   = beAcumulado(b.flushes);
-            var rend = rendimientoFresco(b.flushes);
-            var fN   = (b.flushes || []).length;
-            var ge   = _genChipHtml(
-                b.geneticaFull || [b.genetica, b.fenotipo].filter(Boolean).join(' / ') || '',
-                b.fenId
-            );
-            // Pendientes no son seleccionables aún (sin ID definitivo)
-            var clickAttr = esPendiente(b)
-                ? '' : ' onclick="FR.select(\'' + esc(b.id) + '\')"';
-            var cursor    = esPendiente(b) ? '' : 'cursor:pointer';
-            var huerfana  = b.origen === 'huerfana'
-                ? ' <span class="fr-chip fr-chip-huerfana" style="font-size:0.6rem;padding:1px 4px" title="Bolsa huérfana">H</span>'
-                : '';
-            return '<tr class="fr-row" style="' + cursor + '"' + clickAttr + '>'
-                + '<td><strong>' + esc(b.id || '—') + '</strong>' + huerfana + '</td>'
-                + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ge + '</td>'
-                + '<td><span class="fr-chip ' + chipClass + '">' + esc(label) + '</span></td>'
-                + '<td class="fr-num-days">' + (dias != null ? dias + 'd' : '—') + '</td>'
-                + '<td class="fr-num">' + (fN > 0 ? fN : '—') + '</td>'
-                + '<td class="fr-num">' + (rend > 0 ? fmt(rend, 1) + ' g' : '—') + '</td>'
-                + '<td class="fr-num-pct">' + (be > 0 ? fmt(be, 1) + '%' : '—') + '</td>'
-                + '</tr>';
-        }).join('');
+    // Vista General (spec 2026-09-28): tabla única, filtro por chip y orden por columna.
+    // Estado solo en memoria (no se persiste).
+    var _ovFiltro = 'todas';
+    var _ovSort = { key: 'armado', dir: -1 };
+    var _OV_FILTROS = [
+        { key: 'todas',   label: 'Todas',          fn: function(b) { return true; } },
+        { key: 'pend',    label: '⏳ Pendientes',  fn: esPendiente, soloSiHay: true },
+        { key: 'cultivo', label: '🟢 En cultivo',  fn: esEnCultivo },
+        { key: 'cosecha', label: '🌊 Cosecha',     fn: esCosecha },
+        { key: 'archivo', label: '🔴 Archivo',     fn: esArchivada },
+        { key: 'fav',     label: '⭐ Favoritas',   fn: function(b) { return !!b.favorita; } }
+    ];
+    var _OV_COLS = [
+        { key: 'fav', label: '⭐' }, { key: 'id', label: 'ID' }, { key: 'gen', label: 'Genética' },
+        { key: 'su', label: 'SU' }, { key: 'gr', label: 'GR' }, { key: 'estado', label: 'Estado' },
+        { key: 'armado', label: 'Armado' }, { key: 'dias', label: 'Días', num: true }, { key: 'fn', label: 'F#', num: true },
+        { key: 'ult', label: 'Últ. oleada' }, { key: 'fresco', label: 'Fresco', num: true }, { key: 'be', label: 'BE', num: true },
+        { key: 'seco', label: 'Seco', num: true }, { key: 'desh', label: '% desh.', num: true }
+    ];
+
+    function _frDiasBolsa(b) {
+        return b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo)
+            : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico)
+            : diasEntre(b.fechaInicio, hoyISO());
+    }
+    function _frUltOleada(b) {
+        return (b.flushes || []).reduce(function(m, f) { return (f.fecha || '') > m ? (f.fecha || '') : m; }, '');
+    }
+    function _ovSortVal(b, key) {
+        switch (key) {
+            case 'fav':    return b.favorita ? 1 : 0;
+            case 'id':     return (b.id || '').toLowerCase();
+            case 'gen':    return _geTxtFromBolsa(b).toLowerCase();
+            case 'su':     return ((b.suLoteId || '') + ' ' + (b.suSubTanda || '')).toLowerCase();
+            case 'gr':     return _grTxtFromBolsa(b).toLowerCase();
+            case 'estado': return computeEstado(b);
+            case 'armado': return b.fechaInicio || '';
+            case 'dias':   var d = _frDiasBolsa(b); return d == null ? -1 : d;
+            case 'fn':     return (b.flushes || []).length;
+            case 'ult':    return _frUltOleada(b);
+            case 'fresco': return rendimientoFresco(b.flushes);
+            case 'be':     return beAcumulado(b.flushes);
+            case 'seco':   return biomasaSecaTotal(b.flushes);
+            case 'desh':   var p = pctDeshidBolsa(b.flushes); return p == null ? -1 : p;
+        }
+        return '';
     }
 
-    function _ovSecHeader(emoji, titulo, n, badgeCls) {
-        return '<tr class="fr-ov-sec-hdr">'
-            + '<th colspan="7">'
-            + emoji + ' ' + esc(titulo)
-            + ' <span class="fr-ov-badge ' + badgeCls + '">' + n + '</span>'
-            + '</th></tr>';
+    FR._ovFiltrar = function(key) { _ovFiltro = key; renderDashboard(); };
+    FR._ovOrdenar = function(key) {
+        if (_ovSort.key === key) _ovSort.dir = -_ovSort.dir;
+        else _ovSort = { key: key, dir: (key === 'id' || key === 'gen' || key === 'su' || key === 'gr' || key === 'estado') ? 1 : -1 };
+        renderDashboard();
+    };
+
+    function _frStarHtml(b) {
+        if (!b || !b.id || esPendiente(b) || b.cancelada) return '';
+        var on = !!b.favorita;
+        var tip = on ? ('Favorita' + (b.favorita.motivo ? ': ' + b.favorita.motivo : '') + ' — clic para quitar') : 'Marcar como favorita';
+        return '<button type="button" class="fr-star' + (on ? ' fr-star-on' : '') + '" title="' + esc(tip) + '"'
+            + ' onclick="event.stopPropagation();FR.toggleFavorita(\'' + esc(b.id) + '\')">' + (on ? '★' : '☆') + '</button>';
+    }
+
+    function _ovFila(b) {
+        var pend = esPendiente(b);
+        var estado = computeEstado(b);
+        var cl = pend ? '' : ' onclick="FR.select(\'' + esc(b.id) + '\')"';
+        var fs = b.flushes || [];
+        var fresco = rendimientoFresco(fs), be = beAcumulado(fs), seco = biomasaSecaTotal(fs), desh = pctDeshidBolsa(fs);
+        var pendFs = _frFlushesPendientesSecar(b);
+        var chipPend = pendFs.length ? ' <span class="fr-chip fr-chip-pendiente" title="Oleadas sin peso deshidratado: ' + pendFs.join(', ') + '">PENDIENTE ' + pendFs.join('·') + '</span>' : '';
+        var dias = _frDiasBolsa(b), ult = _frUltOleada(b);
+        var huerfana = b.origen === 'huerfana' ? ' <span class="fr-chip fr-chip-huerfana" title="Bolsa huérfana">H</span>' : '';
+        return '<tr class="fr-row"' + (pend ? '' : ' style="cursor:pointer"') + cl + '>'
+            + '<td>' + _frStarHtml(b) + '</td>'
+            + '<td><strong>' + esc(b.id || '—') + '</strong>' + huerfana + '</td>'
+            + '<td>' + _geChipFromBolsa(b) + '</td>'
+            + '<td>' + _suSubChip(b) + '</td>'
+            + '<td>' + _grChipFromBolsa(b) + '</td>'
+            + '<td><span class="fr-chip ' + _ovChipClass(estado) + '">' + esc(_OV_LABELS[estado] || estado) + '</span></td>'
+            + '<td class="fr-num-days">' + esc(fmtFecha(b.fechaInicio)) + '</td>'
+            + '<td class="fr-num-days">' + (dias != null ? dias + 'd' : '—') + '</td>'
+            + '<td class="fr-num">' + (fs.length || '—') + '</td>'
+            + '<td class="fr-num-days">' + (ult ? esc(fmtFecha(ult)) : '—') + '</td>'
+            + '<td class="fr-num">' + (fresco > 0 ? fmt(fresco, 1) + ' g' : '—') + '</td>'
+            + '<td class="fr-num-pct">' + (be > 0 ? fmt(be, 1) + '%' : '—') + '</td>'
+            + '<td class="fr-num">' + (seco > 0 ? fmt(seco, 1) + ' g' : (chipPend ? '' : '—')) + chipPend + '</td>'
+            + '<td class="fr-num-pct">' + (desh != null ? fmt(desh, 1) + '%' : '—') + '</td>'
+            + '</tr>';
     }
 
     function renderOverview(container) {
         if (!container) return;
-
-        var pendientes = bolsas.filter(esPendiente);
-        var activos    = bolsas.filter(esEnCultivo).slice().sort(function(a, b) { return (b.fechaInicio || '') < (a.fechaInicio || '') ? -1 : 1; });
-        var cosecha    = bolsas.filter(esCosecha).slice().sort(function(a, b) {
-            var fa = (a.flushes || []).reduce(function(m, f) { return (f.fecha || '') > m ? f.fecha : m; }, a.fechaCosecha || '');
-            var fb = (b.flushes || []).reduce(function(m, f) { return (f.fecha || '') > m ? f.fecha : m; }, b.fechaCosecha || '');
-            return fb < fa ? -1 : 1;
-        });
-        var archivadas = bolsas.filter(esArchivada).slice().sort(function(a, b) {
-            var fa = a.fechaCierreCiclo || a.fechaCancelacion || '';
-            var fb = b.fechaCierreCiclo || b.fechaCancelacion || '';
-            return fb < fa ? -1 : 1;
-        });
-        var total      = pendientes.length + activos.length + cosecha.length + archivadas.length;
 
         // ── KPIs sistémicos del Dashboard ──
         var _total      = bolsas.filter(function(b) { return !esPendiente(b); }).length;
@@ -2991,30 +3028,30 @@
             + '</div>'
             + '</div>';
 
-        // ── Tabla ──
-        var tableBody = '';
-        if (total === 0) {
-            tableBody = '<tr><td colspan="7" class="fr-empty">'
-                + 'Sin registros FR. Usá <strong>🔄 Sync desde SU</strong> para importar bolsas.'
-                + '</td></tr>';
-        } else {
-            if (pendientes.length > 0) {
-                tableBody += _ovSecHeader('⏳', 'Pendientes de confirmación', pendientes.length, 'fr-ov-badge-pend');
-                tableBody += _ovFilas(pendientes);
-            }
-            if (activos.length > 0) {
-                tableBody += _ovSecHeader('🟢', 'En cultivo', activos.length, 'fr-ov-badge-ok');
-                tableBody += _ovFilas(activos);
-            }
-            if (cosecha.length > 0) {
-                tableBody += _ovSecHeader('🌊', 'En cosecha', cosecha.length, 'fr-ov-badge-wave');
-                tableBody += _ovFilas(cosecha);
-            }
-            if (archivadas.length > 0) {
-                tableBody += _ovSecHeader('🔴', 'Archivadas', archivadas.length, 'fr-ov-badge-bad');
-                tableBody += _ovFilas(archivadas);
-            }
-        }
+        // ── Tabla única ──
+        var base = bolsas.filter(function(b) { return !b.cancelada; });
+        var filtroDef = _OV_FILTROS.filter(function(f) { return f.key === _ovFiltro; })[0] || _OV_FILTROS[0];
+        var filas = base.filter(filtroDef.fn).slice().sort(function(a, b) {
+            var va = _ovSortVal(a, _ovSort.key), vb = _ovSortVal(b, _ovSort.key);
+            if (va < vb) return -_ovSort.dir;
+            if (va > vb) return _ovSort.dir;
+            return (b.fechaInicio || '') < (a.fechaInicio || '') ? -1 : 1;
+        });
+        var chips = _OV_FILTROS.map(function(f) {
+            var n = base.filter(f.fn).length;
+            if (f.soloSiHay && !n) return '';
+            return '<button type="button" class="fr-ov-filtro' + (f.key === _ovFiltro ? ' fr-ov-filtro-on' : '') + '"'
+                + ' onclick="FR._ovFiltrar(\'' + f.key + '\')">' + f.label + ' ' + n + '</button>';
+        }).join('');
+        var thead = _OV_COLS.map(function(c) {
+            var flecha = _ovSort.key === c.key ? (_ovSort.dir > 0 ? ' ↑' : ' ↓') : '';
+            return '<th class="fr-ov-th-sort' + (c.num ? ' fr-num' : '') + '" onclick="FR._ovOrdenar(\'' + c.key + '\')" title="Ordenar">' + c.label + flecha + '</th>';
+        }).join('');
+        var tbody = filas.length
+            ? filas.map(_ovFila).join('')
+            : '<tr><td colspan="' + _OV_COLS.length + '" class="fr-empty">'
+              + (base.length ? 'Ninguna bolsa en este filtro.' : 'Sin registros FR. Usá <strong>🔄 Sync desde SU</strong> para importar bolsas.')
+              + '</td></tr>';
 
         container.innerHTML =
             '<div class="section-header">'
@@ -3023,16 +3060,11 @@
             + '</div>'
             + '<div class="section-content">'
             + '<div class="metrics-panel" style="margin:0 0 16px 0;padding:16px">' + kpiHtml + '</div>'
-            + '<div class="table-wrap" style="margin-top:14px">'
+            + '<div class="fr-ov-filtros">' + chips + '</div>'
+            + '<div class="table-wrap">'
             +   '<table class="data-table fr-ov-table">'
-            +     '<thead><tr>'
-            +       '<th>ID</th><th>Genética</th><th>Estado</th>'
-            +       '<th title="Días desde inicio">Días</th>'
-            +       '<th title="Flushes">F#</th>'
-            +       '<th title="Rendimiento fresco acumulado">Rend.</th>'
-            +       '<th title="Eficiencia Biológica acumulada">BE</th>'
-            +     '</tr></thead>'
-            +     '<tbody>' + tableBody + '</tbody>'
+            +     '<thead><tr>' + thead + '</tr></thead>'
+            +     '<tbody>' + tbody + '</tbody>'
             +   '</table>'
             + '</div>'
             + '</div>';
@@ -3044,6 +3076,8 @@
         renderCosecha();
         renderArchivo();
         renderDashboard();
+        var _anPanel = document.getElementById('fr-sub-analisis');
+        if (_anPanel && _anPanel.classList.contains('active')) _frRenderAnalisis();
     }
 
     // ======================================================
@@ -3175,7 +3209,7 @@
     }
 
     // Mismo shape que _geTxtFromBolsa (arriba) pero devuelve chips en vez de texto plano.
-    // Usar SOLO para render (filaTabla/filaPendiente/_ovFilas, Task 3) — nunca para
+    // Usar SOLO para render (filaTabla/filaPendiente/_ovFila) — nunca para
     // búsqueda/orden, para eso sigue existiendo _geTxtFromBolsa sin tocar.
     function _geChipFromBolsa(b) {
         if (Array.isArray(b.grSources) && b.grSources.length > 1) {
@@ -3602,14 +3636,21 @@
     }
 
     FR.subTab = function(which) {
-        ['dash', 'activos', 'cosecha', 'archivo', 'experimentos', 'intel'].forEach(function(k) {
+        ['dash', 'activos', 'cosecha', 'archivo', 'experimentos', 'intel', 'analisis'].forEach(function(k) {
             var panel = document.getElementById('fr-sub-' + k);
             var btn = document.querySelector('.fr-subtab[data-frtab="' + k + '"]');
             if (panel) panel.classList.toggle('active', k === which);
             if (btn) btn.classList.toggle('active', k === which);
         });
         if (which === 'intel') _frCalRenderIntelPanel();
+        if (which === 'analisis') _frRenderAnalisis();
     };
+
+    function _frRenderAnalisis() {
+        if (window.FRAnalisis && typeof window.FRAnalisis.render === 'function') {
+            window.FRAnalisis.render(document.getElementById('frAnalisisContent'));
+        }
+    }
 
     /** Click en tab 📈 Dashboard — siempre vuelve a vista general (limpia selección). */
     FR.goOverview = function() {
@@ -6598,6 +6639,29 @@
         fmtFechaHora: fmtFechaHora
     };
     FR._all = function() { return bolsas; };
+
+    // Copia profunda para lectores externos (fr_analisis.js) — nunca la referencia interna.
+    FR.getBolsasSnapshot = function() { return JSON.parse(JSON.stringify(bolsas)); };
+
+    // ⭐ Favorita: anotación del operador, no trazabilidad — permitida en bolsas selladas y
+    // archivadas (no toca grSources/pesos/fechas, Regla 9 intacta). Motivo opcional.
+    FR.toggleFavorita = function(id) {
+        var b = bolsas.find(function(x) { return x.id === id; });
+        if (!b || esPendiente(b) || b.cancelada) return;
+        if (b.favorita) {
+            if (!confirm('¿Quitar ' + b.id + ' de favoritas?' + (b.favorita.motivo ? '\nMotivo guardado: ' + b.favorita.motivo : ''))) return;
+            b.favorita = null;
+            addObsTo(b, '☆ Quitada de favoritas.', 'auto', 'none');
+        } else {
+            var motivo = prompt('⭐ Marcar ' + b.id + ' como favorita.\nMotivo (opcional):', '');
+            if (motivo === null) return;
+            motivo = String(motivo).trim();
+            b.favorita = { ts: new Date().toISOString(), motivo: motivo };
+            addObsTo(b, '⭐ Marcada como favorita' + (motivo ? ': ' + motivo : '.'), 'auto', 'green');
+        }
+        saveBolsas();
+        renderAll();
+    };
 
     // ======================================================
     // BACKUP FR — Export / Import

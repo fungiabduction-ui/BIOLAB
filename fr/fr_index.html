@@ -25,6 +25,7 @@
             <button type="button" class="fr-subtab" data-frtab="archivo" onclick="FR.subTab('archivo')">🔴 Archivo</button>
             <button type="button" class="fr-subtab" data-frtab="experimentos" onclick="FR.goExperimentos()">🔬 Experimentos</button>
             <button type="button" class="fr-subtab" data-frtab="intel" onclick="FR.subTab('intel')">📊 Inteligencia</button>
+            <button type="button" class="fr-subtab" data-frtab="analisis" onclick="FR.subTab('analisis')">🔎 Análisis BE</button>
         </div>
 
         <!-- ============================================ -->
@@ -579,6 +580,10 @@
             <div id="frCalIntelContent" style="padding:16px;"></div>
         </div>
 
+        <div id="fr-sub-analisis" class="fr-subpanel">
+            <div id="frAnalisisContent" style="padding:16px;"></div>
+        </div>
+
     </div><!-- /.app-container -->
 
     <!-- ============================================ -->
@@ -840,5 +845,6 @@
 
     <script src="../shared/ge_resolve.js"></script>
     <script src="fr_app.js"></script>
+    <script src="fr_analisis.js"></script>
 </body>
 </html>
