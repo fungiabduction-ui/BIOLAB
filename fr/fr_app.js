@@ -1423,7 +1423,7 @@
             + '<td class="fr-num-pct" ' + cl + '>' + (be > 0 ? fmt(be, 1) + '%' : '-') + '</td>'
             + ((tabNombre === 'cosecha' || tabNombre === 'archivo')
                 ? '<td class="fr-num" ' + cl + ' title="Rendimiento deshidratado total, todas las oleadas de esta bolsa">' + rendSecoTxt + '</td>'
-                + '<td class="fr-num-pct" ' + cl + ' title="Peso deshidratado / peso fresco total de esta bolsa">' + pctDeshidTxt + '</td>'
+                + '<td class="fr-num-pct" ' + cl + ' title="Promedio de todas las oleadas ya secadas de esta bolsa (seco total / fresco total). El % de cada oleada está en el detalle.">' + pctDeshidTxt + '</td>'
                 : '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + contPctTxt + '</td>'
                 + '<td class="fr-num-days" ' + cl + ' title="Agregado lote SU ' + suId + '">' + diasColTxt + '</td>'
                 + '<td class="fr-num-pct" ' + cl + ' title="Agregado lote SU ' + suId + '">' + ratioTxt + '</td>');
