@@ -298,6 +298,160 @@
         return ordenarFilas(filas, 'beF1Prom', -1);
     }
 
+    // ── Rendimiento: curva de oleadas, velocidad, BE por semana (spec 2026-09-28 unificado) ──
+    function bolsaReal(b) { return !!b && !b.pendienteConfirmacion && !b.cancelada && b.origen !== 'huerfana'; }
+    // Días entre dos fechas 'YYYY-MM-DD' (acepta 'YYYY-MM-DDTHH:mm', usa solo la fecha) sin UTC/DST.
+    function diasEntreISO(a, b) {
+        var p = String(a).slice(0, 10).split('-').map(Number), q = String(b).slice(0, 10).split('-').map(Number);
+        return Math.round((Date.UTC(q[0], q[1] - 1, q[2]) - Date.UTC(p[0], p[1] - 1, p[2])) / 864e5);
+    }
+    function porGenetica(bolsas, grMap, nombreDe, desde, fn) {
+        var g = {};
+        bolsas.forEach(function (b) {
+            if (!bolsaReal(b) || (desde && (b.fechaInicio || '') < desde)) return;
+            var gen = atribuirGenetica(b, grMap, nombreDe);
+            var r = g[gen.key] || (g[gen.key] = { key: gen.key, nombre: gen.nombre, items: [] });
+            fn(b, r.items);
+        });
+        return Object.keys(g).map(function (k) { return g[k]; }).filter(function (r) { return r.items.length; });
+    }
+
+    // BE promedio por número de oleada, por genética — solo ciclos completos (cicloCerrado).
+    function curvaOleadas(bolsas, grMap, nombreDe, desde) {
+        return porGenetica(bolsas, grMap, nombreDe, desde, function (b, items) {
+            if (b.cicloCerrado && Array.isArray(b.flushes) && b.flushes.length) items.push(b.flushes.map(function (f) { return num(f.beOleada); }));
+        }).map(function (r) {
+            var max = Math.max.apply(null, r.items.map(function (a) { return a.length; }));
+            var oleadas = [];
+            for (var i = 0; i < max; i++) {
+                var vals = r.items.filter(function (a) { return a.length > i; }).map(function (a) { return a[i]; });
+                oleadas.push({ prom: promedio(vals), n: vals.length });
+            }
+            return { key: r.key, nombre: r.nombre, nBolsas: r.items.length, oleadas: oleadas };
+        }).sort(function (a, b) { return b.nBolsas - a.nBolsas; });
+    }
+
+    // Días desde el armado hasta la 1ª cosecha, por genética.
+    function diasPrimeraCosecha(bolsas, grMap, nombreDe, desde) {
+        return porGenetica(bolsas, grMap, nombreDe, desde, function (b, items) {
+            if (b.fechaInicio && Array.isArray(b.flushes) && b.flushes.length && b.flushes[0].fecha) {
+                var d = diasEntreISO(b.fechaInicio, b.flushes[0].fecha);
+                if (d >= 0) items.push(d);
+            }
+        }).map(function (r) {
+            return { key: r.key, nombre: r.nombre, n: r.items.length, prom: promedio(r.items),
+                     min: Math.min.apply(null, r.items), max: Math.max.apply(null, r.items) };
+        }).sort(function (a, b) { return a.prom - b.prom; });
+    }
+
+    // BE acumulado por semana de ciclo en bolsas terminadas (rendimiento por espacio ocupado).
+    function fechaCierre(b) {
+        if (b.cicloCerrado) return b.fechaCierreCiclo || null;
+        if (b.noFructifico) return b.fechaNoFructifico || null;
+        if (b.contaminada) return b.fechaContaminacion || null;
+        return null;
+    }
+    function bePorSemana(bolsas, grMap, nombreDe, desde) {
+        var lista = [];
+        var grupos = porGenetica(bolsas, grMap, nombreDe, desde, function (b, items) {
+            var fc = fechaCierre(b);
+            if (!b.fechaInicio || !fc) return;
+            var dias = diasEntreISO(b.fechaInicio, fc);
+            if (dias <= 0) return;
+            var be = beDe(b, 'acum');
+            var it = { id: b.id, be: be, dias: dias, bps: be / dias * 7 };
+            items.push(it); lista.push(it);
+        });
+        grupos.forEach(function (r) { r.items.forEach(function (it) { it.nombre = r.nombre; }); });
+        return {
+            bolsas: lista.sort(function (a, b) { return b.bps - a.bps; }),
+            porGenetica: grupos.map(function (r) {
+                return { key: r.key, nombre: r.nombre, n: r.items.length, prom: promedio(r.items.map(function (i) { return i.bps; })) };
+            }).sort(function (a, b) { return b.prom - a.prom; })
+        };
+    }
+
+    // ── Factores: grano y aditivos ──
+    function composicionGrano(lote) {
+        if (!lote || !Array.isArray(lote.componentes)) return '—';
+        var nombres = unicos(lote.componentes.filter(function (c) { return c && c.tipo === 'seco' && c.nombre; })
+            .map(function (c) { return String(c.nombre).split('(')[0].trim(); }));
+        return nombres.length ? nombres.sort().join(' + ') : '—';
+    }
+    // Composición del lote GR que más frascos aportó a la bolsa.
+    function granoDeBolsa(b, grMap) {
+        var peso = {};
+        fuentesDe(b).forEach(function (s) {
+            if (!s || !s.grLoteId) return;
+            var k = composicionGrano(grMap[s.grLoteId]);
+            peso[k] = (peso[k] || 0) + (int(s.grUsados) || 1);
+        });
+        var best = null;
+        Object.keys(peso).forEach(function (k) { if (best == null || peso[k] > peso[best]) best = k; });
+        return best || '—';
+    }
+
+    // Estabilidad temporal de "grupo vs resto" en `campo` (spec 2026-09-28 unificado):
+    // insuficiente (<3 por lado) · confundido (<50% del grupo en meses donde también hay resto) ·
+    // si no, leave-one-month-out sobre los meses compartidos (mismo principio que
+    // _frCalDeltaConLOO de FR·CAL): inestable si el rango de deltas > max(0.5·|delta|, 10 pp).
+    function estabilidadTemporal(grupo, resto, campo) {
+        if (grupo.length < 3 || resto.length < 3) return { estado: 'insuficiente', delta: null };
+        function mes(m) { return String(m.fechaInicio || '').slice(0, 7); }
+        function prom(arr) { return promedio(arr.map(function (m) { return m[campo]; })); }
+        var delta = prom(grupo) - prom(resto);
+        var mesesResto = {};
+        resto.forEach(function (m) { mesesResto[mes(m)] = true; });
+        var enCompartidos = grupo.filter(function (m) { return mesesResto[mes(m)]; });
+        if (enCompartidos.length / grupo.length < 0.5) return { estado: 'confundido', delta: delta };
+        var meses = unicos(enCompartidos.map(mes));
+        var deltas = [];
+        meses.forEach(function (x) {
+            var g2 = grupo.filter(function (m) { return mes(m) !== x; }), r2 = resto.filter(function (m) { return mes(m) !== x; });
+            if (g2.length >= 2 && r2.length >= 2) deltas.push(prom(g2) - prom(r2));
+        });
+        if (deltas.length < 2) return { estado: 'estable', delta: delta };
+        var rango = Math.max.apply(null, deltas) - Math.min.apply(null, deltas);
+        return { estado: rango > Math.max(0.5 * Math.abs(delta), 10) ? 'inestable' : 'estable', delta: delta };
+    }
+
+    // Tabla genérica de un factor: cada grupo (una bolsa puede estar en varios) contra el resto.
+    // 'f1': BE 1ª oleada de todas; 'acum': BE final solo de cerradas.
+    function tablaFactor(validas, gruposDe, modo) {
+        var campo = modo === 'f1' ? 'beF1' : 'beAcum';
+        var base = modo === 'f1' ? validas : validas.filter(function (m) { return m.cerrada; });
+        var claves = {};
+        validas.forEach(function (m) { gruposDe(m).forEach(function (k) { claves[k] = true; }); });
+        return Object.keys(claves).map(function (k) {
+            var todos = validas.filter(function (m) { return gruposDe(m).indexOf(k) >= 0; });
+            var g = base.filter(function (m) { return gruposDe(m).indexOf(k) >= 0; });
+            var r = base.filter(function (m) { return gruposDe(m).indexOf(k) < 0; });
+            var fechas = todos.map(function (m) { return m.fechaInicio; }).filter(Boolean).sort();
+            return {
+                key: k, n: todos.length,
+                bePromedio: g.length ? promedio(g.map(function (m) { return m[campo]; })) : null,
+                pctFructifico: todos.filter(function (m) { return !m.noFructifico; }).length / todos.length * 100,
+                desde: fechas[0] || null, hasta: fechas[fechas.length - 1] || null,
+                estab: estabilidadTemporal(g, r, campo)
+            };
+        }).sort(function (a, b) { return (b.bePromedio == null ? -1 : b.bePromedio) - (a.bePromedio == null ? -1 : a.bePromedio); });
+    }
+
+    // ── Calidad vs BE: por oleada evaluada ──
+    function puntosCalidad(bolsas, campo) {
+        var out = [];
+        bolsas.forEach(function (b) {
+            if (!bolsaReal(b) || !Array.isArray(b.flushes)) return;
+            b.flushes.forEach(function (f, i) {
+                if (!f || !f.calidad || f.beOleada == null || isNaN(parseFloat(f.beOleada))) return;
+                var y = f.calidad[campo];
+                if (y == null || isNaN(parseFloat(y))) return;
+                out.push({ id: b.id, flushN: f.n || (i + 1), x: parseFloat(f.beOleada), y: parseFloat(y) });
+            });
+        });
+        return out;
+    }
+
     // ── Config de exclusiones (puras) ──
     function conExclusion(cfg, ex) {
         var lista = cfg.exclusiones || [];
@@ -704,6 +858,9 @@
             atribuirGenetica: atribuirGenetica, metricasBolsa: metricasBolsa, analizarBolsas: analizarBolsas,
             regresion: regresion, mediaMovil: mediaMovil, datosGrafico: datosGrafico, serieTiempo: serieTiempo,
             valorEnFecha: valorEnFecha, ordenarFilas: ordenarFilas,
+            curvaOleadas: curvaOleadas, diasPrimeraCosecha: diasPrimeraCosecha, bePorSemana: bePorSemana,
+            composicionGrano: composicionGrano, granoDeBolsa: granoDeBolsa, estabilidadTemporal: estabilidadTemporal,
+            tablaFactor: tablaFactor, puntosCalidad: puntosCalidad,
             rankingGenetica: rankingGenetica, restarMeses: restarMeses, conExclusion: conExclusion,
             sinExclusion: sinExclusion, MEZCLA_PAREJA: MEZCLA_PAREJA
         }
