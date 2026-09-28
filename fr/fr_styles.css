@@ -2298,3 +2298,20 @@ p.fr-hint {
 .fr-an-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .fr-an-th-sort:hover { color: var(--fr-main-soft); }
 .fr-an-rank-table th.fr-num, .fr-an-rank-table td.fr-num { text-align: right; }
+/* Análisis BE — detalle desplegable del ranking de genética (2026-09-28) */
+.fr-an-rank-row { cursor: pointer; }
+.fr-an-rank-row:hover td { background: rgba(232,99,122,0.06); }
+.fr-an-rank-open td { background: rgba(232,99,122,0.10); }
+.fr-an-caret { display: inline-block; width: 12px; color: var(--text-muted); }
+.fr-an-rank-detail > td { padding: 4px 8px 12px 28px; background: var(--surface-1); }
+.fr-an-det-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.fr-an-det-table th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.fr-an-det-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.fr-an-det-table .fr-num { text-align: right; }
+.fr-an-det-row { cursor: pointer; }
+.fr-an-det-row:hover td { background: rgba(255,255,255,0.04); }
+.fr-an-est { font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--border); }
+.fr-an-est-prod { color: #52B788; border-color: rgba(82,183,136,0.45); }
+.fr-an-est-cerr { color: #8B7CF6; border-color: rgba(139,124,246,0.45); }
+.fr-an-est-nf { color: #F2A93C; border-color: rgba(242,169,60,0.45); }
+.fr-an-est-cont { color: #E05252; border-color: rgba(224,82,82,0.45); }

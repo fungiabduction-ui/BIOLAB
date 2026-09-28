@@ -137,6 +137,7 @@
             fechaInicio: b.fechaInicio || '',
             cerrada: !!(b.cicloCerrado || b.noFructifico || b.contaminada),
             noFructifico: b.noFructifico === true && fl.length === 0,
+            contaminada: b.contaminada === true,
             beAcum: beDe(b, 'acum'),
             beF1: beDe(b, 'f1'),
             granoSust: num(b.granoPorBolsa) / seco,
@@ -263,12 +264,24 @@
         validas.forEach(function (m) {
             if (desde && m.fechaInicio < desde) return;
             var k = m.gen.key;
-            var r = g[k] || (g[k] = { key: k, nombre: m.gen.nombre, f1: [], fin: [], acum: [], noFruct: 0, mezclas: [] });
+            var r = g[k] || (g[k] = { key: k, nombre: m.gen.nombre, f1: [], fin: [], acum: [], noFruct: 0, mezclas: [], bolsas: [] });
             r.f1.push(m.beF1);
             r.acum.push(m.beAcum);
             if (m.cerrada) r.fin.push(m.beAcum);
             if (m.noFructifico) r.noFruct++;
             if (m.gen.mezcla) r.mezclas.push(m.id + ': ' + m.gen.detalle);
+            r.bolsas.push({
+                id: m.id, fechaInicio: m.fechaInicio, beF1: m.beF1, beAcum: m.beAcum,
+                estado: m.noFructifico ? 'no fructificó' : m.contaminada ? 'contaminada'
+                      : m.cerrada ? 'ciclo cerrado' : 'en producción',
+                mezcla: m.gen.mezcla ? m.gen.detalle : null
+            });
+        });
+        // Detalle: más nueva primero; misma fecha → por ID
+        Object.keys(g).forEach(function (k) {
+            g[k].bolsas.sort(function (a, b) {
+                return a.fechaInicio > b.fechaInicio ? -1 : a.fechaInicio < b.fechaInicio ? 1 : (a.id < b.id ? -1 : 1);
+            });
         });
         var filas = Object.keys(g).map(function (k) {
             var r = g[k], n = r.f1.length;
@@ -278,7 +291,7 @@
                 nCerradas: r.fin.length, beFinalProm: promedio(r.fin),
                 mejor: Math.max.apply(null, r.acum),
                 pctFructifico: (n - r.noFruct) / n * 100,
-                nMezcla: r.mezclas.length, mezclas: r.mezclas,
+                nMezcla: r.mezclas.length, mezclas: r.mezclas, bolsas: r.bolsas,
                 rankeable: n >= MIN_RANKING
             };
         });
@@ -348,7 +361,10 @@
         { key: 'pctFructifico', label: '% fructificó', num: true }
     ];
     // tips[chartId] = [{x, y, html, bolsaId}] en coordenadas SVG; tipSel[chartId] = punto bajo el mouse
-    var ui = { modo: 'acum', periodo: '3', ventana: 10, rankSort: { key: 'beF1Prom', dir: -1 }, container: null, tips: {}, tipSel: {} };
+    // rankFilas/rankDetIds: lo último renderizado — los onclick del ranking pasan un ÍNDICE, nunca el
+    // nombre de la genética ni el ID (texto libre: un apóstrofo rompería el JS inline, ver CLAUDE.md).
+    var ui = { modo: 'acum', periodo: 'todo', ventana: 10, rankSort: { key: 'beF1Prom', dir: -1 }, rankAbierta: null,
+               rankFilas: [], rankDetIds: [], container: null, tips: {}, tipSel: {} };
 
     function btnToggle(key, label, actual, fn) {
         return '<button type="button" class="fr-an-toggle-btn' + (String(key) === String(actual) ? ' fr-an-on' : '') + '"'
@@ -536,6 +552,26 @@
         return h + '</div>';
     }
 
+    // Fila desplegada bajo una genética del ranking: sus bolsas del período. Clic en una bolsa
+    // abre su ficha en el Dashboard (FR.select), igual que desde la Vista General.
+    function htmlDetalleGenetica(f) {
+        var ESTADO_CLS = { 'no fructificó': 'fr-an-est-nf', 'contaminada': 'fr-an-est-cont', 'ciclo cerrado': 'fr-an-est-cerr', 'en producción': 'fr-an-est-prod' };
+        var h = '<tr class="fr-an-rank-detail"><td colspan="' + RANK_COLS.length + '"><table class="fr-an-det-table"><thead><tr>'
+            + '<th>Bolsa</th><th>Armada</th><th class="fr-num">BE 1ª oleada</th><th class="fr-num">BE acumulado</th><th>Estado</th><th>Mezcla</th>'
+            + '</tr></thead><tbody>';
+        f.bolsas.forEach(function (b) {
+            var idx = ui.rankDetIds.push(b.id) - 1;
+            h += '<tr class="fr-an-det-row" onclick="event.stopPropagation();FRAnalisis.abrirBolsa(' + idx + ')" title="Abrir la ficha de ' + esc(b.id) + '">'
+               + '<td><b>' + esc(b.id) + '</b></td>'
+               + '<td>' + esc(fechaCorta(b.fechaInicio)) + '</td>'
+               + '<td class="fr-num">' + b.beF1.toFixed(0) + '%</td>'
+               + '<td class="fr-num">' + b.beAcum.toFixed(0) + '%</td>'
+               + '<td><span class="fr-an-est ' + (ESTADO_CLS[b.estado] || '') + '">' + esc(b.estado) + '</span></td>'
+               + '<td class="fr-an-dim">' + (b.mezcla ? esc(b.mezcla) : '—') + '</td></tr>';
+        });
+        return h + '</tbody></table></td></tr>';
+    }
+
     function htmlRanking(validas) {
         var per = PERIODOS.filter(function (p) { return p.key === ui.periodo; })[0] || PERIODOS[0];
         var desde = per.meses ? restarMeses(hoyISO(), per.meses) : null;
@@ -550,17 +586,23 @@
                 return '<th class="fr-an-th-sort' + (c.num ? ' fr-num' : '') + '" onclick="FRAnalisis.ordenarRanking(\'' + c.key + '\')" title="Ordenar">' + c.label + flecha + '</th>';
              }).join('')
            + '</tr></thead><tbody>';
-        filas.forEach(function (f) {
+        ui.rankFilas = filas;
+        ui.rankDetIds = [];
+        filas.forEach(function (f, i) {
+            var abierta = ui.rankAbierta === f.key;
             var mez = f.nMezcla ? ' <span class="fr-an-mezcla" title="' + esc(f.mezclas.join('\n')) + '">(' + f.nMezcla + ' con mezcla)</span>' : '';
             var bar = '<span class="fr-an-bar" style="width:' + Math.round(f.beF1Prom / maxBE * 90) + 'px"></span>' + f.beF1Prom.toFixed(0) + '%';
-            h += '<tr class="' + (f.rankeable ? '' : 'fr-an-dim-row') + '">'
-               + '<td><b>' + esc(f.nombre) + '</b>' + mez + (f.rankeable ? '' : ' <i class="fr-an-dim">· pocas bolsas</i>') + '</td>'
+            h += '<tr class="fr-an-rank-row' + (f.rankeable ? '' : ' fr-an-dim-row') + (abierta ? ' fr-an-rank-open' : '') + '"'
+               + ' onclick="FRAnalisis.toggleGenetica(' + i + ')" title="Ver las bolsas de esta genética">'
+               + '<td><span class="fr-an-caret">' + (abierta ? '▾' : '▸') + '</span> <b>' + esc(f.nombre) + '</b>' + mez
+               + (f.rankeable ? '' : ' <i class="fr-an-dim">· pocas bolsas</i>') + '</td>'
                + '<td class="fr-num">' + f.n + '</td><td>' + bar + '</td>'
                + '<td class="fr-num">' + (f.beFinalProm != null ? f.beFinalProm.toFixed(0) + '% <span class="fr-an-dim">(' + f.nCerradas + ')</span>' : '— <span class="fr-an-dim">(0)</span>') + '</td>'
                + '<td class="fr-num">' + f.mejor.toFixed(0) + '%</td>'
                + '<td class="fr-num">' + f.pctFructifico.toFixed(0) + '%</td></tr>';
+            if (abierta) h += htmlDetalleGenetica(f);
         });
-        return h + '</tbody></table><div class="fr-an-dim">Tocá un encabezado para ordenar. Genéticas con menos de ' + MIN_RANKING
+        return h + '</tbody></table><div class="fr-an-dim">Tocá una genética para ver sus bolsas; tocá un encabezado para ordenar. Genéticas con menos de ' + MIN_RANKING
             + ' bolsas en el período van en gris ("pocas bolsas": el promedio es poco confiable). BE final = solo las que ya cerraron ciclo '
             + '(entre paréntesis cuántas). "No fructificó" cuenta como 0. Una bolsa con varias genéticas cuenta para la de más frascos; '
             + 'empate → "Mezcla pareja".</div></div>';
@@ -641,6 +683,16 @@
             if (ui.rankSort.key === key) ui.rankSort.dir = -ui.rankSort.dir;
             else ui.rankSort = { key: key, dir: key === 'nombre' ? 1 : -1 };
             render();
+        },
+        toggleGenetica: function (i) {
+            var f = ui.rankFilas[i];
+            if (!f) return;
+            ui.rankAbierta = ui.rankAbierta === f.key ? null : f.key;
+            render();
+        },
+        abrirBolsa: function (i) {
+            var id = ui.rankDetIds[i];
+            if (id && window.FR && typeof window.FR.select === 'function') window.FR.select(id);
         },
         _tip: tipMove,
         _tipOff: tipOff,

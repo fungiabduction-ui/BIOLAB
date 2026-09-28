@@ -93,6 +93,12 @@ t('rankingGenetica: ordena por 1ª oleada, BE final solo cerradas, noFructifico 
   close(f[0].beF1Prom, (300 + 200 + 0 + 400) / 4);          // A1, A2, A3 (NF=0), A4 abierta
   assert.strictEqual(f[0].nCerradas, 3); close(f[0].beFinalProm, (300 + 300 + 0) / 3);
   assert.strictEqual(f[0].mejor, 400); close(f[0].pctFructifico, 75); assert.strictEqual(f[0].rankeable, true);
+  // detalle de la genética: sus bolsas del período, más nueva primero (mismo orden de fecha → por ID)
+  assert.deepStrictEqual(f[0].bolsas.map(x => x.id), ['A1', 'A2', 'A3', 'A4']);
+  const a3 = f[0].bolsas.find(x => x.id === 'A3');
+  assert.deepStrictEqual([a3.estado, a3.beF1, a3.beAcum], ['no fructificó', 0, 0]);
+  assert.strictEqual(f[0].bolsas.find(x => x.id === 'A4').estado, 'en producción');
+  assert.strictEqual(f[0].bolsas.find(x => x.id === 'A2').estado, 'ciclo cerrado');
   assert.strictEqual(C.rankingGenetica(an.validas, '2026-01-01')[0].rankeable, false); // 210 n=1 → gris "pocas bolsas"
   // orden por columna (nulls siempre al final, en ambas direcciones)
   const filas = [{ nombre: 'a', beFinalProm: 10 }, { nombre: 'b', beFinalProm: null }, { nombre: 'c', beFinalProm: 30 }];
