@@ -522,6 +522,8 @@
 
     // ══ FR·CAL — Motor de Calidad ══════════════════════════════════════════
     var FR_CAL_INTEL_KEY = 'fr_cal_intel';
+    // v2 (2026-09-28): genética unificada con 📊 Análisis + hidratación desde fr_analisis.js.
+    var FR_CAL_INTEL_VERSION = 2;
 
     var FR_CAL_WEIGHTS = {
         dominante:     0.30,
@@ -3433,8 +3435,7 @@
         return html;
     }
 
-    function _frCalRenderIntelPanel() {
-        var cont = document.getElementById('frCalIntelContent');
+    function _frCalRenderIntelPanel(cont, parte) {
         if (!cont) return;
         var intel = FR.getIntel();
         if (intel && !intel.anomalousBolsas) {
@@ -3459,18 +3460,18 @@
             return '<span style="color:' + color + ';font-weight:600;">' + (val > 0 ? '+' : '') + val + '</span>';
         }
 
-        var html = '<h3 style="color:var(--accent,#7eb8f7);margin:0 0 4px;">📊 Motor de Trazabilidad FR·CAL</h3>'
-            + '<p style="font-size:0.78rem;color:var(--text-muted,#888);margin:0 0 18px;">'
-            + intel.totalFlushesEvaluados + ' flushes evaluados · Las correlaciones son observacionales, no causales.</p>';
+        var hHead = '<p style="font-size:0.78rem;color:var(--text-muted,#888);margin:0 0 18px;">Motor de calidad FR·CAL · '
+            + intel.totalFlushesEvaluados + ' oleadas evaluadas con el formulario de calidad · Las correlaciones son observacionales, no causales.</p>';
+        var html = '', hAnom = '';
 
         var anomBolsas = intel.anomalousBolsas || [];
         if (anomBolsas.length) {
-            html += '<h4 style="color:#ff8c8c;font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">⚠ Bolsas con anomalías</h4>';
-            html += '<table class="fr-anomaly-table" style="margin-bottom:18px;"><thead><tr>'
+            hAnom += '<h4 style="color:#ff8c8c;font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">⚠ Bolsas con anomalías</h4>';
+            hAnom += '<table class="fr-anomaly-table" style="margin-bottom:18px;"><thead><tr>'
                 + '<th>Bolsa</th><th>Cepa · SU · GR</th><th>Flush</th><th>Anomalías</th><th>Score</th>'
                 + '</tr></thead><tbody>';
             anomBolsas.forEach(function(ab) {
-                html += '<tr onclick="FR.select(\'' + esc(ab.bolsaId) + '\');FR.subTab(\'dash\');" '
+                hAnom += '<tr onclick="FR.select(\'' + esc(ab.bolsaId) + '\');FR.subTab(\'dash\');" '
                     + 'style="cursor:pointer;" onmouseover="this.style.background=\'#2a1a1a\'" onmouseout="this.style.background=\'\'">'
                     + '<td style="color:#7eb8f7;font-size:0.75rem;font-family:monospace;">' + esc(ab.bolsaId.substring(0, 10)) + '…</td>'
                     + '<td style="font-size:0.78rem;">' + esc(ab.fenLabel) + '<br><span style="color:#666;font-size:0.72rem;">SU: ' + esc(ab.suLabel) + ' · GR: ' + esc(ab.grLabel) + '</span></td>'
@@ -3479,7 +3480,7 @@
                     + '<td style="color:' + (ab.scoreAuto >= 70 ? '#5dbe7a' : ab.scoreAuto >= 50 ? '#ffb83f' : '#ff6b6b') + ';font-weight:600;">' + ab.scoreAuto + '</td>'
                     + '</tr>';
             });
-            html += '</tbody></table>';
+            hAnom += '</tbody></table>';
         }
 
         var cepaKeys = Object.keys(intel.byCepa);
@@ -3510,7 +3511,7 @@
                     + '<div class="fr-cal-intel-card-title">' + esc(d.label || fenId) + ' <span style="color:#666;">(n=' + d.n + ')</span></div>'
                     + '<div class="fr-cal-intel-row"><span>Score auto medio</span><strong>' + (d.scoreAutoMean != null ? Math.round(d.scoreAutoMean) + '/100' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>Score personal medio</span><strong>' + (d.scorePersonalMean != null ? (Math.round(d.scorePersonalMean * 10) / 10) + '/10' : '—') + '</strong></div>'
-                    + '<div class="fr-cal-intel-row"><span>BE medio</span><strong>' + (d.beMean != null ? fmt(d.beMean, 1) + '%' : '—') + '</strong></div>'
+                    + '<div class="fr-cal-intel-row"><span>BE medio (oleadas evaluadas)</span><strong>' + (d.beMean != null ? fmt(d.beMean, 1) + '%' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>% Dominante medio</span><strong>' + (d.pctDominanteMean != null ? fmt(d.pctDominanteMean, 1) + '%' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>% Abortos medio</span><strong>' + (d.pctAbortosMean != null ? fmt(d.pctAbortosMean, 1) + '%' : '—') + '</strong></div>'
                     + bolsaRows
@@ -3581,7 +3582,7 @@
                     + '<div class="fr-cal-intel-card-title">GR ' + esc(d.label) + ' <span style="color:#666;">(n=' + d.n + ')</span></div>'
                     + '<div class="fr-cal-intel-row"><span>Score auto medio</span><strong>' + (d.scoreAutoMean != null ? Math.round(d.scoreAutoMean) + '/100' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>% Positivo medio</span><strong>' + (d.pctPositivoMean != null ? fmt(d.pctPositivoMean, 1) + '%' : '—') + '</strong></div>'
-                    + '<div class="fr-cal-intel-row"><span>BE medio</span><strong>' + (d.beMean != null ? fmt(d.beMean, 1) + '%' : '—') + '</strong></div>'
+                    + '<div class="fr-cal-intel-row"><span>BE medio (oleadas evaluadas)</span><strong>' + (d.beMean != null ? fmt(d.beMean, 1) + '%' : '—') + '</strong></div>'
                     + '<div class="fr-cal-intel-row"><span>Hidratación de grano</span><strong>' + (d.hidratacion != null ? fmt(d.hidratacion, 1) + '%' : '—') + '</strong></div>'
                     + '</div>';
             });
@@ -3619,30 +3620,41 @@
         });
         if (rankRows.length) {
             var dimLabels = { mutaciones: 'Mutaciones', deformaciones: 'Deformaciones', blobs: 'Blobs' };
-            html += '<h4 style="color:var(--text-secondary,#aaa);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;">🔬 Candidatos de riesgo</h4>';
-            html += '<table class="fr-anomaly-table"><thead><tr><th>Anomalía</th><th>Candidato</th><th>Δ · Confianza</th></tr></thead><tbody>';
+            hAnom += '<h4 style="color:var(--text-secondary,#aaa);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;">🔬 Candidatos de riesgo</h4>';
+            hAnom += '<table class="fr-anomaly-table"><thead><tr><th>Anomalía</th><th>Candidato</th><th>Δ · Confianza</th></tr></thead><tbody>';
             rankRows.forEach(function(r) {
-                html += '<tr>'
+                hAnom += '<tr>'
                     + '<td>' + (dimLabels[r.dim] || r.dim) + '</td>'
                     + '<td><span class="fr-anomaly-fuente fr-anomaly-fuente-' + esc(r.c.fuente.toLowerCase()) + '">' + esc(r.c.fuente) + '</span> ' + esc(r.c.label) + '</td>'
                     + '<td style="color:#ff8c8c;">+' + esc(String(r.c.delta)) + '% <span style="color:#888;font-size:0.78rem;">· ' + esc(r.c.confidence) + '</span></td>'
                     + '</tr>';
             });
-            html += '</tbody></table>'
+            hAnom += '</tbody></table>'
                 + '<p style="font-size:0.76rem;color:#666;margin:6px 0 0;">Correlaciones observacionales. Verificá en SU/GR antes de concluir causalidad.</p>';
         }
 
-        cont.innerHTML = html;
+        cont.innerHTML = parte === 'anomalias'
+            ? hHead + (hAnom || '<p style="color:var(--text-muted,#888);font-size:0.85rem;">Sin anomalías registradas en las oleadas evaluadas.</p>')
+            : hHead + html;
     }
 
+    // Render de FR·CAL en el contenedor que pasa la pestaña 📊 Análisis (fr_analisis.js).
+    // parte: 'calidad' (perfiles, aditivos, dosis, lotes/componentes GR) | 'anomalias'.
+    FR.renderCalIntel = function(el, parte) { _frCalRenderIntelPanel(el, parte === 'anomalias' ? 'anomalias' : 'calidad'); };
+
     FR.subTab = function(which) {
-        ['dash', 'activos', 'cosecha', 'archivo', 'experimentos', 'intel', 'analisis'].forEach(function(k) {
+        // "📊 Inteligencia" (FR·CAL) se fusionó en "📊 Análisis" (2026-09-28): 'intel' lleva a su
+        // sección Calidad — compatibilidad con cualquier llamada vieja.
+        if (which === 'intel') {
+            if (window.FRAnalisis && typeof window.FRAnalisis.setSeccion === 'function') window.FRAnalisis.setSeccion('calidad', true);
+            which = 'analisis';
+        }
+        ['dash', 'activos', 'cosecha', 'archivo', 'experimentos', 'analisis'].forEach(function(k) {
             var panel = document.getElementById('fr-sub-' + k);
             var btn = document.querySelector('.fr-subtab[data-frtab="' + k + '"]');
             if (panel) panel.classList.toggle('active', k === which);
             if (btn) btn.classList.toggle('active', k === which);
         });
-        if (which === 'intel') _frCalRenderIntelPanel();
         if (which === 'analisis') _frRenderAnalisis();
     };
 
@@ -5879,9 +5891,17 @@
         var grLoteCompMap = {};
         grLotesAll.forEach(function(l) { if (l.id) grLoteCompMap[l.id] = l; });
 
+        // Genética unificada con 📊 Análisis (2026-09-28): fen_id de la tanda GR + genética con más
+        // frascos + nombre actual de GE. Antes agrupaba por b.fenId/texto guardado ("F2B 103" ≠ "F2B",
+        // mezclas atribuidas a la primera fuente). Fallback al criterio viejo si fr_analisis.js no cargó.
+        var _FA = window.FRAnalisis;
+        var _atrib = (_FA && _FA._calc && typeof _FA._calc.atribuirGenetica === 'function' && typeof _FA.nombreGenetica === 'function')
+            ? function(b) { return _FA._calc.atribuirGenetica(b, grLoteCompMap, _FA.nombreGenetica); } : null;
+
         var records = [];
         bolsas.forEach(function(b) {
             if (!Array.isArray(b.flushes)) return;
+            var _gen = _atrib ? _atrib(b) : null;
             var suLote = b.suLoteId ? suMap[b.suLoteId] : null;
             var aditivos = _frCalBolsaAditivos(b, suMap);
             var grLote = b.grLoteId ? grLoteCompMap[b.grLoteId] : null;
@@ -5894,8 +5914,9 @@
                     suLabel:            suLote ? (suLote.codigo || b.suLoteId || '—') : (b.suLoteId || '—'),
                     grLabel:            grLote ? (grLote.codigo || b.grLoteId || '—') : (b.grLoteId || '—'),
                     flushNum:           flushIdx + 1,
-                    fenId:              b.fenId || null,
-                    fenLabel:           (b.genetica ? b.genetica + ' / ' : '') + (b.fenotipo || ''),
+                    fenId:              _gen ? _gen.key : (b.fenId || null),
+                    fenLabel:           _gen ? (_gen.nombre + (_gen.mezcla ? ' (mezcla: ' + _gen.detalle + ')' : ''))
+                                             : (b.genetica ? b.genetica + ' / ' : '') + (b.fenotipo || ''),
                     grLoteId:           b.grLoteId || null,
                     aditivos:           aditivos,
                     scoreAuto:          cal.scoreAuto,
@@ -6043,7 +6064,9 @@
             // módulo montado.
             var lote = grLoteCompMap[grId];
             var hid = null;
-            if (lote) {
+            if (lote && _FA && _FA._calc && typeof _FA._calc.hidratacionLoteGR === 'function') {
+                hid = _FA._calc.hidratacionLoteGR(lote);   // única copia en FR (fr_analisis.js)
+            } else if (lote) {
                 var _prod = lote.uf || lote.produccion || {};
                 var _masaTotal = (parseFloat(_prod.cantidad_unidades) || 0) * (parseFloat(_prod.peso_unidad) || 0);
                 var _masaSeca = 0;
@@ -6156,6 +6179,7 @@
         });
 
         var intel = {
+            version:               FR_CAL_INTEL_VERSION,
             ts:                    new Date().toISOString(),
             totalFlushesEvaluados: records.length,
             byCepa:                byCepa,
@@ -6173,7 +6197,11 @@
     FR.getIntel = function() {
         try {
             var raw = localStorage.getItem(FR_CAL_INTEL_KEY);
-            if (raw) return JSON.parse(raw);
+            if (raw) {
+                var cached = JSON.parse(raw);
+                // Cache derivado: si es de una versión anterior del cálculo, se reconstruye.
+                if (cached && cached.version === FR_CAL_INTEL_VERSION) return cached;
+            }
         } catch(e) {}
         return _frCalBuildIntel();
     };
