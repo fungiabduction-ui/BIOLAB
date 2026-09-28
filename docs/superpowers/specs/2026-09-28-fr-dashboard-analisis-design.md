@@ -44,6 +44,15 @@ Entra una bolsa si: no pendiente, no cancelada, `origen !== 'huerfana'`, `granoP
 - `hidrSust` = `(pesoHumedoHidratado − pesoSustratoSeco) / pesoSustratoSeco × 100`.
 - `hidrGrano`: por cada fuente de `grSources`, hidratación del lote GR con la **misma fórmula que `grCalcularKPIFormulario`** (`masaTotal = uf.cantidad_unidades × uf.peso_unidad`; `masaSeca = Σ componentes[tipo='seco'].masa`; `(masaTotal − masaSeca)/masaSeca × 100`; null si `masaSeca ≤ 0` o `masaTotal ≤ masaSeca`), promedio ponderado por `grUsados`. Fórmula duplicada a propósito (GR no está montado en FR); documentar en ambos lados que deben cambiar juntas.
 
+### 3.2b Gráfico principal — BE global en el tiempo (pedido 2026-09-28)
+
+Primer gráfico de la pestaña, ancho completo.
+- **Eje X = fecha de armado** (`fechaInicio`), un punto por bolsa. **Eje Y = BE** según el selector global (acumulado / 1ª oleada).
+- Incluye, además de las bolsas válidas, las **contaminadas** (marcador ✕ rojo, BE = lo que llegó a producir, 0 si nada) y las **no fructificó** (marcador ▽ ámbar, BE 0). Datos de grano/hidratación no son requisito para este gráfico (solo: no pendiente, no cancelada, no huérfana, con `fechaInicio`, y con ≥1 flush o `noFructifico` o `contaminada`).
+- ● cerrada / ○ en producción, igual que las dispersiones.
+- **3 medias móviles por cantidad de bolsas** (ordenadas por fecha de armado, empate por ID): **MM5 (rápida), MM10 (media), MM20 (lenta)**, cada una desde que hay suficientes bolsas. En modo acumulado se calculan solo con cerradas (las abiertas tienen BE parcial y hundirían el final de la curva); en modo 1ª oleada con todas. Contaminadas y no fructificó entran a las medias (son resultados reales del proceso).
+- Leyenda: MM rápida por encima de la lenta = los protocolos recientes rinden mejor.
+
 ### 3.3 Gráficos (3 dispersiones: X vs BE)
 
 Grano/sustrato seco vs BE · Agua en sustrato vs BE · Agua en grano vs BE.
@@ -85,4 +94,4 @@ Actualizar tabla de keys de `CLAUDE.md`.
 
 ## Fuera de alcance (posibles iteraciones)
 
-BE vs tiempo, BE por número de oleada, etiquetas múltiples en vez de ⭐, exportar gráficos.
+BE por número de oleada, etiquetas múltiples en vez de ⭐, exportar gráficos.
