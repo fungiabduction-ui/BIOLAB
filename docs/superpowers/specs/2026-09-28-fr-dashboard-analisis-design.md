@@ -50,8 +50,10 @@ Primer gráfico de la pestaña, ancho completo.
 - **Eje X = fecha de armado** (`fechaInicio`), un punto por bolsa. **Eje Y = BE** según el selector global (acumulado / 1ª oleada).
 - Incluye, además de las bolsas válidas, las **contaminadas** (marcador ✕ rojo, BE = lo que llegó a producir, 0 si nada) y las **no fructificó** (marcador ▽ ámbar, BE 0). Datos de grano/hidratación no son requisito para este gráfico (solo: no pendiente, no cancelada, no huérfana, con `fechaInicio`, y con ≥1 flush o `noFructifico` o `contaminada`).
 - ● cerrada / ○ en producción, igual que las dispersiones.
-- **3 medias móviles por cantidad de bolsas** (ordenadas por fecha de armado, empate por ID): **MM5 (rápida), MM10 (media), MM20 (lenta)**, cada una desde que hay suficientes bolsas. En modo acumulado se calculan solo con cerradas (las abiertas tienen BE parcial y hundirían el final de la curva); en modo 1ª oleada con todas. Contaminadas y no fructificó entran a las medias (son resultados reales del proceso).
-- Leyenda: MM rápida por encima de la lenta = los protocolos recientes rinden mejor.
+- **2 medias móviles por cantidad de bolsas** (iteración tras probar, pedido del operador: acierto vs error), ventana elegible 5 / 10 (default) / 20 bolsas:
+  - **MM BE** (eje izquierdo): en modo acumulado solo cerradas (las abiertas tienen BE parcial); en modo 1ª oleada todas.
+  - **MM % fallas** (eje derecho 0–100%): % de bolsas contaminadas o no fructificó sobre TODAS las bolsas de la serie (una abierta con cosecha ya fructificó = acierto).
+- **Tooltip al pasar el mouse** (todos los gráficos): línea vertical + cuadro con la bolsa más cercana (ID, genética y detalle de mezcla, fecha, BE, estado) y, en el de tiempo, el valor de ambas medias en esa fecha. En las dispersiones el clic excluye la bolsa bajo el cursor.
 
 ### 3.3 Gráficos (3 dispersiones: X vs BE)
 
@@ -75,8 +77,8 @@ Grano/sustrato seco vs BE · Agua en sustrato vs BE · Agua en grano vs BE.
 - **Atribución de bolsas con varias genéticas**: a la genética con más frascos (`grUsados` sumado por `fen_id`). Empate → fila aparte "🧬 Mezcla pareja". Cada fila indica cuántas de sus bolsas son mezcla ("8 bolsas (2 con mezcla)"), tooltip con el detalle.
 - **Independiente del selector acumulado/1ª oleada** (cambio tras probar con datos reales: con "acumulado" + últimos 3 meses casi ninguna bolsa había cerrado y el ranking quedaba vacío). **Ordena por BE de 1ª oleada** promedio de todas las bolsas válidas del período, y muestra al lado **BE final prom. solo de las cerradas** con su cantidad entre paréntesis.
 - **Filtro de período por fecha de armado**: Últimos 3 meses (default) · Últimos 6 meses · Todo. "Últimos N meses" = `fechaInicio` ≥ hoy − N meses (fecha local, comparación de strings `YYYY-MM-DD`).
-- Columnas: Genética · Bolsas · BE 1ª oleada prom. (barra) · BE final prom. (cerradas) · Mejor BE (acumulado máx.) · % fructificó.
-- `noFructifico` cuenta como 0 en ambos promedios. Rankea filas con n ≥ 3; el resto abajo en gris "pocas bolsas".
+- Columnas: Genética · Bolsas · BE 1ª oleada prom. (barra) · BE final prom. (cerradas) · Mejor BE (acumulado máx.) · % fructificó. **Ordenable por cualquier columna** (clic en encabezado, ↑↓); default BE 1ª oleada ↓. Sin agrupar por n: las de pocas bolsas van en gris dentro del mismo orden (nulls siempre al final).
+- `noFructifico` cuenta como 0 en ambos promedios. Filas con n < 3 en gris "pocas bolsas".
 - En las dispersiones, las bolsas que no fructificaron se dibujan como ▽ (BE 0), igual que en el gráfico de tiempo.
 
 ## 4. Persistencia — resumen

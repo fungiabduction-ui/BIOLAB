@@ -13,7 +13,6 @@
     var CFG_KEY = 'fr_analisis_cfg';
     var MIN_TENDENCIA = 5;   // puntos mínimos del conjunto que define la tendencia
     var MIN_RANKING = 3;     // bolsas mínimas para rankear una genética
-    var VENTANAS_MM = [5, 10, 20];
     var MEZCLA_PAREJA = '__mezcla_pareja__';
     // Motivos de "no entra" que no son problemas de datos → no se listan como exclusión.
     var MOTIVOS_SILENCIOSOS = { 'pendiente': 1, 'cancelada': 1, 'sin cosechas todavía': 1, 'contaminada sin cosecha': 1 };
@@ -202,9 +201,13 @@
     }
 
     // Serie temporal de BE por fecha de armado. Incluye contaminadas (BE producido, 0 si nada)
-    // y no fructificó (0); no exige datos de grano/hidratación. Medias móviles por cantidad de
-    // bolsas: en 'acum' solo cerradas (las abiertas tienen BE parcial), en 'f1' todas.
-    function serieTiempo(bolsas, modo, grMap, nombreDe) {
+    // y no fructificó (0); no exige datos de grano/hidratación. Dos medias móviles por cantidad
+    // de bolsas (pedido del operador 2026-09-28: acierto vs error):
+    //  - mmBE: BE promedio. En 'acum' solo cerradas (las abiertas tienen BE parcial), en 'f1' todas.
+    //  - mmFallas: % de bolsas que fallaron (contaminada o no fructificó) sobre TODAS — una bolsa
+    //    abierta con cosecha ya fructificó, cuenta como acierto.
+    function serieTiempo(bolsas, modo, grMap, nombreDe, ventana) {
+        ventana = ventana || 10;
         var puntos = [];
         bolsas.forEach(function (b) {
             if (!b || b.pendienteConfirmacion || b.cancelada || b.origen === 'huerfana' || !b.fechaInicio) return;
@@ -219,13 +222,35 @@
         });
         puntos.sort(function (a, c) { return a.fecha < c.fecha ? -1 : a.fecha > c.fecha ? 1 : (a.id < c.id ? -1 : 1); });
         var base = modo === 'f1' ? puntos : puntos.filter(function (p) { return p.cerrada; });
-        var medias = {};
-        VENTANAS_MM.forEach(function (w) {
-            var mm = mediaMovil(base.map(function (p) { return p.y; }), w);
-            medias[w] = [];
-            mm.forEach(function (v, i) { if (v != null) medias[w].push({ fecha: base[i].fecha, v: v }); });
+        function serie(lista, valores) {
+            var out = [];
+            mediaMovil(valores, ventana).forEach(function (v, i) { if (v != null) out.push({ fecha: lista[i].fecha, v: v }); });
+            return out;
+        }
+        return {
+            puntos: puntos, baseMedias: base, ventana: ventana,
+            mmBE: serie(base, base.map(function (p) { return p.y; })),
+            mmFallas: serie(puntos, puntos.map(function (p) { return p.tipo === 'normal' ? 0 : 100; }))
+        };
+    }
+
+    // Último valor de una serie de media móvil con fecha <= iso (null si la ventana no se completó).
+    function valorEnFecha(serie, iso) {
+        var v = null;
+        for (var i = 0; i < serie.length && serie[i].fecha <= iso; i++) v = serie[i].v;
+        return v;
+    }
+
+    // Orden por columna para tablas: nulls siempre al final; strings sin distinguir mayúsculas.
+    function ordenarFilas(filas, key, dir) {
+        return filas.slice().sort(function (a, b) {
+            var va = a[key], vb = b[key];
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            if (typeof va === 'string') { va = va.toLowerCase(); vb = String(vb).toLowerCase(); }
+            return va < vb ? -dir : va > vb ? dir : 0;
         });
-        return { puntos: puntos, baseMedias: base, medias: medias };
     }
 
     // ── Ranking de genética ──
@@ -257,11 +282,7 @@
                 rankeable: n >= MIN_RANKING
             };
         });
-        filas.sort(function (a, b) {
-            if (a.rankeable !== b.rankeable) return a.rankeable ? -1 : 1;
-            return b.beF1Prom - a.beF1Prom;
-        });
-        return filas;
+        return ordenarFilas(filas, 'beF1Prom', -1);
     }
 
     // ── Config de exclusiones (puras) ──
@@ -313,33 +334,101 @@
     var GRAFICOS = [
         { key: 'granoSust', titulo: '🌾 Grano / sustrato seco vs BE', eje: 'grano ÷ sustrato seco', fmt: function (v) { return v.toFixed(1); } },
         { key: 'hidrSust',  titulo: '💧 Agua en sustrato vs BE',      eje: 'hidratación del sustrato', fmt: function (v) { return v.toFixed(0) + '%'; } },
-        { key: 'hidrGrano', titulo: '🌾💧 Agua en grano vs BE',          eje: 'hidratación del grano (lote GR)', fmt: function (v) { return v.toFixed(0) + '%'; } }
+        { key: 'hidrGrano', titulo: '🌾💧 Agua en grano vs BE',       eje: 'hidratación del grano (lote GR)', fmt: function (v) { return v.toFixed(0) + '%'; } }
     ];
     var PERIODOS = [{ key: '3', label: 'Últimos 3 meses', meses: 3 }, { key: '6', label: 'Últimos 6 meses', meses: 6 }, { key: 'todo', label: 'Todo', meses: null }];
-    var MM_COLORES = { 5: '#5C9CE0', 10: '#C15FCB', 20: '#E8A83D' };
-    var MM_NOMBRES = { 5: 'MM5 rápida', 10: 'MM10 media', 20: 'MM20 lenta' };
-    var ui = { modo: 'acum', periodo: '3', container: null };
+    var VENTANAS = [5, 10, 20];
+    var COLOR_MM_BE = '#5C9CE0', COLOR_MM_FALLAS = '#E05252';
+    var RANK_COLS = [
+        { key: 'nombre', label: 'Genética' },
+        { key: 'n', label: 'Bolsas', num: true },
+        { key: 'beF1Prom', label: 'BE 1ª oleada prom.' },
+        { key: 'beFinalProm', label: 'BE final prom. (cerradas)', num: true },
+        { key: 'mejor', label: 'Mejor BE', num: true },
+        { key: 'pctFructifico', label: '% fructificó', num: true }
+    ];
+    // tips[chartId] = [{x, y, html, bolsaId}] en coordenadas SVG; tipSel[chartId] = punto bajo el mouse
+    var ui = { modo: 'acum', periodo: '3', ventana: 10, rankSort: { key: 'beF1Prom', dir: -1 }, container: null, tips: {}, tipSel: {} };
 
     function btnToggle(key, label, actual, fn) {
-        return '<button type="button" class="fr-an-toggle-btn' + (key === actual ? ' fr-an-on' : '') + '"'
+        return '<button type="button" class="fr-an-toggle-btn' + (String(key) === String(actual) ? ' fr-an-on' : '') + '"'
             + ' onclick="FRAnalisis.' + fn + '(\'' + key + '\')">' + esc(label) + '</button>';
     }
     function fechaADate(iso) { var p = String(iso).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+    function fechaCorta(iso) { var p = String(iso).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
     function ejeY(max) { return Math.max(100, Math.ceil(max / 100) * 100); }
+    function estadoTxt(p) {
+        if (p.tipo === 'contaminada') return '☣ contaminada';
+        if (p.tipo === 'noFructifico' || p.noFructifico) return '🕳 no fructificó (BE 0)';
+        return p.cerrada ? 'ciclo cerrado (BE final)' : 'en producción (BE parcial)';
+    }
+    function genTxt(gen) { return esc(gen.nombre) + (gen.mezcla ? '<br><span class="fr-an-dim">mezcla: ' + esc(gen.detalle) + '</span>' : ''); }
+
+    // ── Tooltip ── cada gráfico registra sus puntos (ui.tips); al mover el mouse se toma el más
+    // cercano (la distancia vertical pesa menos: en el gráfico de tiempo manda la fecha).
+    function tipAttrs(id, clickable) {
+        return ' onmousemove="FRAnalisis._tip(event, \'' + id + '\')" onmouseleave="FRAnalisis._tipOff(\'' + id + '\')"'
+            + (clickable ? ' onclick="FRAnalisis._tipClick(\'' + id + '\')"' : '');
+    }
+    function tipMarcadores(T, bottom) {
+        return '<line class="fr-an-cross" x1="0" x2="0" y1="' + T + '" y2="' + bottom + '" style="display:none"/>'
+            + '<circle class="fr-an-ring" r="7" cx="0" cy="0" style="display:none"/>';
+    }
+    function tipMove(evt, id) {
+        var svg = evt.currentTarget, pts = ui.tips[id];
+        var tip = ui.container && ui.container.querySelector('.fr-an-tip');
+        if (!svg || !pts || !pts.length || !tip) return;
+        var rect = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+        var sx = (evt.clientX - rect.left) * vb.width / rect.width, sy = (evt.clientY - rect.top) * vb.height / rect.height;
+        var best = null, bd = Infinity;
+        pts.forEach(function (p) {
+            var d = (p.x - sx) * (p.x - sx) + 0.25 * (p.y - sy) * (p.y - sy);
+            if (d < bd) { bd = d; best = p; }
+        });
+        ui.tipSel[id] = best;
+        tip.innerHTML = best.html;
+        tip.style.display = 'block';
+        var tx = evt.clientX + 16, ty = evt.clientY + 16, w = tip.offsetWidth, h = tip.offsetHeight;
+        if (tx + w > window.innerWidth - 8) tx = evt.clientX - w - 16;
+        if (ty + h > window.innerHeight - 8) ty = evt.clientY - h - 16;
+        tip.style.left = Math.max(8, tx) + 'px';
+        tip.style.top = Math.max(8, ty) + 'px';
+        var cross = svg.querySelector('.fr-an-cross'), ring = svg.querySelector('.fr-an-ring');
+        if (cross) { cross.setAttribute('x1', best.x); cross.setAttribute('x2', best.x); cross.style.display = ''; }
+        if (ring) { ring.setAttribute('cx', best.x); ring.setAttribute('cy', best.y); ring.style.display = ''; }
+    }
+    function tipOff(id) {
+        ui.tipSel[id] = null;
+        var el = ui.container;
+        if (!el) return;
+        var tip = el.querySelector('.fr-an-tip');
+        if (tip) tip.style.display = 'none';
+        el.querySelectorAll('.fr-an-cross, .fr-an-ring').forEach(function (n) { n.style.display = 'none'; });
+    }
+    function tipClick(id) {
+        var p = ui.tipSel[id];
+        if (p && p.bolsaId) excluirPunto(id, p.bolsaId);
+    }
 
     function svgTiempo(s) {
+        ui.tips.tiempo = [];
         if (!s.puntos.length) return '<div class="fr-an-vacio">Sin bolsas con cosecha todavía.</div>';
-        var W = 760, H = 260, L = 44, R = 12, T = 10, B = 30;
+        var W = 760, H = 260, L = 44, R = 44, T = 10, B = 30;
         var t0 = fechaADate(s.puntos[0].fecha).getTime(), t1 = fechaADate(s.puntos[s.puntos.length - 1].fecha).getTime();
         if (t1 === t0) { t0 -= 864e5; t1 += 864e5; }
         var yMax = ejeY(Math.max.apply(null, s.puntos.map(function (p) { return p.y; })));
         function X(iso) { return L + (fechaADate(iso).getTime() - t0) / (t1 - t0) * (W - L - R); }
         function Y(v) { return H - B - v / yMax * (H - B - T); }
-        var h = '<svg class="fr-an-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="BE en el tiempo">';
+        function Yf(v) { return H - B - v / 100 * (H - B - T); }   // eje derecho: % fallas
+        var h = '<svg class="fr-an-svg fr-an-hover" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="BE en el tiempo"' + tipAttrs('tiempo', false) + '>'
+            + '<rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - B - T) + '" fill="transparent"/>';
         for (var v = 0; v <= yMax; v += 100) {
             h += '<line class="fr-an-grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/>'
                + '<text class="fr-an-tick" x="' + (L - 4) + '" y="' + (Y(v) + 3) + '" text-anchor="end">' + v + '%</text>';
         }
+        [0, 25, 50, 75, 100].forEach(function (f) {
+            h += '<text class="fr-an-tick fr-an-tick-fallas" x="' + (W - R + 4) + '" y="' + (Yf(f) + 3) + '">' + f + '%</text>';
+        });
         var d = new Date(t0); d.setDate(1); d.setMonth(d.getMonth() + 1);
         var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
         while (d.getTime() <= t1) {
@@ -348,30 +437,39 @@
                + '<text class="fr-an-tick" x="' + xm + '" y="' + (H - 12) + '" text-anchor="middle">' + MESES[d.getMonth()] + '</text>';
             d.setMonth(d.getMonth() + 1);
         }
-        VENTANAS_MM.forEach(function (w) {
-            var serie = s.medias[w];
-            if (serie.length < 2) return;
-            h += '<polyline class="fr-an-mm" stroke="' + MM_COLORES[w] + '" points="'
-               + serie.map(function (p) { return X(p.fecha).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ') + '"/>';
-        });
+        if (s.mmFallas.length > 1) {
+            h += '<polyline class="fr-an-mm fr-an-mm-fallas" stroke="' + COLOR_MM_FALLAS + '" points="'
+               + s.mmFallas.map(function (p) { return X(p.fecha).toFixed(1) + ',' + Yf(p.v).toFixed(1); }).join(' ') + '"/>';
+        }
+        if (s.mmBE.length > 1) {
+            h += '<polyline class="fr-an-mm" stroke="' + COLOR_MM_BE + '" points="'
+               + s.mmBE.map(function (p) { return X(p.fecha).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ') + '"/>';
+        }
         s.puntos.forEach(function (p) {
             var cx = +X(p.fecha).toFixed(1), cy = +Y(p.y).toFixed(1);
-            var tip = p.id + ' · ' + p.gen.nombre + (p.gen.mezcla ? ' (mezcla: ' + p.gen.detalle + ')' : '')
-                + '\nArmada ' + p.fecha + ' · BE ' + p.y.toFixed(0) + '%'
-                + (p.tipo === 'contaminada' ? '\n☣ contaminada' : p.tipo === 'noFructifico' ? '\n🕳 no fructificó' : (p.cerrada ? '\nciclo cerrado' : '\nen producción (BE parcial)'));
             if (p.tipo === 'contaminada') {
                 h += '<g class="fr-an-mk-cont"><path d="M' + (cx - 4) + ' ' + (cy - 4) + 'L' + (cx + 4) + ' ' + (cy + 4)
-                   + 'M' + (cx + 4) + ' ' + (cy - 4) + 'L' + (cx - 4) + ' ' + (cy + 4) + '"/><title>' + esc(tip) + '</title></g>';
+                   + 'M' + (cx + 4) + ' ' + (cy - 4) + 'L' + (cx - 4) + ' ' + (cy + 4) + '"/></g>';
             } else if (p.tipo === 'noFructifico') {
-                h += '<path class="fr-an-mk-nf" d="M' + (cx - 4.5) + ' ' + (cy - 4) + 'L' + (cx + 4.5) + ' ' + (cy - 4) + 'L' + cx + ' ' + (cy + 4) + 'Z"><title>' + esc(tip) + '</title></path>';
+                h += '<path class="fr-an-mk-nf" d="M' + (cx - 4.5) + ' ' + (cy - 4) + 'L' + (cx + 4.5) + ' ' + (cy - 4) + 'L' + cx + ' ' + (cy + 4) + 'Z"/>';
             } else {
-                h += '<circle class="fr-an-pt' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + cx + '" cy="' + cy + '" r="3.4"><title>' + esc(tip) + '</title></circle>';
+                h += '<circle class="fr-an-pt' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + cx + '" cy="' + cy + '" r="3.4"/>';
             }
+            var mb = valorEnFecha(s.mmBE, p.fecha), mf = valorEnFecha(s.mmFallas, p.fecha);
+            ui.tips.tiempo.push({ x: cx, y: cy, bolsaId: p.id, html:
+                '<b>' + esc(p.id) + '</b> · ' + genTxt(p.gen)
+                + '<br>Armada ' + fechaCorta(p.fecha)
+                + '<br>BE ' + (ui.modo === 'f1' ? '1ª oleada' : 'acumulado') + ': <b>' + p.y.toFixed(0) + '%</b>'
+                + '<br>' + estadoTxt(p)
+                + '<div class="fr-an-tip-sep"></div>'
+                + '<span style="color:' + COLOR_MM_BE + '">MM BE (' + s.ventana + ' bolsas): ' + (mb == null ? '—' : mb.toFixed(0) + '%') + '</span>'
+                + '<br><span style="color:' + COLOR_MM_FALLAS + '">MM fallas (' + s.ventana + ' bolsas): ' + (mf == null ? '—' : mf.toFixed(0) + '%') + '</span>' });
         });
-        return h + '</svg>';
+        return h + tipMarcadores(T, H - B) + '</svg>';
     }
 
     function svgDispersion(def, d) {
+        ui.tips[def.key] = [];
         if (!d.puntos.length) return '<div class="fr-an-vacio">Sin bolsas con este dato.</div>';
         var W = 320, H = 200, L = 40, R = 10, T = 10, B = 30;
         var xs = d.puntos.map(function (p) { return p.x; });
@@ -383,8 +481,9 @@
         function X(v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }
         function Y(v) { return H - B - v / yMax * (H - B - T); }
         var clip = 'frAnClip-' + def.key;
-        var h = '<svg class="fr-an-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(def.titulo) + '">'
-            + '<defs><clipPath id="' + clip + '"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - B - T) + '"/></clipPath></defs>';
+        var h = '<svg class="fr-an-svg fr-an-hover fr-an-clickable" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(def.titulo) + '"' + tipAttrs(def.key, true) + '>'
+            + '<defs><clipPath id="' + clip + '"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - B - T) + '"/></clipPath></defs>'
+            + '<rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - B - T) + '" fill="transparent"/>';
         for (var v = 0; v <= yMax; v += 100) {
             h += '<line class="fr-an-grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/>'
                + '<text class="fr-an-tick" x="' + (L - 4) + '" y="' + (Y(v) + 3) + '" text-anchor="end">' + v + '%</text>';
@@ -397,20 +496,20 @@
                + '" x2="' + X(x1) + '" y2="' + Y(d.tendencia.m * x1 + d.tendencia.b) + '"/>';
         }
         d.puntos.forEach(function (p) {
-            var tip = p.id + ' · ' + p.gen.nombre + (p.gen.mezcla ? ' (mezcla: ' + p.gen.detalle + ')' : '')
-                + '\nBE ' + p.y.toFixed(0) + '% · ' + def.eje + ': ' + def.fmt(p.x)
-                + (p.noFructifico ? '\n🕳 no fructificó (BE 0)' : p.cerrada ? '\nciclo cerrado' : '\nen producción (BE parcial)') + '\nclic para excluir de este gráfico';
             var px = +X(p.x).toFixed(1), py = +Y(p.y).toFixed(1);
-            var onclick = ' onclick="FRAnalisis.excluirPunto(\'' + def.key + '\', \'' + esc(p.id) + '\')"';
             if (p.noFructifico) {
-                h += '<path class="fr-an-mk-nf fr-an-pt-click" d="M' + (px - 4.5) + ' ' + (py - 4) + 'L' + (px + 4.5) + ' ' + (py - 4) + 'L' + px + ' ' + (py + 4) + 'Z"'
-                   + onclick + '><title>' + esc(tip) + '</title></path>';
+                h += '<path class="fr-an-mk-nf" d="M' + (px - 4.5) + ' ' + (py - 4) + 'L' + (px + 4.5) + ' ' + (py - 4) + 'L' + px + ' ' + (py + 4) + 'Z"/>';
             } else {
-                h += '<circle class="fr-an-pt fr-an-pt-click' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + px + '" cy="' + py + '" r="3.6"'
-                   + onclick + '><title>' + esc(tip) + '</title></circle>';
+                h += '<circle class="fr-an-pt' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + px + '" cy="' + py + '" r="3.6"/>';
             }
+            ui.tips[def.key].push({ x: px, y: py, bolsaId: p.id, html:
+                '<b>' + esc(p.id) + '</b> · ' + genTxt(p.gen)
+                + '<br>' + esc(def.eje) + ': <b>' + esc(def.fmt(p.x)) + '</b>'
+                + '<br>BE ' + (ui.modo === 'f1' ? '1ª oleada' : 'acumulado') + ': <b>' + p.y.toFixed(0) + '%</b>'
+                + '<br>' + estadoTxt(p)
+                + '<div class="fr-an-tip-sep"></div><span class="fr-an-dim">clic para excluir de este gráfico</span>' });
         });
-        return h + '</svg>';
+        return h + tipMarcadores(T, H - B) + '</svg>';
     }
 
     function pieDispersion(d, modo) {
@@ -440,14 +539,17 @@
     function htmlRanking(validas) {
         var per = PERIODOS.filter(function (p) { return p.key === ui.periodo; })[0] || PERIODOS[0];
         var desde = per.meses ? restarMeses(hoyISO(), per.meses) : null;
-        var filas = rankingGenetica(validas, desde);
+        var filas = ordenarFilas(rankingGenetica(validas, desde), ui.rankSort.key, ui.rankSort.dir);
         var h = '<div class="fr-an-rank"><div class="fr-an-rank-head"><h3>🏆 Top genética por BE</h3><div class="fr-an-toggle">'
             + PERIODOS.map(function (p) { return btnToggle(p.key, p.label, ui.periodo, 'setPeriodo'); }).join('') + '</div></div>';
         if (!filas.length) return h + '<div class="fr-an-dim">Sin bolsas en este período.</div></div>';
         var maxBE = Math.max.apply(null, filas.map(function (f) { return f.beF1Prom; }).concat([1]));
-        h += '<table class="data-table fr-an-rank-table"><thead><tr><th>Genética</th><th class="fr-num">Bolsas</th>'
-           + '<th>BE 1ª oleada prom. ↓</th><th class="fr-num">BE final prom. (cerradas)</th><th class="fr-num">Mejor BE</th>'
-           + '<th class="fr-num">% fructificó</th></tr></thead><tbody>';
+        h += '<table class="data-table fr-an-rank-table"><thead><tr>'
+           + RANK_COLS.map(function (c) {
+                var flecha = ui.rankSort.key === c.key ? (ui.rankSort.dir > 0 ? ' ↑' : ' ↓') : '';
+                return '<th class="fr-an-th-sort' + (c.num ? ' fr-num' : '') + '" onclick="FRAnalisis.ordenarRanking(\'' + c.key + '\')" title="Ordenar">' + c.label + flecha + '</th>';
+             }).join('')
+           + '</tr></thead><tbody>';
         filas.forEach(function (f) {
             var mez = f.nMezcla ? ' <span class="fr-an-mezcla" title="' + esc(f.mezclas.join('\n')) + '">(' + f.nMezcla + ' con mezcla)</span>' : '';
             var bar = '<span class="fr-an-bar" style="width:' + Math.round(f.beF1Prom / maxBE * 90) + 'px"></span>' + f.beF1Prom.toFixed(0) + '%';
@@ -458,9 +560,10 @@
                + '<td class="fr-num">' + f.mejor.toFixed(0) + '%</td>'
                + '<td class="fr-num">' + f.pctFructifico.toFixed(0) + '%</td></tr>';
         });
-        return h + '</tbody></table><div class="fr-an-dim">Ordenado por BE de 1ª oleada (todas las bolsas armadas en el período); '
-            + 'rankea genéticas con ≥' + MIN_RANKING + ' bolsas. BE final = solo las que ya cerraron ciclo (entre paréntesis cuántas). '
-            + '"No fructificó" cuenta como 0. Una bolsa con varias genéticas cuenta para la de más frascos; empate → "Mezcla pareja".</div></div>';
+        return h + '</tbody></table><div class="fr-an-dim">Tocá un encabezado para ordenar. Genéticas con menos de ' + MIN_RANKING
+            + ' bolsas en el período van en gris ("pocas bolsas": el promedio es poco confiable). BE final = solo las que ya cerraron ciclo '
+            + '(entre paréntesis cuántas). "No fructificó" cuenta como 0. Una bolsa con varias genéticas cuenta para la de más frascos; '
+            + 'empate → "Mezcla pareja".</div></div>';
     }
 
     function render(container) {
@@ -474,17 +577,19 @@
         var cfg = leerCfg(), grMap = leerGrMap();
         var bolsas = window.FR.getBolsasSnapshot();
         var an = analizarBolsas(bolsas, grMap, cfg, nombreGenetica);
-        var st = serieTiempo(bolsas, ui.modo, grMap, nombreGenetica);
-        var mmLeyenda = VENTANAS_MM.map(function (w) {
-            return '<span class="fr-an-mm-key" style="border-color:' + MM_COLORES[w] + ';color:' + MM_COLORES[w] + '">' + MM_NOMBRES[w] + '</span>';
-        }).join(' ');
-        var html = '<div class="fr-an-toolbar"><div class="fr-an-toggle">'
+        var st = serieTiempo(bolsas, ui.modo, grMap, nombreGenetica, ui.ventana);
+        var ventanas = VENTANAS.map(function (w) { return btnToggle(w, w + ' bolsas', ui.ventana, 'setVentana'); }).join('');
+        var html = '<div class="fr-an-tip" style="display:none"></div>'
+            + '<div class="fr-an-toolbar"><div class="fr-an-toggle">'
             + btnToggle('acum', 'BE acumulado', ui.modo, 'setModo') + btnToggle('f1', 'Comparar 1ª oleada', ui.modo, 'setModo')
             + '</div><span class="fr-an-leyenda">● ciclo cerrado · ○ en producción (BE parcial) · <span class="fr-an-ley-cont">✕ contaminada</span> · <span class="fr-an-ley-nf">▽ no fructificó</span></span></div>'
-            + '<div class="fr-an-chart fr-an-chart-main"><div class="fr-an-chart-title">📈 BE en el tiempo (por fecha de armado)</div>'
+            + '<div class="fr-an-chart fr-an-chart-main"><div class="fr-an-chart-head"><div class="fr-an-chart-title">📈 BE en el tiempo (por fecha de armado)</div>'
+            + '<div class="fr-an-toggle"><span class="fr-an-toggle-label">Media móvil:</span>' + ventanas + '</div></div>'
             + svgTiempo(st)
-            + '<div class="fr-an-chart-pie">' + mmLeyenda + ' — medias por cantidad de bolsas' + (ui.modo === 'acum' ? ', solo ciclo cerrado' : '')
-            + '. Rápida por encima de la lenta = protocolos recientes rindiendo mejor.</div></div>'
+            + '<div class="fr-an-chart-pie"><span class="fr-an-mm-key" style="border-color:' + COLOR_MM_BE + ';color:' + COLOR_MM_BE + '">MM BE (eje izq.)</span> '
+            + '<span class="fr-an-mm-key" style="border-color:' + COLOR_MM_FALLAS + ';color:' + COLOR_MM_FALLAS + '">MM % fallas: contaminada + no fructificó (eje der.)</span>'
+            + ' — promedio de las últimas ' + ui.ventana + ' bolsas' + (ui.modo === 'acum' ? ' (MM BE: solo ciclo cerrado)' : '')
+            + '. BE subiendo y fallas bajando = protocolos mejorando.</div></div>'
             + '<div class="fr-an-charts">';
         GRAFICOS.forEach(function (def) {
             var d = datosGrafico(an.validas, def.key, ui.modo, cfg);
@@ -531,12 +636,22 @@
         render: render,
         setModo: function (m) { ui.modo = m === 'f1' ? 'f1' : 'acum'; render(); },
         setPeriodo: function (p) { ui.periodo = p; render(); },
+        setVentana: function (w) { w = parseInt(w, 10); ui.ventana = VENTANAS.indexOf(w) >= 0 ? w : 10; render(); },
+        ordenarRanking: function (key) {
+            if (ui.rankSort.key === key) ui.rankSort.dir = -ui.rankSort.dir;
+            else ui.rankSort = { key: key, dir: key === 'nombre' ? 1 : -1 };
+            render();
+        },
+        _tip: tipMove,
+        _tipOff: tipOff,
+        _tipClick: tipClick,
         excluirPunto: excluirPunto,
         quitarExclusion: quitarExclusion,
         _calc: {
             motivoInvalida: motivoInvalida, hidratacionLoteGR: hidratacionLoteGR, hidrGranoBolsa: hidrGranoBolsa,
             atribuirGenetica: atribuirGenetica, metricasBolsa: metricasBolsa, analizarBolsas: analizarBolsas,
             regresion: regresion, mediaMovil: mediaMovil, datosGrafico: datosGrafico, serieTiempo: serieTiempo,
+            valorEnFecha: valorEnFecha, ordenarFilas: ordenarFilas,
             rankingGenetica: rankingGenetica, restarMeses: restarMeses, conExclusion: conExclusion,
             sinExclusion: sinExclusion, MEZCLA_PAREJA: MEZCLA_PAREJA
         }

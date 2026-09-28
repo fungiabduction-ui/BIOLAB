@@ -87,13 +87,20 @@ t('rankingGenetica: ordena por 1ª oleada, BE final solo cerradas, noFructifico 
   ];
   const an = C.analizarBolsas(bs, grMap, { exclusiones: [] }, nombreDe);
   let f = C.rankingGenetica(an.validas, '2026-01-01');
+  assert.deepStrictEqual(f.map(x => x.nombre), ['210', '244']); // orden por BE 1ª oleada desc, sin agrupar por n
+  f = [f[1]];
   assert.strictEqual(f[0].nombre, '244'); assert.strictEqual(f[0].n, 4);
   close(f[0].beF1Prom, (300 + 200 + 0 + 400) / 4);          // A1, A2, A3 (NF=0), A4 abierta
   assert.strictEqual(f[0].nCerradas, 3); close(f[0].beFinalProm, (300 + 300 + 0) / 3);
   assert.strictEqual(f[0].mejor, 400); close(f[0].pctFructifico, 75); assert.strictEqual(f[0].rankeable, true);
-  assert.strictEqual(f[1].nombre, '210'); assert.strictEqual(f[1].rankeable, false); // 900% pero n=1 → abajo
+  assert.strictEqual(C.rankingGenetica(an.validas, '2026-01-01')[0].rankeable, false); // 210 n=1 → gris "pocas bolsas"
+  // orden por columna (nulls siempre al final, en ambas direcciones)
+  const filas = [{ nombre: 'a', beFinalProm: 10 }, { nombre: 'b', beFinalProm: null }, { nombre: 'c', beFinalProm: 30 }];
+  assert.deepStrictEqual(C.ordenarFilas(filas, 'beFinalProm', -1).map(x => x.nombre), ['c', 'a', 'b']);
+  assert.deepStrictEqual(C.ordenarFilas(filas, 'beFinalProm', 1).map(x => x.nombre), ['a', 'c', 'b']);
+  assert.deepStrictEqual(C.ordenarFilas(filas, 'nombre', 1).map(x => x.nombre), ['a', 'b', 'c']);
   f = C.rankingGenetica(an.validas, null);
-  assert.strictEqual(f[0].n, 5); // incluye OLD
+  assert.strictEqual(f.find(x => x.nombre === '244').n, 5); // incluye OLD
 });
 
 t('restarMeses sin UTC y con fin de mes', () => {
@@ -120,15 +127,19 @@ t('mediaMovil y serieTiempo', () => {
     bolsa({ id: 'O', fechaInicio: '2026-08-05', flushes: [{ beOleada: 50 }] }),
     bolsa({ id: 'H', origen: 'huerfana' })
   ];
-  const s = C.serieTiempo(bs, 'acum', grMap, nombreDe);
+  const s = C.serieTiempo(bs, 'acum', grMap, nombreDe, 5);
   assert.deepStrictEqual(s.puntos.map(p => p.id), ['A', 'B', 'X', 'N', 'O']);
   assert.deepStrictEqual(s.puntos.map(p => p.tipo), ['normal', 'normal', 'contaminada', 'noFructifico', 'normal']);
   assert.strictEqual(s.puntos[2].y, 0);
-  assert.strictEqual(s.baseMedias.length, 4);   // acum: solo cerradas
-  assert.strictEqual(s.medias[5].length, 0);
-  const s1 = C.serieTiempo(bs, 'f1', grMap, nombreDe);
+  assert.strictEqual(s.baseMedias.length, 4);   // acum: MM de BE solo con cerradas → 4 < 5, sin valores
+  assert.strictEqual(s.mmBE.length, 0);
+  // MM de % fallas usa TODAS las bolsas (una abierta con cosecha ya fructificó = acierto)
+  assert.strictEqual(s.mmFallas.length, 1); close(s.mmFallas[0].v, 40); // 2 fallas de 5
+  const s1 = C.serieTiempo(bs, 'f1', grMap, nombreDe, 5);
   assert.strictEqual(s1.baseMedias.length, 5);
-  close(s1.medias[5][0].v, (100 + 200 + 0 + 0 + 50) / 5);
+  close(s1.mmBE[0].v, (100 + 200 + 0 + 0 + 50) / 5);
+  assert.strictEqual(C.valorEnFecha(s1.mmBE, '2026-08-04'), null);   // antes de completar la ventana
+  close(C.valorEnFecha(s1.mmBE, '2026-08-30'), 70);
 });
 
 console.log('\n' + ok + ' tests OK');

@@ -2278,3 +2278,23 @@ p.fr-hint {
 .fr-an-dim-row td { color: var(--text-muted); }
 .fr-an-dim-row .fr-an-bar { background: var(--text-muted); }
 .fr-an-mezcla { font-size: 11px; color: var(--text-muted); cursor: help; }
+/* Análisis BE — tooltip, eje de fallas, orden del ranking (iteración 2026-09-28) */
+.fr-an-tip {
+    position: fixed; z-index: 2000; pointer-events: none; max-width: 300px;
+    background: var(--surface-3); border: 1px solid var(--border-light); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--text-light);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+}
+.fr-an-tip-sep { border-top: 1px solid var(--border); margin: 5px 0; }
+.fr-an-hover { cursor: crosshair; }
+.fr-an-clickable { cursor: pointer; }
+.fr-an-cross { stroke: rgba(255,255,255,0.35); stroke-dasharray: 3 3; pointer-events: none; }
+.fr-an-ring { fill: none; stroke: #fff; stroke-width: 1.5; pointer-events: none; }
+.fr-an-tick-fallas { fill: #E05252; }
+.fr-an-mm-fallas { stroke-dasharray: 5 3; }
+.fr-an-chart-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.fr-an-chart-head .fr-an-chart-title { margin-bottom: 0; }
+.fr-an-toggle-label { font-size: 11px; color: var(--text-muted); padding: 4px 8px; }
+.fr-an-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+.fr-an-th-sort:hover { color: var(--fr-main-soft); }
+.fr-an-rank-table th.fr-num, .fr-an-rank-table td.fr-num { text-align: right; }
