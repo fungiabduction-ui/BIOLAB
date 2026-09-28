@@ -195,7 +195,7 @@
         validas.forEach(function (m) {
             var x = m[graficoKey];
             if (x == null || !isFinite(x) || bolsasExcl[m.id]) return;
-            puntos.push({ id: m.id, x: x, y: modo === 'f1' ? m.beF1 : m.beAcum, cerrada: m.cerrada, gen: m.gen, lotesGR: m.lotesGR });
+            puntos.push({ id: m.id, x: x, y: modo === 'f1' ? m.beF1 : m.beAcum, cerrada: m.cerrada, noFructifico: m.noFructifico, gen: m.gen, lotesGR: m.lotesGR });
         });
         var base = modo === 'f1' ? puntos : puntos.filter(function (p) { return p.cerrada; });
         return { puntos: puntos, nTendencia: base.length, tendencia: base.length >= MIN_TENDENCIA ? regresion(base) : null };
@@ -229,31 +229,37 @@
     }
 
     // ── Ranking de genética ──
-    function rankingGenetica(validas, modo, desde) {
+    // Independiente del selector acumulado/1ª oleada (probado con datos reales 2026-09-28: con
+    // "acumulado" + últimos 3 meses casi nada cerró y el ranking quedaba vacío). Ordena por BE de
+    // 1ª oleada (todas las bolsas del período) y muestra al lado el BE final de las ya cerradas.
+    function promedio(arr) { return arr.length ? arr.reduce(function (a, v) { return a + v; }, 0) / arr.length : null; }
+    function rankingGenetica(validas, desde) {
         var g = {};
         validas.forEach(function (m) {
             if (desde && m.fechaInicio < desde) return;
             var k = m.gen.key;
-            var r = g[k] || (g[k] = { key: k, nombre: m.gen.nombre, valores: [], noFruct: 0, enCurso: 0, mezclas: [] });
-            if (modo === 'acum' && !m.cerrada) { r.enCurso++; return; }
-            r.valores.push(modo === 'f1' ? m.beF1 : m.beAcum);
+            var r = g[k] || (g[k] = { key: k, nombre: m.gen.nombre, f1: [], fin: [], acum: [], noFruct: 0, mezclas: [] });
+            r.f1.push(m.beF1);
+            r.acum.push(m.beAcum);
+            if (m.cerrada) r.fin.push(m.beAcum);
             if (m.noFructifico) r.noFruct++;
             if (m.gen.mezcla) r.mezclas.push(m.id + ': ' + m.gen.detalle);
         });
         var filas = Object.keys(g).map(function (k) {
-            var r = g[k], n = r.valores.length;
+            var r = g[k], n = r.f1.length;
             return {
                 key: k, nombre: r.nombre, n: n,
-                bePromedio: n ? r.valores.reduce(function (a, v) { return a + v; }, 0) / n : null,
-                mejor: n ? Math.max.apply(null, r.valores) : null,
-                pctFructifico: n ? (n - r.noFruct) / n * 100 : null,
-                enCurso: r.enCurso, nMezcla: r.mezclas.length, mezclas: r.mezclas,
+                beF1Prom: promedio(r.f1),
+                nCerradas: r.fin.length, beFinalProm: promedio(r.fin),
+                mejor: Math.max.apply(null, r.acum),
+                pctFructifico: (n - r.noFruct) / n * 100,
+                nMezcla: r.mezclas.length, mezclas: r.mezclas,
                 rankeable: n >= MIN_RANKING
             };
         });
         filas.sort(function (a, b) {
             if (a.rankeable !== b.rankeable) return a.rankeable ? -1 : 1;
-            return (b.bePromedio == null ? -1 : b.bePromedio) - (a.bePromedio == null ? -1 : a.bePromedio);
+            return b.beF1Prom - a.beF1Prom;
         });
         return filas;
     }
@@ -307,7 +313,7 @@
     var GRAFICOS = [
         { key: 'granoSust', titulo: '🌾 Grano / sustrato seco vs BE', eje: 'grano ÷ sustrato seco', fmt: function (v) { return v.toFixed(1); } },
         { key: 'hidrSust',  titulo: '💧 Agua en sustrato vs BE',      eje: 'hidratación del sustrato', fmt: function (v) { return v.toFixed(0) + '%'; } },
-        { key: 'hidrGrano', titulo: '🫙 Agua en grano vs BE',          eje: 'hidratación del grano (lote GR)', fmt: function (v) { return v.toFixed(0) + '%'; } }
+        { key: 'hidrGrano', titulo: '🌾💧 Agua en grano vs BE',          eje: 'hidratación del grano (lote GR)', fmt: function (v) { return v.toFixed(0) + '%'; } }
     ];
     var PERIODOS = [{ key: '3', label: 'Últimos 3 meses', meses: 3 }, { key: '6', label: 'Últimos 6 meses', meses: 6 }, { key: 'todo', label: 'Todo', meses: null }];
     var MM_COLORES = { 5: '#5C9CE0', 10: '#C15FCB', 20: '#E8A83D' };
@@ -393,9 +399,16 @@
         d.puntos.forEach(function (p) {
             var tip = p.id + ' · ' + p.gen.nombre + (p.gen.mezcla ? ' (mezcla: ' + p.gen.detalle + ')' : '')
                 + '\nBE ' + p.y.toFixed(0) + '% · ' + def.eje + ': ' + def.fmt(p.x)
-                + (p.cerrada ? '\nciclo cerrado' : '\nen producción (BE parcial)') + '\nclic para excluir de este gráfico';
-            h += '<circle class="fr-an-pt fr-an-pt-click' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.y).toFixed(1) + '" r="3.6"'
-               + ' onclick="FRAnalisis.excluirPunto(\'' + def.key + '\', \'' + esc(p.id) + '\')"><title>' + esc(tip) + '</title></circle>';
+                + (p.noFructifico ? '\n🕳 no fructificó (BE 0)' : p.cerrada ? '\nciclo cerrado' : '\nen producción (BE parcial)') + '\nclic para excluir de este gráfico';
+            var px = +X(p.x).toFixed(1), py = +Y(p.y).toFixed(1);
+            var onclick = ' onclick="FRAnalisis.excluirPunto(\'' + def.key + '\', \'' + esc(p.id) + '\')"';
+            if (p.noFructifico) {
+                h += '<path class="fr-an-mk-nf fr-an-pt-click" d="M' + (px - 4.5) + ' ' + (py - 4) + 'L' + (px + 4.5) + ' ' + (py - 4) + 'L' + px + ' ' + (py + 4) + 'Z"'
+                   + onclick + '><title>' + esc(tip) + '</title></path>';
+            } else {
+                h += '<circle class="fr-an-pt fr-an-pt-click' + (p.cerrada ? ' fr-an-pt-cerrada' : '') + '" cx="' + px + '" cy="' + py + '" r="3.6"'
+                   + onclick + '><title>' + esc(tip) + '</title></circle>';
+            }
         });
         return h + '</svg>';
     }
@@ -427,30 +440,27 @@
     function htmlRanking(validas) {
         var per = PERIODOS.filter(function (p) { return p.key === ui.periodo; })[0] || PERIODOS[0];
         var desde = per.meses ? restarMeses(hoyISO(), per.meses) : null;
-        var filas = rankingGenetica(validas, ui.modo, desde);
-        var acum = ui.modo === 'acum';
+        var filas = rankingGenetica(validas, desde);
         var h = '<div class="fr-an-rank"><div class="fr-an-rank-head"><h3>🏆 Top genética por BE</h3><div class="fr-an-toggle">'
             + PERIODOS.map(function (p) { return btnToggle(p.key, p.label, ui.periodo, 'setPeriodo'); }).join('') + '</div></div>';
         if (!filas.length) return h + '<div class="fr-an-dim">Sin bolsas en este período.</div></div>';
-        var maxBE = Math.max.apply(null, filas.map(function (f) { return f.bePromedio || 0; }).concat([1]));
-        h += '<table class="data-table fr-an-rank-table"><thead><tr><th>Genética</th><th class="fr-num">Bolsas</th><th>'
-           + (acum ? 'BE final prom.' : 'BE 1ª oleada prom.') + '</th><th class="fr-num">Mejor</th><th class="fr-num">% fructificó</th>'
-           + (acum ? '<th class="fr-num">En curso</th>' : '') + '</tr></thead><tbody>';
+        var maxBE = Math.max.apply(null, filas.map(function (f) { return f.beF1Prom; }).concat([1]));
+        h += '<table class="data-table fr-an-rank-table"><thead><tr><th>Genética</th><th class="fr-num">Bolsas</th>'
+           + '<th>BE 1ª oleada prom. ↓</th><th class="fr-num">BE final prom. (cerradas)</th><th class="fr-num">Mejor BE</th>'
+           + '<th class="fr-num">% fructificó</th></tr></thead><tbody>';
         filas.forEach(function (f) {
             var mez = f.nMezcla ? ' <span class="fr-an-mezcla" title="' + esc(f.mezclas.join('\n')) + '">(' + f.nMezcla + ' con mezcla)</span>' : '';
-            var bar = f.bePromedio != null
-                ? '<span class="fr-an-bar" style="width:' + Math.round(f.bePromedio / maxBE * 90) + 'px"></span>' + f.bePromedio.toFixed(0) + '%'
-                : '—';
+            var bar = '<span class="fr-an-bar" style="width:' + Math.round(f.beF1Prom / maxBE * 90) + 'px"></span>' + f.beF1Prom.toFixed(0) + '%';
             h += '<tr class="' + (f.rankeable ? '' : 'fr-an-dim-row') + '">'
                + '<td><b>' + esc(f.nombre) + '</b>' + mez + (f.rankeable ? '' : ' <i class="fr-an-dim">· pocas bolsas</i>') + '</td>'
                + '<td class="fr-num">' + f.n + '</td><td>' + bar + '</td>'
-               + '<td class="fr-num">' + (f.mejor != null ? f.mejor.toFixed(0) + '%' : '—') + '</td>'
-               + '<td class="fr-num">' + (f.pctFructifico != null ? f.pctFructifico.toFixed(0) + '%' : '—') + '</td>'
-               + (acum ? '<td class="fr-num">' + f.enCurso + '</td>' : '') + '</tr>';
+               + '<td class="fr-num">' + (f.beFinalProm != null ? f.beFinalProm.toFixed(0) + '% <span class="fr-an-dim">(' + f.nCerradas + ')</span>' : '— <span class="fr-an-dim">(0)</span>') + '</td>'
+               + '<td class="fr-num">' + f.mejor.toFixed(0) + '%</td>'
+               + '<td class="fr-num">' + f.pctFructifico.toFixed(0) + '%</td></tr>';
         });
-        return h + '</tbody></table><div class="fr-an-dim">Rankea genéticas con ≥' + MIN_RANKING + ' bolsas'
-            + (acum ? ' de ciclo cerrado' : '') + ' armadas en el período. "No fructificó" cuenta como 0. '
-            + 'Una bolsa con varias genéticas cuenta para la de más frascos; empate → "Mezcla pareja".</div></div>';
+        return h + '</tbody></table><div class="fr-an-dim">Ordenado por BE de 1ª oleada (todas las bolsas armadas en el período); '
+            + 'rankea genéticas con ≥' + MIN_RANKING + ' bolsas. BE final = solo las que ya cerraron ciclo (entre paréntesis cuántas). '
+            + '"No fructificó" cuenta como 0. Una bolsa con varias genéticas cuenta para la de más frascos; empate → "Mezcla pareja".</div></div>';
     }
 
     function render(container) {

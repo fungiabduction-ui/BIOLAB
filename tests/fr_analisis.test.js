@@ -76,7 +76,7 @@ t('datosGrafico: acum usa solo cerradas para tendencia, f1 usa todas, exclusión
   assert.strictEqual(d.puntos.length, 5); assert.strictEqual(d.tendencia, null); // quedan 4 cerradas < 5
 });
 
-t('rankingGenetica: acum solo cerradas, noFructifico = 0, n>=3 rankea, período', () => {
+t('rankingGenetica: ordena por 1ª oleada, BE final solo cerradas, noFructifico = 0, n>=3 rankea, período', () => {
   const bs = [
     bolsa({ id: 'A1', cicloCerrado: true, flushes: [{ beOleada: 300 }] }),
     bolsa({ id: 'A2', cicloCerrado: true, flushes: [{ beOleada: 200 }, { beOleada: 100 }] }),
@@ -86,14 +86,14 @@ t('rankingGenetica: acum solo cerradas, noFructifico = 0, n>=3 rankea, período'
     bolsa({ id: 'OLD', fechaInicio: '2025-01-01', cicloCerrado: true, flushes: [{ beOleada: 1 }] })
   ];
   const an = C.analizarBolsas(bs, grMap, { exclusiones: [] }, nombreDe);
-  let f = C.rankingGenetica(an.validas, 'acum', '2026-01-01');
-  assert.strictEqual(f[0].nombre, '244'); assert.strictEqual(f[0].n, 3); close(f[0].bePromedio, 200);
-  close(f[0].pctFructifico, 200 / 3); assert.strictEqual(f[0].enCurso, 1); assert.strictEqual(f[0].rankeable, true);
+  let f = C.rankingGenetica(an.validas, '2026-01-01');
+  assert.strictEqual(f[0].nombre, '244'); assert.strictEqual(f[0].n, 4);
+  close(f[0].beF1Prom, (300 + 200 + 0 + 400) / 4);          // A1, A2, A3 (NF=0), A4 abierta
+  assert.strictEqual(f[0].nCerradas, 3); close(f[0].beFinalProm, (300 + 300 + 0) / 3);
+  assert.strictEqual(f[0].mejor, 400); close(f[0].pctFructifico, 75); assert.strictEqual(f[0].rankeable, true);
   assert.strictEqual(f[1].nombre, '210'); assert.strictEqual(f[1].rankeable, false); // 900% pero n=1 → abajo
-  f = C.rankingGenetica(an.validas, 'f1', '2026-01-01');
-  assert.strictEqual(f[0].n, 4); close(f[0].bePromedio, (300 + 200 + 0 + 400) / 4);
-  f = C.rankingGenetica(an.validas, 'acum', null);
-  assert.strictEqual(f[0].n, 4); // incluye OLD
+  f = C.rankingGenetica(an.validas, null);
+  assert.strictEqual(f[0].n, 5); // incluye OLD
 });
 
 t('restarMeses sin UTC y con fin de mes', () => {

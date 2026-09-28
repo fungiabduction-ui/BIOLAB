@@ -73,10 +73,11 @@ Grano/sustrato seco vs BE · Agua en sustrato vs BE · Agua en grano vs BE.
 
 - **Identidad de genética = `fen_id` de la tanda GR** (leída en vivo de `gr_lotes[].dg[]` por `grLoteId`+`grTandaId`), nombre = nombre ACTUAL del nodo en GE (`window.ge.getNode` o `GEResolve.resolverNodoCrudo`). Fallback: último eslabón de `geneticaFull`. Motivo: el texto guardado en tandas viejas quedó desactualizado ("F2B 103" = nodo "F2B"; una tanda guardó el id crudo "NODE-…").
 - **Atribución de bolsas con varias genéticas**: a la genética con más frascos (`grUsados` sumado por `fen_id`). Empate → fila aparte "🧬 Mezcla pareja". Cada fila indica cuántas de sus bolsas son mezcla ("8 bolsas (2 con mezcla)"), tooltip con el detalle.
-- Mismo selector BE acumulado / 1ª oleada que los gráficos, y **filtro de período por fecha de armado**: Últimos 3 meses (default) · Últimos 6 meses · Todo. Motivo: el ranking histórico mezcla protocolos viejos y castiga genéticas que hoy rinden mejor.
-- Columnas: Genética · Bolsas · BE prom. (barra) · Mejor · % fructificó · (modo acumulado: cerradas / en curso).
-- En modo acumulado el promedio usa solo cerradas; en modo 1ª oleada usa todas las bolsas válidas del período (abiertas y cerradas). En ambos modos `noFructifico` cuenta como 0. Rankea filas con n ≥ 3; el resto abajo en gris "pocas bolsas".
-- "Últimos N meses" = `fechaInicio` ≥ hoy − N meses (fecha local, comparación de strings `YYYY-MM-DD`, nunca `new Date(iso)` sin hora).
+- **Independiente del selector acumulado/1ª oleada** (cambio tras probar con datos reales: con "acumulado" + últimos 3 meses casi ninguna bolsa había cerrado y el ranking quedaba vacío). **Ordena por BE de 1ª oleada** promedio de todas las bolsas válidas del período, y muestra al lado **BE final prom. solo de las cerradas** con su cantidad entre paréntesis.
+- **Filtro de período por fecha de armado**: Últimos 3 meses (default) · Últimos 6 meses · Todo. "Últimos N meses" = `fechaInicio` ≥ hoy − N meses (fecha local, comparación de strings `YYYY-MM-DD`).
+- Columnas: Genética · Bolsas · BE 1ª oleada prom. (barra) · BE final prom. (cerradas) · Mejor BE (acumulado máx.) · % fructificó.
+- `noFructifico` cuenta como 0 en ambos promedios. Rankea filas con n ≥ 3; el resto abajo en gris "pocas bolsas".
+- En las dispersiones, las bolsas que no fructificaron se dibujan como ▽ (BE 0), igual que en el gráfico de tiempo.
 
 ## 4. Persistencia — resumen
 
