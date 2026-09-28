@@ -44,6 +44,10 @@ las dispersiones muestran siempre todo el historial.
   - `insuficiente`: grupo o resto con < 3 bolsas.
   - `confundido con fecha`: < 50% de las bolsas del grupo caen en meses donde también hay bolsas
     del resto → el efecto no se puede separar del momento.
+  - el delta se calcula **solo dentro de los meses compartidos** (ajuste tras probar con datos
+    reales: comparar contra todo el resto mezclaba meses en los que el grupo ni existía).
+  - `1 mes en común` (`unMes`): con un solo mes compartido no hay leave-one-out posible — nunca se
+    reporta como estable (caso real: Avena cerradas vs resto solo coinciden en junio, delta +3 pp).
   - si no: leave-one-month-out sobre los meses compartidos (mismo principio que
     `_frCalDeltaConLOO`): `inestable` si el rango de deltas supera `max(0.5 × |delta|, 10 pp)`,
     si no `estable`.

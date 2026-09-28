@@ -2315,3 +2315,25 @@ p.fr-hint {
 .fr-an-est-cerr { color: #8B7CF6; border-color: rgba(139,124,246,0.45); }
 .fr-an-est-nf { color: #F2A93C; border-color: rgba(242,169,60,0.45); }
 .fr-an-est-cont { color: #E05252; border-color: rgba(224,82,82,0.45); }
+/* Análisis unificado — sub-pestañas y tablas de factores/rendimiento (2026-09-28) */
+.fr-an-secnav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.fr-an-sec {
+    background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+    padding: 6px 14px; border-radius: 16px; font-size: 13px; cursor: pointer;
+}
+.fr-an-sec:hover { color: var(--text-light); border-color: var(--fr-main-soft); }
+.fr-an-sec-on { background: rgba(232,99,122,0.22); border-color: var(--fr-main); color: var(--text-light); font-weight: 600; }
+.fr-an-charts-2 { margin: 12px 0; }
+.fr-an-tabla { font-size: 12px; }
+.fr-an-tabla th.fr-num, .fr-an-tabla td.fr-num { text-align: right; }
+.fr-an-bar-f2 { background: #8B7CF6; }
+.fr-an-bar-dias { background: #5C9CE0; }
+.fr-an-nota { margin-top: 6px; line-height: 1.45; }
+.fr-an-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.fr-an-subtitulo { margin: 14px 0 8px; }
+.fr-an-estab { font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid; cursor: help; white-space: nowrap; }
+.fr-an-estab-ok { color: #52B788; border-color: rgba(82,183,136,0.45); }
+.fr-an-estab-warn { color: #F2A93C; border-color: rgba(242,169,60,0.45); }
+.fr-an-estab-dim { color: var(--text-muted); border-color: var(--border); }
+.fr-an-chart + .fr-an-chart { margin-top: 12px; }
+.fr-an-charts .fr-an-chart + .fr-an-chart { margin-top: 0; }

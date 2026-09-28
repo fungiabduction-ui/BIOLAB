@@ -201,6 +201,14 @@ t('estabilidadTemporal: insuficiente, confundido, estable, inestable', () => {
   assert.strictEqual(e.estado, 'estable'); close(e.delta, 100);
   const g2 = [m('2026-06-01', 900), m('2026-07-01', 100), m('2026-08-01', 100)];
   assert.strictEqual(C.estabilidadTemporal(g2, r, 'beF1').estado, 'inestable');
+  // el delta compara solo dentro de los meses compartidos: el resto de abril (sin grupo) no cuenta
+  const rConAbril = r.concat([m('2026-04-01', 1000), m('2026-04-02', 1000)]);
+  close(C.estabilidadTemporal(g, rConAbril, 'beF1').delta, 100);
+  // un solo mes en común: la comparación existe pero no se puede probar que se sostenga
+  const gJun = [m('2026-06-01', 400), m('2026-06-02', 400), m('2026-06-03', 400)];
+  const rJun = [m('2026-06-04', 100), m('2026-06-05', 100), m('2026-06-06', 100), m('2026-04-01', 50)];
+  const u = C.estabilidadTemporal(gJun, rJun, 'beF1');
+  assert.strictEqual(u.estado, 'unMes'); close(u.delta, 300);
 });
 
 t('tablaFactor: cada grupo contra el resto, período y % fructificó', () => {
