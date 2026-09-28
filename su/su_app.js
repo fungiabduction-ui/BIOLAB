@@ -875,6 +875,7 @@ function guardarLote() {
             inputValue: _colorInput ? _colorInput.value : null
         });
 
+        _suLogCambiosFrascos(lotesData[indiceExistente], lote);
         lotesData[indiceExistente] = lote;
     } else {
         // Lote nuevo: asignar _uuid definitivo
@@ -894,6 +895,7 @@ function guardarLote() {
             inputValue: _colorInput ? _colorInput.value : null
         });
 
+        _suLogCambiosFrascos(null, lote);
         lotesData.push(lote);
     }
 
@@ -3419,26 +3421,8 @@ window.suDbOnChangeUsadosSource = function(inputEl) {
         val = 0; inputEl.value = 0;
     }
 
-    // Trazabilidad automática
-    var prevLogged = parseInt(sourceRow.dataset.grUsadosLogged || '0') || 0;
-    var mainTanda = mainRow ? ((mainRow.querySelector('.db-tanda') || {}).value || '') : '';
-    if (grLote && grTanda && val > prevLogged) {
-        var delta = val - prevLogged;
-        suDbRegistrarSeguimiento('frascos-gr',
-            (mainTanda ? mainTanda + ' · ' : '')
-            + 'Se usaron ' + delta + ' frasco' + (delta > 1 ? 's' : '')
-            + ' de GR ' + grLote + ' / tanda ' + grTanda
-            + ' (acumulado en fuente: ' + val + ')', '🟢');
-        sourceRow.dataset.grUsadosLogged = String(val);
-    } else if (val < prevLogged) {
-        var diff = prevLogged - val;
-        suDbRegistrarSeguimiento('frascos-gr',
-            (mainTanda ? mainTanda + ' · ' : '')
-            + 'Corrección: se liberaron ' + diff + ' frasco' + (diff > 1 ? 's' : '')
-            + ' de GR ' + grLote + ' / tanda ' + grTanda
-            + ' (nuevo total fuente: ' + val + ')', '🟡');
-        sourceRow.dataset.grUsadosLogged = String(val);
-    }
+    // El log 'frascos-gr' ya NO se escribe acá (por tecla) — ver _suLogCambiosFrascos(),
+    // que lo calcula al guardar como diferencia contra el lote persistido.
 
     inputEl.dataset.prevUsados = String(val);
     // Refresca TODAS las source rows, no solo esta — si hay otra fila apuntando
@@ -3494,6 +3478,58 @@ window.suDbActualizarTotalUsados = function() {
     var el = document.getElementById('dbTotalUsados');
     if (el) el.textContent = tot;
 };
+
+// Log de frascos GR usados, calculado AL GUARDAR como diferencia entre el lote ya
+// persistido (prevLote, null si es nuevo) y el que se está por guardar. Antes se
+// registraba por tecla en el oninput de frascos, lo que (1) llenaba el historial de
+// pares "liberaron/usaron" al borrar y retipear o usar las flechitas, (2) al reabrir un
+// lote guardado contaba desde 0 (el acumulado registrado no se restauraba) y (3) nunca
+// registraba la liberación al cambiar la tanda GR de una fuente o quitarla — quedaba
+// escrito que se usó un grano que al final no se usó (caso real: SU285/285b, GR225c).
+// Clave: sub-tanda SU + lote GR + tanda GR. Escribe en lote.dbSeguimiento y en
+// SU.dbSeguimientoNotas (la UI del formulario sigue abierta después de guardar).
+function _suLogCambiosFrascos(prevLote, lote) {
+    function mapa(l) {
+        var m = {};
+        if (!l) return m;
+        var lo = l.grProtocolo || '';
+        (l.db || []).forEach(function(r) {
+            suDbNormSources(r, lo).forEach(function(s) {
+                if (!s.grLoteId || !s.grTandaId) return;
+                var k = (r.tanda || '') + '|' + s.grLoteId + '|' + s.grTandaId;
+                if (!m[k]) m[k] = { tanda: r.tanda || '', grLoteId: s.grLoteId, grTandaId: s.grTandaId, n: 0 };
+                m[k].n += parseInt(s.grUsados) || 0;
+            });
+        });
+        return m;
+    }
+    var antes = mapa(prevLote), ahora = mapa(lote);
+    var claves = Object.keys(antes);
+    Object.keys(ahora).forEach(function(k) { if (!antes[k]) claves.push(k); });
+    var notas = [];
+    claves.forEach(function(k) {
+        var a = antes[k] ? antes[k].n : 0, b = ahora[k] ? ahora[k].n : 0;
+        if (a === b) return;
+        var ref = ahora[k] || antes[k];
+        var d = Math.abs(b - a);
+        var txt = (ref.tanda ? ref.tanda + ' · ' : '')
+            + (b > a ? 'Se usaron ' : 'Corrección: se liberaron ') + d + ' frasco' + (d > 1 ? 's' : '')
+            + ' de ' + ref.grLoteId + ' / tanda ' + ref.grTandaId
+            + ' (total en la sub-tanda: ' + b + ')';
+        notas.push({
+            id: _suNotaId(), ts: new Date().toISOString(), tsLegacy: null, tsInferred: false,
+            tipo: 'frascos-gr', texto: txt, estado: b > a ? 'green' : 'yellow',
+            auto: true, editedAt: null, imagenes: []
+        });
+    });
+    if (!notas.length) return;
+    if (!Array.isArray(lote.dbSeguimiento)) lote.dbSeguimiento = [];
+    notas.forEach(function(n) { lote.dbSeguimiento.push(n); });
+    if (window.SU && Array.isArray(SU.dbSeguimientoNotas)) {
+        notas.forEach(function(n) { SU.dbSeguimientoNotas.push(n); });
+        if (typeof window.suDbRenderSeguimientoNotas === 'function') window.suDbRenderSeguimientoNotas();
+    }
+}
 
 // ---------- REGISTRO AUTOMÁTICO DE EVENTOS ----------
 function suDbRegistrarSeguimiento(tipo, mensaje, emoji) {
