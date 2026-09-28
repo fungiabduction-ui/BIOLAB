@@ -167,6 +167,50 @@
         return base + '_' + Date.now();
     }
 
+    // Pendientes en orden cronológico de inoculación SU (fechaInicio de una pendiente = fecha
+    // del lote SU); empate → orden de creación en `bolsas` (= orden de lote/índice en SU).
+    function _frPendientesOrdenadas() {
+        return bolsas
+            .map(function(b, i) { return { b: b, i: i }; })
+            .filter(function(x) { return esPendiente(x.b); })
+            .sort(function(x, y) {
+                var fx = x.b.fechaInicio || '', fy = y.b.fechaInicio || '';
+                return fx < fy ? -1 : fx > fy ? 1 : x.i - y.i;
+            })
+            .map(function(x) { return x.b; });
+    }
+
+    // Fecha con la que se confirmaría cada pendiente — misma resolución que confirmarBolsa
+    // recibe del input (borrador si existe, si no hoy; input vaciado → fechaInicio).
+    function _frFechaArmadoPendiente(b) {
+        var d = _frFechaArmadoDrafts.hasOwnProperty(b._frUuid) ? _frFechaArmadoDrafts[b._frUuid] : hoyISO();
+        return d || b.fechaInicio || hoyISO();
+    }
+
+    // ID provisorio de cada pendiente (uuid → id), asignado en orden cronológico sobre los
+    // IDs ya confirmados + los ya repartidos a pendientes anteriores. Solo cálculo, no persiste.
+    // (overrideUuid, overrideFecha) fuerza la fecha de una fila — lo usa confirmarBolsa.
+    function _frPreviewIdsPendientes(overrideUuid, overrideFecha) {
+        var usados = {};
+        bolsas.forEach(function(b) { if (b.id) usados[b.id] = true; });
+        var out = {};
+        _frPendientesOrdenadas().forEach(function(b) {
+            var fecha = (overrideUuid && b._frUuid === overrideUuid) ? overrideFecha : _frFechaArmadoPendiente(b);
+            var d = new Date(fecha + 'T00:00:00');
+            if (isNaN(d.getTime())) return;
+            var base = 'FR' + String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0');
+            var id = null;
+            if (!usados[base]) id = base;
+            else for (var code = 98; code <= 122; code++) {
+                if (!usados[base + String.fromCharCode(code)]) { id = base + String.fromCharCode(code); break; }
+            }
+            if (!id) return;  // >25 el mismo día: confirmarBolsa cae a genFrId
+            usados[id] = true;
+            out[b._frUuid] = id;
+        });
+        return out;
+    }
+
     // Deriva la fecha de entrada en FR desde el ID (e.g. "FR2306" → "2026-06-23").
     // Heuristica de año: si el DDMM del ID está en el futuro respecto a hoy, usa año anterior.
     // Devuelve ISO date string o null si el ID no tiene el formato esperado.
@@ -339,6 +383,17 @@
         return flushes.reduce(function(a, f) { return a + (f.pesoSeco != null ? num(f.pesoSeco) : 0); }, 0);
     }
     function rendimientoFresco(flushes) { return biomasaHumedaTotal(flushes); }
+    // % deshidratado sobre las oleadas YA secadas solamente — con un flush pendiente de
+    // secar, dividir el seco total por el húmedo total (que incluye ese flush) subestimaba
+    // el % hasta que se cargara el seco. null si todavía no hay ninguna oleada secada.
+    function pctDeshidBolsa(flushes) {
+        if (!Array.isArray(flushes)) return null;
+        var hum = 0, sec = 0;
+        flushes.forEach(function(f) {
+            if (f && f.pesoSeco != null && num(f.pesoHumedo) > 0) { hum += num(f.pesoHumedo); sec += num(f.pesoSeco); }
+        });
+        return (hum > 0 && sec > 0) ? (sec / hum) * 100 : null;
+    }
     function pctBiomasaFlush(f) {
         var h = num(f && f.pesoHumedo);
         var s = (f && f.pesoSeco != null) ? num(f.pesoSeco) : null;
@@ -369,6 +424,16 @@
             if (f && f.pesoHumedo != null && f.pesoSeco == null) return i;
         }
         return -1;
+    }
+    // Todas las oleadas pendientes de secar (no solo la última) — para el chip de la tabla,
+    // que debe seguir apareciendo en F2/F3/... aunque F1 ya tenga su seco cargado.
+    function _frFlushesPendientesSecar(b) {
+        if (!b || !Array.isArray(b.flushes)) return [];
+        var out = [];
+        b.flushes.forEach(function(f, i) {
+            if (f && f.pesoHumedo != null && f.pesoSeco == null) out.push('F' + (f.n || (i + 1)));
+        });
+        return out;
     }
 
     // Reparto proporcional al peso humedo entre N bolsas secadas juntas en la misma
@@ -730,6 +795,11 @@
                             }
                             if (fechaRegGR && !ex.fechaRegistroGR) {
                                 ex.fechaRegistroGR = fechaRegGR;
+                                res.colonizacionSync++;
+                            }
+                            // Sub-tanda renombrada en SU antes de confirmar → se sella con el nombre actual.
+                            if (r.tanda && ex.suSubTanda !== r.tanda) {
+                                ex.suSubTanda = r.tanda;
                                 res.colonizacionSync++;
                             }
                         }
@@ -1177,8 +1247,11 @@
         if (!esPendiente(b)) { console.warn('[FR] confirmarBolsa: bolsa no está pendiente', frUuid); return; }
 
         var fechaArmado = fechaOverride || b.fechaInicio || hoyISO();
+        // Mismo reparto que la vista previa de Pendientes (_frPreviewIdsPendientes) — el ID que
+        // el usuario vio en la fila es el que se asigna, aunque confirme fuera de orden.
+        var idNuevo = _frPreviewIdsPendientes(frUuid, fechaArmado)[frUuid];
+        if (!idNuevo || bolsas.some(function(x) { return x.id === idNuevo; })) idNuevo = genFrId(fechaArmado);
         b.fechaInicio = fechaArmado;
-        var idNuevo = genFrId(fechaArmado);
         b.id = idNuevo;
         b.fechaEntradaFR = hoyISO();
         b.pendienteConfirmacion = false;
@@ -1288,11 +1361,15 @@
         // no agregar una columna de "Calidad" — un solo flush de alto BE (300-400%) no es
         // comparable contra 3 flushes de 80% cada uno, promediar scoreAuto seria enganoso.
         var rendSeco    = biomasaSecaTotal(b.flushes);
-        var pctDeshid   = (rend > 0 && rendSeco > 0) ? (rendSeco / rend) * 100 : null;
-        var _pendChip   = '<span class="fr-chip fr-chip-pendiente">PENDIENTE</span>';
-        var _esPend     = _frIdxFlushPendienteSecar(b) !== -1;
-        var rendSecoTxt = rendSeco > 0 ? fmt(rendSeco, 1) + ' g' : (_esPend ? _pendChip : '-');
-        var pctDeshidTxt = pctDeshid != null ? fmt(pctDeshid, 1) + '%' : (_esPend ? _pendChip : '-');
+        var pctDeshid   = pctDeshidBolsa(b.flushes);
+        // Chip PENDIENTE para CUALQUIER oleada sin seco (antes solo aparecía si ninguna
+        // oleada estaba secada — desde F2 en adelante quedaba oculto detrás del total de F1).
+        var _pendFs     = _frFlushesPendientesSecar(b);
+        var _pendChip   = _pendFs.length
+            ? '<span class="fr-chip fr-chip-pendiente" title="Oleadas sin peso deshidratado: ' + _pendFs.join(', ') + '">PENDIENTE ' + _pendFs.join('·') + '</span>'
+            : '';
+        var rendSecoTxt = rendSeco > 0 ? fmt(rendSeco, 1) + ' g' + (_pendChip ? ' ' + _pendChip : '') : (_pendChip || '-');
+        var pctDeshidTxt = pctDeshid != null ? fmt(pctDeshid, 1) + '%' + (_pendChip ? ' ' + _pendChip : '') : (_pendChip || '-');
         var fEntrada   = fmtFecha(b.fechaInicio || b.fechaEntradaFR || _parseFechaFromId(b.id));
         var fUltCos    = '—';
         var fArchFecha = '—';
@@ -1331,7 +1408,7 @@
             + '<td class="fr-num-days" ' + cl + ' title="Fecha de armado de la bolsa">' + esc(fEntrada) + '</td>'
             + '<td ' + cl + '><strong>' + esc(b.id) + '</strong>' + huerfanaBadge + '</td>'
             + '<td ' + cl + '>' + ge + '</td>'
-            + '<td ' + cl + '>' + _suChipFromBolsa(b) + '</td>'
+            + '<td ' + cl + '>' + _suSubChip(b) + '</td>'
             + '<td ' + cl + '>' + grChip + '</td>'
             + '<td class="fr-num-days" ' + cl + '>' + (dias != null ? dias + 'd' : '-') + '</td>'
             + '<td ' + cl + '>'
@@ -1410,6 +1487,7 @@
         var haystack = [
             b.id        || '',
             b.suLoteId  || '',
+            _esSubTandaReal(b.suSubTanda) ? b.suSubTanda : '',
             _grTxtFromBolsa(b),
             _geTxtFromBolsa(b)
         ].join(' ').toLowerCase();
@@ -1427,7 +1505,7 @@
         if (key === 'arch_fecha')  return b.fechaCierreCiclo || b.fechaCancelacion || '';
         if (key === 'id')      return (b.id || '').toLowerCase();
         if (key === 'ge')      return _geTxtFromBolsa(b).toLowerCase();
-        if (key === 'su')      return (b.suLoteId || '').toLowerCase();
+        if (key === 'su')      return ((b.suLoteId || '') + ' ' + (_esSubTandaReal(b.suSubTanda) ? b.suSubTanda : '')).toLowerCase();
         if (key === 'gr')      return _grTxtFromBolsa(b).toLowerCase();
         if (key === 'dias')    return (b.cicloCerrado && b.fechaCierreCiclo ? diasEntre(b.fechaInicio, b.fechaCierreCiclo) : b.noFructifico && b.fechaNoFructifico ? diasEntre(b.fechaInicio, b.fechaNoFructifico) : diasEntre(b.fechaInicio, hoyISO())) || 0;
         if (key === 'estado')  return computeEstado(b);
@@ -1439,8 +1517,8 @@
         if (key === 'ratio')   { ag = _aggregadosPorSU(b.suLoteId); return (ag && ag.ratio      != null) ? ag.ratio      : -1; }
         if (key === 'rendseco') return biomasaSecaTotal(b.flushes);
         if (key === 'pctdeshid') {
-            var hum = biomasaHumedaTotal(b.flushes), sec = biomasaSecaTotal(b.flushes);
-            return (hum > 0 && sec > 0) ? (sec / hum) * 100 : -1;
+            var pd = pctDeshidBolsa(b.flushes);
+            return pd != null ? pd : -1;
         }
         return '';
     }
@@ -3005,30 +3083,12 @@
         } catch (e) { return null; }
     }
 
-    function _grChipHtml(label, hex) {
+    function _grChipHtml(label, hex, title) {
         if (!label) return '—';
         var bg = hex ? _hexToRgba(hex, 0.15) : null;
         var border = hex ? _hexToRgba(hex, 0.40) : null;
         var style = bg ? ' style="background:' + bg + ';border-color:' + border + ';color:' + esc(hex) + '"' : '';
-        return '<span class="fr-traza"' + style + ' title="' + esc(label) + '">' + esc(label) + '</span>';
-    }
-
-    // Vista rápida (Activo/Cosecha/Archivo/Pendientes): un chip por LOTE GR, nunca por tanda —
-    // la tanda es detalle de trazabilidad, no hace falta en un vistazo rápido de la tabla.
-    // Multi-fuente: dedupeado por grLoteId (varias tandas del mismo lote no repiten el chip).
-    function _grChipFromBolsa(b) {
-        if (Array.isArray(b.grSources) && b.grSources.length > 1) {
-            var vistos = {};
-            var chips = [];
-            b.grSources.forEach(function(s) {
-                var loteId = s.grLoteId || '—';
-                if (vistos[loteId]) return;
-                vistos[loteId] = true;
-                chips.push(_grChipHtml(loteId, _grColorForSource(s)));
-            });
-            return chips.join(' + ');
-        }
-        return _grChipHtml(b.grLoteId || '—', _grColorForSource({ grLoteId: b.grLoteId }));
+        return '<span class="fr-traza"' + style + ' title="' + esc(title || label) + '">' + esc(label) + '</span>';
     }
 
     // Chip de color por protocolo SU — mismo mecanismo que el chip GR de arriba, reutiliza
@@ -3127,9 +3187,78 @@
         return _genChipHtml(b.geneticaFull || [b.genetica, b.fenotipo].filter(Boolean).join(' / ') || '', b.fenId);
     }
 
-    function filaPendiente(b) {
+    // Fila db de SU a la que pertenece una bolsa (mismo recorrido por rango de índice que
+    // sincronizarTodo/_frComputarNuevaTrazabilidad). Solo lectura, para Pendientes.
+    function _frSuRowForBolsa(b, suLotes) {
+        var lote = null;
+        for (var i = 0; i < suLotes.length; i++) {
+            var l = suLotes[i];
+            if ((b._suUuid && l._uuid === b._suUuid) || (!b._suUuid && l.id === b.suLoteId)) { lote = l; break; }
+        }
+        if (!lote || !Array.isArray(lote.db)) return null;
+        var idx = 0;
+        for (var d = 0; d < lote.db.length; d++) {
+            var n = int(lote.db[d].bolsas);
+            if (b.suBolsaIndex >= idx && b.suBolsaIndex < idx + n) return lote.db[d];
+            idx += n;
+        }
+        return null;
+    }
+
+    function _esSubTandaReal(sub) { return !!sub && !/^sub-\d+$/.test(sub); }
+
+    // Bolsas FR de la misma sub-tanda SU (datos sellados de FR, sin leer SU) — para el tooltip
+    // de frascos compartidos en bolsas ya confirmadas.
+    function _frBolsasMismaSubTanda(b) {
+        if (!_esSubTandaReal(b.suSubTanda)) return 0;
+        return bolsas.filter(function(x) {
+            return x.suSubTanda === b.suSubTanda
+                && ((b._suUuid && x._suUuid) ? x._suUuid === b._suUuid : x.suLoteId === b.suLoteId);
+        }).length;
+    }
+
+    // Chip SU de todas las tablas de FR: identifica la bolsa física → sub-tanda (ej. "249a"),
+    // no solo el lote. Pendientes pasan suRow (lectura en vivo de SU); confirmadas usan el
+    // suSubTanda sellado. 'sub-N' es el fallback sintético de sincronizarTodo → chip de lote.
+    function _suSubChip(b, suRow) {
+        var sub = (suRow && suRow.tanda) || b.suSubTanda || '';
+        if (!_esSubTandaReal(sub)) return _suChipFromBolsa(b);
+        return _grChipHtml(sub, _suColorForBolsa(b), 'Lote ' + (b.suLoteId || '—') + ' · sub-tanda ' + sub);
+    }
+
+    // Chip GR de todas las tablas de FR: lote GR + frascos usados (grUsados) por lote, sumando
+    // tandas del mismo lote (multi-fuente → un chip por lote). Los frascos son de la sub-tanda
+    // SU entera (compartidos entre sus bolsas) — el tooltip lo aclara con tanda(s) GR y cuántas
+    // bolsas los comparten. Confirmadas: grSources sellado; pendientes: resincronizado por SU.
+    function _grChipFromBolsa(b, suRow) {
+        var srcs = Array.isArray(b.grSources) && b.grSources.length
+            ? b.grSources
+            : [{ grLoteId: b.grLoteId, grTandaId: b.grTandaId, grUsados: 0 }];
+        var nBolsas = suRow ? int(suRow.bolsas) : _frBolsasMismaSubTanda(b);
+        var porLote = {}, orden = [];
+        srcs.forEach(function(s) {
+            var id = s.grLoteId || '—';
+            if (!porLote[id]) { porLote[id] = { usados: 0, tandas: [], src: s }; orden.push(id); }
+            porLote[id].usados += int(s.grUsados);
+            if (s.grTandaId) porLote[id].tandas.push(s.grTandaId + (int(s.grUsados) ? ' ×' + int(s.grUsados) : ''));
+        });
+        return orden.map(function(id) {
+            if (id === '—' || id === 'Desconocido') return _grChipHtml(id, null);  // huérfanas/legacy sin trazabilidad GR
+            var g = porLote[id];
+            var label = id + (g.usados > 0 ? ' ×' + g.usados : '');
+            var tip = 'Lote GR ' + id
+                + (g.tandas.length ? ' · tanda ' + g.tandas.join(', ') : '')
+                + (g.usados > 0 ? ' · ' + g.usados + (g.usados === 1 ? ' frasco usado' : ' frascos usados')
+                    + (nBolsas > 1 ? ' en la sub-tanda (compartidos entre ' + nBolsas + ' bolsas, ~' + fmt(g.usados / nBolsas, 1) + '/bolsa)' : '')
+                    : ' · frascos usados sin registrar en SU');
+            return _grChipHtml(label, _grColorForSource(g.src), tip);
+        }).join(' + ');
+    }
+
+    function filaPendiente(b, suLotes, previewIds) {
         var ge    = _geChipFromBolsa(b);
-        var grChip = _grChipFromBolsa(b);
+        var suRow = _frSuRowForBolsa(b, suLotes || []);
+        var grChip = _grChipFromBolsa(b, suRow);
         var seco  = b.pesoSustratoSeco > 0 ? fmt(b.pesoSustratoSeco, 1) + ' g' : '—';
         var uuid  = esc(b._frUuid || '');
         // Default = hoy (día en que se confirma el armado), no b.fechaInicio (que en una
@@ -3138,9 +3267,10 @@
         // usuario ya tecleó algo en esta fila en un render anterior, se respeta ese borrador.
         var fechaVal = _frFechaArmadoDrafts.hasOwnProperty(b._frUuid) ? _frFechaArmadoDrafts[b._frUuid] : hoyISO();
         return '<tr class="fr-row fr-row-pendiente">'
-            + '<td><span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
+            + '<td style="white-space:nowrap"><strong class="fr-pend-id" data-fr-uuid="' + uuid + '" title="ID provisorio — se asigna al confirmar">' + esc((previewIds && previewIds[b._frUuid]) || '—') + '</strong> '
+            +   '<span class="fr-chip fr-chip-pendiente">⏳ pendiente</span></td>'
             + '<td>' + ge + '</td>'
-            + '<td>' + _suChipFromBolsa(b) + '</td>'
+            + '<td>' + _suSubChip(b, suRow) + '</td>'
             + '<td>' + grChip + '</td>'
             + '<td class="fr-num-days"><input type="date" class="fr-fecha-armado-input" value="' + esc(fechaVal) + '" oninput="FR._draftFechaArmado(\'' + uuid + '\', this.value)" title="Fecha real de armado — corregí si confirmás en un día distinto al que se armó la bolsa"></td>'
             + '<td class="fr-num">' + seco + '</td>'
@@ -3156,12 +3286,24 @@
      *  por otra fila/otro módulo antes de que esta se confirme. */
     FR._draftFechaArmado = function(frUuid, value) {
         if (!frUuid) return;
-        if (value) _frFechaArmadoDrafts[frUuid] = value;
-        else delete _frFechaArmadoDrafts[frUuid];
+        // '' también se guarda: input vaciado → confirmarBolsa cae a fechaInicio, y la
+        // vista previa del ID tiene que reflejar exactamente eso (_frFechaArmadoPendiente).
+        _frFechaArmadoDrafts[frUuid] = value || '';
+        _frRefrescarPreviewIds();
     };
 
+    // Actualiza solo los IDs provisorios en el DOM (sin re-render del tbody → el input de
+    // fecha que se está editando no pierde foco). Cambiar la fecha de una fila puede mover
+    // los sufijos de otras del mismo día, por eso se recalculan todas.
+    function _frRefrescarPreviewIds() {
+        var ids = _frPreviewIdsPendientes();
+        document.querySelectorAll('#frPendientesBody .fr-pend-id').forEach(function(el) {
+            el.textContent = ids[el.getAttribute('data-fr-uuid')] || '—';
+        });
+    }
+
     function renderPendientes() {
-        var pendientes = bolsas.filter(esPendiente);
+        var pendientes = _frPendientesOrdenadas();
 
         // Poda defensiva: si una bolsa dejó de estar pendiente por una vía distinta
         // a confirmarBolsa/cancelarBolsa (import de backup, restore, migración), su
@@ -3199,8 +3341,8 @@
                 +       '<thead><tr>'
                 +         '<th>Estado</th>'
                 +         '<th>Genética</th>'
-                +         '<th>Lote SU</th>'
-                +         '<th>Tanda GR</th>'
+                +         '<th>SU</th>'
+                +         '<th>GR</th>'
                 +         '<th>Fecha inicio</th>'
                 +         '<th>Sust. seco</th>'
                 +         '<th>Acciones</th>'
@@ -3220,8 +3362,10 @@
         var badge = document.getElementById('frPendientesBadge');
         if (badge) badge.textContent = pendientes.length > 0 ? pendientes.length : '';
 
+        var _suLotes = getSULotes();
+        var _previewIds = _frPreviewIdsPendientes();
         tbody.innerHTML = pendientes.length > 0
-            ? pendientes.map(filaPendiente).join('')
+            ? pendientes.map(function(b) { return filaPendiente(b, _suLotes, _previewIds); }).join('')
             : '<tr><td colspan="7" class="fr-empty">Sin bolsas pendientes de confirmación.</td></tr>';
     }
 

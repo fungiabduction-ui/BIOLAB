@@ -1297,6 +1297,13 @@ p.fr-hint {
     border-color: rgba(232,99,122,0.5);
 }
 
+/* ID provisorio de una bolsa pendiente — punteado para distinguirlo de un ID ya asignado */
+.fr-pend-id {
+    font-style: italic;
+    opacity: 0.8;
+    border-bottom: 1px dashed currentColor;
+}
+
 .fr-chip-cancelada {
     background: rgba(128,128,128,0.15);
     color: var(--text-muted);
