@@ -1553,6 +1553,12 @@ window.grEliminarRegistro = grEliminarRegistro;
             if (!confirm('Ya existe un lote con este ID. ¿Deseas sobrescribirlo?')) {
                 return;
             }
+            // DC (Descontaminación Química) eliminado de la UI — pero si este lote ya
+            // tenía datos históricos de `dc`, se preservan tal cual en cada re-guardado.
+            // recolectarDatosLote() ya no reconstruye `dc` desde el DOM (no hay de dónde).
+            if (lotesData[indiceExistente].dc && !lote.dc) {
+                lote.dc = lotesData[indiceExistente].dc;
+            }
         }
 
         // [Fase 4] Aplicar consumo de Cultivos CI: pre-valida stock, devuelve los
@@ -1890,7 +1896,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         GR.protoNotas = [];
         GR.seguimientoNotas = [];
         GR.protoCerrado = false;
-        GR.dcRegistrado = false;
         if (typeof grRenderNotas === 'function') grRenderNotas();
         if (typeof window.grRenderSeguimientoNotas === 'function') window.grRenderSeguimientoNotas();
 
@@ -1916,18 +1921,6 @@ window.grEliminarRegistro = grEliminarRegistro;
                 notas: row.querySelector('.ct-notas').value
             });
         });
-
-        // DC — leer tanto del panel nuevo (grDc*) como de los IDs legacy
-        const _val = (id, def = '') => document.getElementById(id)?.value ?? def;
-        const _num = (id, def = 0) => parseFloat(document.getElementById(id)?.value) || def;
-        const dc = {
-            volSol: _num('grDcVolSol') || _num('dcVolSol'),
-            agente: _val('grDcAgente') || _val('dcAgente'),
-            concAgente: _num('grDcConcAgente') || _num('dcConcAgente'),
-            volAgente: _num('grDcVolAgente') || _num('dcVolAgente'),
-            conc: parseFloat(document.getElementById('grDcConcFinal')?.textContent) || _num('dcConc'),
-            tiempo: _num('grDcTiempo') || _num('dcTiempo')
-        };
 
         // UF - Unidad Física (fuente de verdad de producción)
         const _ufNum = (id) => parseFloat(document.getElementById(id)?.value) || 0;
@@ -2021,17 +2014,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                 colonizacion: row.querySelector('.dg-colonizacion')?.value || null
             });
         });
-        
 
-        // PO
-        const po = [];
-        for (let i = 1; i <= 6; i++) {
-            const checkbox = document.getElementById('po' + i);
-            po.push({
-                paso: i,
-                completado: checkbox ? checkbox.checked : false
-            });
-        }
 
         // RE
         const re = {};
@@ -2042,11 +2025,9 @@ window.grEliminarRegistro = grEliminarRegistro;
             fecha: document.getElementById('loteFecha').value,
             version: document.getElementById('loteVersion').value,
             componentes,
-            dc,
             hm: {},
             uf,
             dg,
-            po,
             re,
             protoNotas: GR.protoNotas || [],
             seguimientoNotas: GR.seguimientoNotas || []
@@ -2114,22 +2095,11 @@ window.grEliminarRegistro = grEliminarRegistro;
         });
         actualizarTotalesCT();
 
-        // DC — escribe a panel nuevo (grDc*) si existe, fallback a IDs legacy
-        if (lote.dc) {
-            const _set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-            _set('grDcVolSol', lote.dc.volSol || '');
-            _set('grDcAgente', lote.dc.agente || '');
-            _set('grDcConcAgente', lote.dc.concAgente || '');
-            _set('grDcVolAgente', lote.dc.volAgente || '');
-            _set('grDcTiempo', lote.dc.tiempo || '');
-            _set('dcVolSol', lote.dc.volSol || 0);
-            _set('dcAgente', lote.dc.agente || '');
-            _set('dcConcAgente', lote.dc.concAgente || 0);
-            _set('dcVolAgente', lote.dc.volAgente || 0);
-            _set('dcConc', lote.dc.conc || 0);
-            _set('dcTiempo', lote.dc.tiempo || 0);
-            if (typeof grCalcDC === 'function') grCalcDC();
-        }
+        // DC (Descontaminación Química) eliminado — la UI y el cálculo ya no existen
+        // (MEJ, 2026-09-09: reemplazado por el protocolo en texto libre de "Notas del
+        // Protocolo"). `lote.dc` de registros viejos NO se restaura a ningún campo
+        // (no hay dónde) pero tampoco se toca ni se borra — `guardarLote()` lo preserva
+        // tal cual si el lote ya lo tenía, para no perder ese dato histórico.
 
         // UF - Unidad Física
         if (lote.uf) {
@@ -2227,16 +2197,6 @@ window.grEliminarRegistro = grEliminarRegistro;
         });
         
         grActualizarTotalesGenetica();
-
-        // PO - Verificar que los elementos existen
-        const po = [];
-        for (let i = 1; i <= 6; i++) {
-            const checkbox = document.getElementById('po' + i);
-            po.push({
-                paso: i,
-                completado: checkbox ? checkbox.checked : false
-            });
-        }
 
         // Renderizar notas (ya cargadas al inicio de esta función — ver comentario ahí)
         if (typeof grRenderNotas === 'function') grRenderNotas();
@@ -3086,7 +3046,35 @@ window.grEliminarRegistro = grEliminarRegistro;
         GR.seguimientoNotas = existing;
         window.grRenderSeguimientoNotas();
     }
-    
+
+    // MEJ-0053: el log de "inoculación" antes vivía solo dentro del onchange de
+    // genética, leyendo "frascos" del DOM en ese instante — si el usuario llenaba
+    // frascos DESPUÉS de elegir la genética, el campo todavía leía el default "0" y
+    // el log se perdía en silencio para siempre (caso real: GR89B/GR89C, 2026-09-08).
+    // Se llama desde el onchange de genética Y desde el oninput de frascos — cualquiera
+    // de los 2 que complete la condición dispara el log, una sola vez por genética.
+    function _grMaybeLogInoculacion(row) {
+        if (!row) return;
+        const tanda = row.querySelector('.dg-tanda')?.value || '';
+        const genetica = row.querySelector('.dg-genetica')?.value || '';
+        const frascos = parseInt(row.querySelector('.dg-frascos')?.value) || 0;
+        if (!tanda || !genetica || frascos === 0) return;
+        if (row.dataset.inoculacionLoggedFor === genetica) return; // ya logueado para esta genética
+        row.dataset.inoculacionLoggedFor = genetica;
+        grRegistrarSeguimiento(
+            'inoculacion',
+            `${tanda} - ${_grNombreInoculo(genetica)}: ${frascos} ${_grUds()} inoculados`,
+            '🟡'
+        );
+        grActualizarTotalesGenetica();
+    }
+
+    // Handler del oninput de .dg-frascos — antes solo recalculaba totales.
+    GR.dgOnChangeFrascos = window.grDgOnChangeFrascos = function(inputEl) {
+        grActualizarTotalesGenetica();
+        _grMaybeLogInoculacion(inputEl.closest('.dg-row'));
+    };
+
     function grGetNombreGenetica(fenId) {
         return grGetNombreGeneticaPorId(fenId);
     }
@@ -3211,15 +3199,16 @@ window.grEliminarRegistro = grEliminarRegistro;
 
         // isLoad=true: no loggear nota de inoculación al simplemente abrir el lote —
         // solo debe registrarse ante una selección real del usuario (mismo motivo de arriba).
-        if (opts.isLoad || !tanda || !genetica || frascos === 0) return;
+        // Además marca la fila como "ya cubierta" para esta genética (si la tiene) —
+        // sin esto, tocar después el campo de frascos en una fila YA cargada (ej. una
+        // corrección sin relación) dispararía un log de inoculación nuevo y falso sobre
+        // una tanda que ya existía antes de abrir el formulario.
+        if (opts.isLoad) {
+            if (genetica) row.dataset.inoculacionLoggedFor = genetica;
+            return;
+        }
 
-        grRegistrarSeguimiento(
-            'inoculacion',
-            `${tanda} - ${_grNombreInoculo(genetica)}: ${frascos} ${_grUds()} inoculados`,
-            '🟡'
-        );
-
-        grActualizarTotalesGenetica();
+        _grMaybeLogInoculacion(row);
     };
     
     window.grDgOnChangeContaminados = function(inputEl) {
@@ -3338,7 +3327,7 @@ window.grEliminarRegistro = grEliminarRegistro;
                 <span class="dg-fr-chip"></span>
               </div>
             </td>
-            <td><input type="number" class="dg-frascos" value="0" min="0" oninput="grActualizarTotalesGenetica()"></td>
+            <td><input type="number" class="dg-frascos" value="0" min="0" oninput="grDgOnChangeFrascos(this)"></td>
             <td>
                 <select class="dg-tipo" onchange="grDgOnChangeTipo(this)" style="display:block;width:100%;margin-bottom:4px;">
                     <option value="">— fuente de inóculo —</option>
@@ -3445,87 +3434,6 @@ GR.subTab = window.grSubTab = function grSubTab(t) {
 // ==========================================
 GR.protoNotas = [];
 GR.protoCerrado = false;
-GR.dcRegistrado = false;
-
-GR.toggleDC = window.grToggleDC = function grToggleDC() {
-    const panel = document.getElementById('grDcPanel');
-    if (!panel) return;
-    const abierto = panel.style.display !== 'none';
-    panel.style.display = abierto ? 'none' : 'block';
-    if (!abierto) grPoblarBibliotecaAgentes();
-};
-
-function grPoblarBibliotecaAgentes() {
-    const sel = document.getElementById('grDcBibliotecaAgentes');
-    if (!sel) return;
-    const bib = getBiblioteca();
-    const agentes = bib.agentes || [];
-    sel.innerHTML = '<option value="">-- Seleccionar de biblioteca --</option>' +
-        agentes.map(a => `<option value="${a.nombre}" data-conc="${a.concDefault || 0}">${a.nombre}</option>`).join('');
-}
-
-GR.seleccionarAgente = window.grSeleccionarAgente = function grSeleccionarAgente() {
-    const sel = document.getElementById('grDcBibliotecaAgentes');
-    if (!sel) return;
-    const opt = sel.options[sel.selectedIndex];
-    if (!opt || !opt.value) return;
-    const agente = document.getElementById('grDcAgente');
-    const conc = document.getElementById('grDcConcAgente');
-    if (agente) agente.value = opt.value;
-    if (conc) conc.value = opt.getAttribute('data-conc') || 0;
-    grCalcDC();
-};
-
-GR.calcDC = window.grCalcDC = function grCalcDC() {
-    const volSol = parseFloat(document.getElementById('grDcVolSol')?.value) || 0;
-    const concAg = parseFloat(document.getElementById('grDcConcAgente')?.value) || 0;
-    const volAg  = parseFloat(document.getElementById('grDcVolAgente')?.value) || 0;
-
-    // volSol en L (dilución con agua), volAg en ml
-    // Volumen total de la solución = volSol*1000 ml + volAg ml
-    const volSolMl   = volSol * 1000;
-    const volTotalMl = volSolMl + volAg;
-    // C_final(%) = (volAg_ml × concAg%) / volTotal_ml
-    const concFinal = volTotalMl > 0 ? (volAg * concAg) / volTotalMl : 0;
-    const aguaNec   = volSolMl / 1000; // agua pura necesaria = lo que el usuario ingresó
-    const proporcion = volAg > 0 ? `1:${(volSolMl / volAg).toFixed(1)}` : '—';
-
-    const cf = document.getElementById('grDcConcFinal');
-    const an = document.getElementById('grDcAguaNec');
-    const pr = document.getElementById('grDcProporcion');
-    if (cf) cf.textContent = concFinal.toFixed(3);
-    if (an) an.textContent = aguaNec.toFixed(2);
-    if (pr) pr.textContent = proporcion;
-
-    grCheckDCCompleto();
-};
-
-function grCheckDCCompleto() { /* auto-registro desactivado: se usa botón Guardar manual */ }
-
-GR.guardarDC = window.grGuardarDC = function grGuardarDC() {
-    if (GR.protoCerrado) { alert('El protocolo está cerrado. Reábralo para editar.'); return; }
-    const volSol = document.getElementById('grDcVolSol')?.value;
-    const agente = document.getElementById('grDcAgente')?.value?.trim();
-    const concAg = document.getElementById('grDcConcAgente')?.value;
-    const volAg = document.getElementById('grDcVolAgente')?.value;
-    const tiempo = document.getElementById('grDcTiempo')?.value;
-    if (!volSol || !agente || !concAg || !volAg || !tiempo) {
-        alert('Completa todos los campos de DC antes de guardar.');
-        return;
-    }
-    const concFinal = document.getElementById('grDcConcFinal')?.textContent || '0';
-    GR.protoNotas.push({
-        ts: grTimestamp(),
-        texto: `🧪 Descontaminación Química — ${agente} ${concAg}% | Vol sol: ${volSol}L | Vol agente: ${volAg}ml | Conc final: ${concFinal}% | Tiempo: ${tiempo}min`
-    });
-    GR.dcRegistrado = true;
-    grRenderNotas();
-    const btn = document.getElementById('grBtnGuardarDC');
-    if (btn) {
-        btn.textContent = '✓ Guardado';
-        setTimeout(() => { btn.textContent = '💾 Guardar'; }, 1500);
-    }
-};
 
 function grTimestamp() {
     const d = new Date();
